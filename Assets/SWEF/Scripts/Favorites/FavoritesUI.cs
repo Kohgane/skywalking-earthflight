@@ -1,6 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
-using SWEF.Core;
+using SWEF.Core;   // SWEFSession (static class)
 using SWEF.Flight;
 using SWEF.Teleport;
 
@@ -14,7 +14,6 @@ namespace SWEF.Favorites
     {
         [SerializeField] private FavoriteManager favorites;
         [SerializeField] private TeleportController teleport;
-        [SerializeField] private SWEFSession session;
         [SerializeField] private AltitudeController altitudeSource;
 
         [Header("Panel")]
@@ -39,7 +38,6 @@ namespace SWEF.Favorites
         {
             if (favorites == null) favorites = FindFirstObjectByType<FavoriteManager>();
             if (teleport == null) teleport = FindFirstObjectByType<TeleportController>();
-            if (session == null) session = FindFirstObjectByType<SWEFSession>();
             if (altitudeSource == null) altitudeSource = FindFirstObjectByType<AltitudeController>();
 
             if (toggleButton != null) toggleButton.onClick.AddListener(TogglePanel);
@@ -90,10 +88,10 @@ namespace SWEF.Favorites
 
         private void SaveCurrent()
         {
-            if (favorites == null || session == null) return;
+            if (favorites == null) return;
 
-            double lat = session.Latitude;
-            double lon = session.Longitude;
+            double lat = SWEFSession.Lat;
+            double lon = SWEFSession.Lon;
             float alt = altitudeSource != null ? altitudeSource.CurrentAltitudeMeters : 0f;
             string name = $"Fav @ ({lat:F4}, {lon:F4})";
 

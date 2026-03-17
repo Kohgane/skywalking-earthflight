@@ -78,6 +78,8 @@ World Scene
       └── HudBinder (wires sliders/toggles to controllers)
 ```
 
+---
+
 ## Altitude Staging (Ascent Experience)
 | Range       | Visual Effect                                |
 |-------------|----------------------------------------------|
@@ -189,4 +191,118 @@ World Scene (Phase 2)
       ├── Vignette Overlay (Image + CanvasGroup)
       ├── Teleport Panel (TeleportUI)  ← NEW
       └── Favorites Panel (FavoritesUI) ← NEW
+```
+
+---
+
+## Phase 3 — Settings, Audio Manager, Screenshot, Onboarding Tutorial
+
+Phase 3 adds 7 new scripts across 4 new namespaces, plus minor additions to two existing scripts.
+
+### New Scripts
+
+| Script | Namespace | Purpose |
+|--------|-----------|---------|
+| `Settings/SettingsManager.cs` | `SWEF.Settings` | PlayerPrefs-based persistent settings (volume, sensitivity, speed, comfort mode) |
+| `Settings/SettingsUI.cs` | `SWEF.Settings` | UI panel with sliders, toggle, close and reset buttons |
+| `Audio/AudioManager.cs` | `SWEF.Audio` | Singleton BGM + SFX manager; survives scene loads |
+| `Audio/AltitudeAudioTrigger.cs` | `SWEF.Audio` | Plays AltitudeWarning SFX when crossing 100 km / 120 km thresholds |
+| `Screenshot/ScreenshotController.cs` | `SWEF.Screenshot` | Hides HUD, captures PNG to persistentDataPath/Screenshots/, fires event |
+| `Screenshot/ScreenshotUI.cs` | `SWEF.Screenshot` | Capture button, white flash overlay, "Screenshot saved!" toast |
+| `Tutorial/TutorialManager.cs` | `SWEF.Tutorial` | First-run 6-step onboarding overlay; persisted via "SWEF_TutorialCompleted" |
+
+### Modified Scripts
+
+| Script | Change |
+|--------|--------|
+| `Flight/FlightController.cs` | Added `SetMaxSpeed(float)` public setter |
+| `Flight/TouchInputRouter.cs` | Added `SetSensitivity(float)` public setter |
+| `Favorites/FavoritesUI.cs` | Fixed `SWEFSession` static-class access (`SWEFSession.Lat/Lon`) |
+
+> **Note:** AudioClips (BGM and SFX) are user-provided assets and are **not** included in the repository. Assign them in the Inspector on the `AudioManager` GameObject.
+
+### Setup in World Scene
+
+#### 1. SettingsManager
+1. Create empty GameObject `SettingsManager`
+2. Attach `SettingsManager` script
+3. Optionally assign `Flight Controller` and `Touch Input Router` fields (auto-found if left empty)
+
+#### 2. SettingsUI
+1. On the HUD Canvas create a settings panel with:
+   - `Slider` MasterVolume (0–1)
+   - `Slider` SfxVolume (0–1)
+   - `Toggle` ComfortMode
+   - `Slider` TouchSensitivity (0.5–3.0)
+   - `Slider` MaxSpeed (50–500)
+   - `Button` Close, `Button` Reset
+2. Create `SettingsUI` GameObject, attach script
+3. Assign `Open Button` in the HUD (e.g. a ⚙ icon button)
+4. Assign `Settings Manager` → the SettingsManager GameObject above
+
+#### 3. AudioManager
+1. Create empty GameObject `AudioManager` (place in Boot scene or a persistent scene)
+2. Attach `AudioManager` script — `DontDestroyOnLoad` is handled automatically
+3. Assign:
+   - `Bgm Clip` → your background music AudioClip
+   - `Sfx Clips` (array of 5) → clips for ButtonClick, Teleport, Screenshot, FavoriteSave, AltitudeWarning
+   - `Settings Manager` → SettingsManager (optional — auto-found)
+4. BGM starts automatically on `Start()`
+
+#### 4. AltitudeAudioTrigger
+1. Create empty GameObject `AltitudeAudioTrigger` in World scene
+2. Attach `AltitudeAudioTrigger` script
+3. Assign `Altitude Source` → PlayerRig's `AltitudeController` (auto-found if left empty)
+4. Default thresholds: 100,000 m (Kármán line) and 120,000 m; adjust in Inspector
+
+#### 5. ScreenshotController
+1. Create empty GameObject `ScreenshotController`
+2. Attach `ScreenshotController` script
+3. Assign `Hud Canvas` → the main HUD Canvas (auto-found if left empty)
+4. Screenshots are saved to `Application.persistentDataPath/Screenshots/SWEF_<timestamp>.png`
+
+#### 6. ScreenshotUI
+1. On the HUD Canvas add a camera/screenshot button
+2. Optionally add a full-screen white Image with CanvasGroup (flash overlay)
+3. Add a `Text` element for the toast message
+4. Create `ScreenshotUI` GameObject, attach script and wire all references
+5. Assign `Controller` → the ScreenshotController above
+
+#### 7. TutorialManager
+1. Create a full-screen Canvas overlay for the tutorial
+2. Add `Text` (message), `Button` (Next), `Button` (Skip) inside the panel
+3. Create `TutorialManager` GameObject, attach script
+4. Assign `Tutorial Panel`, `Message Text`, `Next Button`, `Skip Button` in Inspector
+5. Tutorial shows automatically on first World scene load (once only)
+6. To force re-show: call `PlayerPrefs.DeleteKey("SWEF_TutorialCompleted")` in the Unity Editor
+
+### Updated Architecture
+```
+World Scene (Phase 3)
+  ├── WorldBootstrap
+  ├── CesiumGeoreference + Cesium3DTileset
+  ├── CesiumCreditSystem
+  ├── AtmosphereController
+  ├── ComfortVignette
+  ├── TeleportController
+  ├── FavoriteManager
+  ├── SettingsManager              ← NEW
+  ├── AltitudeAudioTrigger         ← NEW
+  ├── ScreenshotController         ← NEW
+  ├── PlayerRig
+  │   ├── FlightController  (+ SetMaxSpeed)
+  │   ├── TouchInputRouter  (+ SetSensitivity)
+  │   ├── AltitudeController
+  │   └── Main Camera
+  └── HUD Canvas
+      ├── HudBinder
+      ├── Vignette Overlay (Image + CanvasGroup)
+      ├── Teleport Panel (TeleportUI)
+      ├── Favorites Panel (FavoritesUI)
+      ├── Settings Panel (SettingsUI)      ← NEW
+      ├── Screenshot Button (ScreenshotUI) ← NEW
+      └── Tutorial Overlay (TutorialManager) ← NEW
+
+Boot Scene / DontDestroyOnLoad
+  └── AudioManager                 ← NEW (singleton, persists across scenes)
 ```

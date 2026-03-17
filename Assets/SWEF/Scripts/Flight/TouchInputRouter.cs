@@ -17,6 +17,8 @@ namespace SWEF.Flight
         [SerializeField] private float sensitivity = 1.4f;
         [SerializeField] private float maxAxis = 1.0f;
 
+        public void SetSensitivity(float s) => sensitivity = Mathf.Clamp(s, 0.5f, 3.0f);
+
         private Vector2 _lastPos;
         private bool _dragging;
 
