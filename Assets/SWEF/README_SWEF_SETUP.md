@@ -417,3 +417,110 @@ World Scene (Phase 4)
       ├── Screenshot Button
       └── Tutorial Overlay
 ```
+
+---
+
+## Phase 5 — Pause System, Flight Recorder/Playback, Achievements, Stats Dashboard
+
+Phase 5 adds 7 new scripts across 3 new namespaces (`SWEF.Core`, `SWEF.Recorder`, `SWEF.Achievement`) and extends `SWEF.UI`, plus targeted modifications to two existing scripts.
+
+### New Scripts
+
+| Script | Namespace | Purpose |
+|--------|-----------|---------|
+| `Core/PauseManager.cs` | `SWEF.Core` | Singleton pause/resume; sets `Time.timeScale` 0↔1; shows pause panel with Resume and Quit buttons |
+| `Recorder/FlightRecorder.cs` | `SWEF.Recorder` | Records position, rotation, altitude and speed at configurable intervals (default 0.5 s, max 300 s) |
+| `Recorder/FlightPlayback.cs` | `SWEF.Recorder` | Replays recorded frames by lerping a ghost Transform; adjustable speed 0.25×–4×; fires `OnPlaybackFinished` |
+| `Recorder/RecorderUI.cs` | `SWEF.Recorder` | Record/Stop/Play/Clear buttons, progress slider and status text (🔴 REC / ▶ / Ready) |
+| `Achievement/AchievementManager.cs` | `SWEF.Achievement` | Singleton — 8 achievements persisted in PlayerPrefs; auto-checks altitude and speed thresholds each frame |
+| `Achievement/AchievementUI.cs` | `SWEF.Achievement` | Fade-in toast on unlock; achievement list panel (✅/🔒) toggled by a button |
+| `UI/StatsDashboard.cs` | `SWEF.UI` | Tracks and displays flight time, max altitude, max speed, distance traveled, and achievement count |
+
+### Modified Scripts
+
+| Script | Change |
+|--------|--------|
+| `Teleport/TeleportController.cs` | Calls `AchievementManager.Instance?.TryUnlock("first_teleport")` after successful teleport |
+| `Screenshot/ScreenshotController.cs` | Calls `AchievementManager.Instance?.TryUnlock("first_screenshot")` after successful capture |
+
+### Achievements
+
+| ID | Title | Trigger |
+|----|-------|---------|
+| `first_flight` | First Flight ✈️ | First Update frame in the World scene |
+| `reach_10km` | Sky High 🌤️ | Altitude ≥ 10,000 m |
+| `reach_karman` | Edge of Space 🌍 | Altitude ≥ 100,000 m (Kármán line) |
+| `reach_120km` | Space Pioneer 🚀 | Altitude ≥ 120,000 m |
+| `mach1` | Sound Barrier 💥 | Speed ≥ 343 m/s |
+| `orbital_speed` | Orbital Velocity ⚡ | Speed ≥ 7,900 m/s |
+| `first_teleport` | World Traveler 🗺️ | First successful teleport |
+| `first_screenshot` | Photographer 📸 | First screenshot captured |
+
+PlayerPrefs keys use the pattern `SWEF_ACH_{id}` (value `1` = unlocked).
+
+### Setup in World Scene
+
+#### 1. PauseManager
+1. Create empty GameObject `PauseManager`
+2. Attach `PauseManager` script
+3. On the HUD Canvas create a pause panel containing:
+   - A full-screen dark overlay with a **CanvasGroup** component (`Pause Overlay`)
+   - `Button` Resume → wired automatically
+   - `Button` Quit To Menu → wired automatically
+4. Assign `Pause Panel`, `Resume Button`, `Quit Button`, `Pause Overlay` in Inspector
+5. Call `PauseManager.Instance.TogglePause()` from a pause button (e.g. ☰ icon)
+
+#### 2. FlightRecorder
+1. Create empty GameObject `FlightRecorder` in World scene
+2. Attach `FlightRecorder` script
+3. Assign `Flight` → PlayerRig's `FlightController`; `Altitude` → `AltitudeController` (auto-found if left empty)
+4. Adjust `Record Interval Sec` (default 0.5) and `Max Record Duration Sec` (default 300) if desired
+
+#### 3. FlightPlayback
+1. Create a simple ghost GameObject (e.g. a semi-transparent aircraft mesh or an empty marker)
+2. Create `FlightPlayback` GameObject, attach script
+3. Assign `Recorder` → the `FlightRecorder` above; `Ghost Object` → the ghost Transform
+4. `Playback Speed` defaults to 1×
+
+#### 4. RecorderUI
+1. On the HUD Canvas create a toggleable panel containing:
+   - `Button` Record, `Button` Stop, `Button` Play, `Button` Clear
+   - `Slider` Progress (0–1, non-interactable for display)
+   - `Text` Status
+2. Create `RecorderUI` GameObject, attach script
+3. Wire all button/slider/text references; assign `Recorder Panel` and `Toggle Button`
+
+#### 5. AchievementManager
+1. Create empty GameObject `AchievementManager` in World scene
+2. Attach `AchievementManager` script
+3. Assign `Altitude Source` → `AltitudeController`; `Flight` → `FlightController` (auto-found if left empty)
+
+#### 6. AchievementUI
+1. Create a toast panel on the HUD Canvas:
+   - `Text` Toast Title, `Text` Toast Description
+   - Attach a **CanvasGroup** to the panel (`Toast Canvas Group`)
+2. Create an achievement list panel with 8 × `Text` elements (one per achievement)
+3. Create `AchievementUI` GameObject, attach script
+4. Wire all references; assign `Toggle Button` to show/hide the list panel
+
+#### 7. StatsDashboard
+1. On the HUD Canvas create a dashboard panel with `Text` elements for:
+   - Flight Time, Max Altitude, Max Speed, Distance Traveled, Achievements
+2. Create `StatsDashboard` GameObject, attach script
+3. Assign all `Text` refs, `Dashboard Panel`, `Toggle Button`
+4. Wire `Flight` → `FlightController`; `Altitude` → `AltitudeController` (auto-found if left empty)
+
+### Updated Architecture
+
+```
+Boot Scene / World Scene (Phase 5)
+  ├── PauseManager                      ← NEW
+  ├── AchievementManager                ← NEW
+  ├── FlightRecorder                    ← NEW
+  ├── FlightPlayback                    ← NEW
+  └── HUD Canvas additions:
+      ├── Pause Panel (PauseManager)    ← NEW
+      ├── Recorder Panel (RecorderUI)   ← NEW
+      ├── Achievement Toast + List (AchievementUI) ← NEW
+      └── Stats Dashboard (StatsDashboard) ← NEW
+```
