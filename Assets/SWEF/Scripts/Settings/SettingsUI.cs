@@ -1,5 +1,7 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using SWEF.Core;
 
 namespace SWEF.Settings
 {
@@ -7,6 +9,7 @@ namespace SWEF.Settings
     /// UI panel that exposes all SettingsManager values to the player.
     /// Sliders and toggles feed directly into SettingsManager; changes are
     /// saved immediately. Reset restores defaults.
+    /// Also exposes a quality preset dropdown wired to QualityPresetManager.
     /// </summary>
     public class SettingsUI : MonoBehaviour
     {
@@ -23,6 +26,10 @@ namespace SWEF.Settings
         [SerializeField] private Slider sensitivitySlider;
         [SerializeField] private Slider speedSlider;
 
+        [Header("Quality Preset (Phase 8)")]
+        [SerializeField] private QualityPresetManager qualityManager;
+        [SerializeField] private Dropdown             qualityDropdown;
+
         [Header("Ref")]
         [SerializeField] private SettingsManager settings;
 
@@ -32,6 +39,9 @@ namespace SWEF.Settings
         {
             if (settings == null)
                 settings = FindFirstObjectByType<SettingsManager>();
+
+            if (qualityManager == null)
+                qualityManager = FindFirstObjectByType<QualityPresetManager>();
 
             if (openButton  != null) openButton.onClick.AddListener(OpenPanel);
             if (closeButton != null) closeButton.onClick.AddListener(ClosePanel);
@@ -64,6 +74,20 @@ namespace SWEF.Settings
                 speedSlider.onValueChanged.AddListener(OnSpeedChanged);
             }
 
+            // Populate quality dropdown with preset names
+            if (qualityDropdown != null)
+            {
+                qualityDropdown.ClearOptions();
+                qualityDropdown.AddOptions(new List<string>
+                {
+                    QualityPresetManager.QualityLevel.Low.ToString(),
+                    QualityPresetManager.QualityLevel.Medium.ToString(),
+                    QualityPresetManager.QualityLevel.High.ToString(),
+                    QualityPresetManager.QualityLevel.Ultra.ToString(),
+                });
+                qualityDropdown.onValueChanged.AddListener(OnQualityDropdownChanged);
+            }
+
             if (panelRoot != null) panelRoot.SetActive(false);
         }
 
@@ -82,6 +106,14 @@ namespace SWEF.Settings
         private void Start()
         {
             RefreshUI();
+
+            // Sync dropdown to the currently active quality preset
+            if (qualityDropdown != null && qualityManager != null)
+            {
+                _ignoreCallbacks          = true;
+                qualityDropdown.value     = (int)qualityManager.CurrentQuality;
+                _ignoreCallbacks          = false;
+            }
         }
 
         // ── Panel toggle ─────────────────────────────────────────────────────────
@@ -150,6 +182,12 @@ namespace SWEF.Settings
         {
             if (settings == null) return;
             settings.ResetToDefaults();
+        }
+
+        private void OnQualityDropdownChanged(int index)
+        {
+            if (_ignoreCallbacks || qualityManager == null) return;
+            qualityManager.SetQuality((QualityPresetManager.QualityLevel)index);
         }
     }
 }

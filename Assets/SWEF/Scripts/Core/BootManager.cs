@@ -26,11 +26,29 @@ namespace SWEF.Core
         /// </summary>
         [SerializeField] private SplashScreen splashScreen;
 
+        [Header("Optional — Phase 8")]
+        /// <summary>
+        /// Optional reference to a <see cref="CrashReporter"/> for detecting previous session crashes.
+        /// Auto-found if null.
+        /// </summary>
+        [SerializeField] private CrashReporter crashReporter;
+
         private IEnumerator Start()
         {
             loadingScreen?.Show();
 
             SWEFSession.Clear();
+
+            // Phase 8 — check for previous crash
+            if (crashReporter == null)
+                crashReporter = FindFirstObjectByType<CrashReporter>();
+
+            if (crashReporter != null)
+            {
+                string[] logs = crashReporter.GetCrashLogPaths();
+                if (logs.Length > 0)
+                    Debug.Log($"[SWEF] Previous crash detected: {logs[0]}");
+            }
 
             loadingScreen?.SetStatus("Checking location services...");
 
