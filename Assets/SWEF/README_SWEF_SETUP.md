@@ -813,3 +813,70 @@ World Scene (Phase 7)
       ├── Share Button                        ← NEW
       └── Tutorial Overlay
 ```
+
+## Phase 8 — Polish & Optimization
+
+Phase 8 adds 5 new scripts focused on app stability, performance presets, accessibility, and input remapping.
+
+### New Scripts
+
+| Script | Namespace | Purpose |
+|--------|-----------|---------|
+| `Core/MemoryManager.cs` | `SWEF.Core` | Runtime memory monitoring + auto GC/cache clear at configurable thresholds |
+| `Core/QualityPresetManager.cs` | `SWEF.Core` | One-tap quality presets (Low/Medium/High/Ultra) controlling Cesium SSE, shadows, frame rate |
+| `UI/AccessibilityManager.cs` | `SWEF.UI` | Font scaling, high-contrast mode, reduced-motion flag; persisted in PlayerPrefs |
+| `Core/CrashReporter.cs` | `SWEF.Core` | Captures exceptions/errors to persistent log files; detects previous session crashes |
+| `UI/InputRebinder.cs` | `SWEF.UI` | Keyboard/gamepad input remapping with PlayerPrefs persistence |
+
+### Modified Scripts
+
+| Script | Change |
+|--------|--------|
+| `Settings/SettingsUI.cs` | Added quality preset dropdown wired to QualityPresetManager |
+| `Core/BootManager.cs` | Checks for previous crash on startup via CrashReporter |
+
+### Setup
+
+#### 1. MemoryManager
+1. Create empty GameObject `MemoryManager` (Boot scene or persistent)
+2. Attach `MemoryManager` script — DontDestroyOnLoad handled automatically
+3. Adjust `Check Interval Sec`, `Memory Warning Threshold MB`, `Memory Critical Threshold MB` in Inspector
+
+#### 2. QualityPresetManager
+1. Create empty GameObject `QualityPresetManager` in World scene
+2. Attach `QualityPresetManager` script
+3. Optionally assign `Tileset` → Cesium3DTileset (auto-found if empty)
+4. Default quality: Medium
+
+#### 3. AccessibilityManager
+1. Create empty GameObject `AccessibilityManager` (Boot scene or persistent)
+2. Attach `AccessibilityManager` script — DontDestroyOnLoad handled automatically
+3. Call SetFontScale/SetHighContrast/SetReducedMotion from Settings UI
+
+#### 4. CrashReporter
+1. Create empty GameObject `CrashReporter` (Boot scene or persistent)
+2. Attach `CrashReporter` script — DontDestroyOnLoad handled automatically
+3. Crash logs are written to `persistentDataPath/CrashLogs/`
+4. On BootManager startup, previous crash is auto-detected and logged
+
+#### 5. InputRebinder
+1. Create empty GameObject `InputRebinder` in World scene
+2. Attach `InputRebinder` script
+3. Default bindings pre-populated; customize in Inspector
+4. Useful for editor testing and desktop builds
+
+### Updated Architecture
+```
+World Scene (Phase 8)
+  ├── QualityPresetManager                   ← NEW
+  ├── InputRebinder                          ← NEW
+  ├── (all existing Phase 1–7 systems)
+  └── HUD Canvas
+      └── Settings Panel (+ quality dropdown) ← MODIFIED
+
+Boot Scene / DontDestroyOnLoad (Phase 8)
+  ├── MemoryManager                          ← NEW
+  ├── AccessibilityManager                   ← NEW
+  ├── CrashReporter                          ← NEW
+  └── (all existing persistent singletons)
+```
