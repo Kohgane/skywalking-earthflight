@@ -67,6 +67,10 @@ namespace SWEF.Screenshot
 
             Debug.Log($"[SWEF] Screenshot saved: {filePath}");
             OnScreenshotCaptured?.Invoke(filePath);
+
+            // Achievement: first screenshot
+            if (Achievement.AchievementManager.Instance != null)
+                Achievement.AchievementManager.Instance.TryUnlock("first_screenshot");
         }
     }
 }

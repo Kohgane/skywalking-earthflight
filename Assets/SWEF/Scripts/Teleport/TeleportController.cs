@@ -108,6 +108,11 @@ namespace SWEF.Teleport
                 yield return StartCoroutine(Fade(1f, 0f, fadeDuration));
 
             Debug.Log($"[SWEF] Teleported to {placeName} ({lat}, {lon})");
+
+            // Achievement: first teleport
+            if (SWEF.Achievement.AchievementManager.Instance != null)
+                SWEF.Achievement.AchievementManager.Instance.TryUnlock("first_teleport");
+
             OnTeleportCompleted?.Invoke();
         }
 
