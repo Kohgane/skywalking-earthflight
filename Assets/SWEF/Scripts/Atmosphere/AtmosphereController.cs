@@ -17,12 +17,20 @@ namespace SWEF.Atmosphere
     /// <summary>
     /// Blends fog, sky color, skybox material, and sun intensity based on current altitude.
     /// Reads altitude from AltitudeController. Layers are designer-tweakable in Inspector.
+    /// Optionally integrates with <see cref="DayNightCycle"/> to dim the sun at night.
     /// </summary>
     public class AtmosphereController : MonoBehaviour
     {
         [SerializeField] private AltitudeController altitudeSource;
         [SerializeField] private Light sunLight;
         [SerializeField] private Material skyboxMaterial;
+
+        [Header("Day / Night (optional)")]
+        [Tooltip("Assign a DayNightCycle to have the sun dim automatically at night.")]
+        [SerializeField] private DayNightCycle dayNightCycle;
+
+        [Tooltip("Multiplier applied to sun intensity when DayNightCycle reports IsNight.")]
+        [SerializeField] private float nightIntensityFactor = 0.1f;
 
         [Header("Transition")]
         [SerializeField] private float transitionSmoothing = 3f;
@@ -107,7 +115,12 @@ namespace SWEF.Atmosphere
                 skyboxMaterial.SetFloat("_Blend", _currentBlend);
 
             if (sunLight != null)
-                sunLight.intensity = _currentSun;
+            {
+                float finalSun = _currentSun;
+                if (dayNightCycle != null && dayNightCycle.IsNight)
+                    finalSun *= nightIntensityFactor;
+                sunLight.intensity = finalSun;
+            }
         }
     }
 }
