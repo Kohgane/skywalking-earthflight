@@ -306,3 +306,114 @@ World Scene (Phase 3)
 Boot Scene / DontDestroyOnLoad
   └── AudioManager                 ← NEW (singleton, persists across scenes)
 ```
+
+---
+
+## Phase 4 — Loading Screen, Error Handling, Speed/Compass HUD, Minimap
+
+Phase 4 adds 5 new scripts across `SWEF.Core` and `SWEF.UI`, plus targeted modifications to two existing scripts.
+
+### New Scripts
+
+| Script | Namespace | Purpose |
+|--------|-----------|---------|
+| `Core/LoadingScreen.cs` | `SWEF.Core` | Progress bar + rotating tip texts while GPS initializes in the Boot scene |
+| `Core/ErrorHandler.cs` | `SWEF.Core` | Per-scene singleton — displays GPS, Network and API errors with Retry/Dismiss |
+| `UI/SpeedIndicator.cs` | `SWEF.UI` | HUD speed readout in km/h; Mach number above 343 m/s; "ORBITAL ⚡" above 7900 m/s |
+| `UI/CompassHUD.cs` | `SWEF.UI` | HUD heading (000°) + 8-direction cardinal (N/NE/E/SE/S/SW/W/NW); optional needle |
+| `UI/MiniMap.cs` | `SWEF.UI` | Lat/lon coordinates + adaptive altitude units + altitude-range emoji label |
+
+### Modified Scripts
+
+| Script | Change |
+|--------|--------|
+| `Flight/FlightController.cs` | Added `public float CurrentSpeedMps => _vel.magnitude;` property |
+| `Core/BootManager.cs` | Integrated `LoadingScreen` (show/progress/status/hide) and `ErrorHandler` (GPS error presets) |
+
+### Setup in Boot Scene
+
+#### 1. LoadingScreen
+1. Create a Canvas in the Boot scene (Screen Space – Overlay)
+2. Add a full-screen panel (`GameObject` → Image, stretched to fill)
+3. Inside the panel add:
+   - `Slider` — progress bar (0–1)
+   - `Text` — status text (e.g. "Acquiring GPS fix…")
+   - `Text` — tip text (rotates every 3 s)
+4. Attach a `CanvasGroup` component to the panel
+5. Create `LoadingScreen` GameObject, attach the script
+6. Wire: `Progress Bar`, `Status Text`, `Tip Text`, `Loading Panel`, `Canvas Group`
+7. On the `BootManager` GameObject, assign `Loading Screen` → the LoadingScreen above
+
+#### 2. ErrorHandler (Boot Scene)
+1. Create an error panel (Canvas child): title Text, message Text, Retry Button, Dismiss Button
+2. Create `ErrorHandler` GameObject, attach the script
+3. Wire all four UI references in Inspector
+4. The `BootManager` will call `ErrorHandler.Instance?.ShowGPSError()` / `ShowGPSTimeoutError()` automatically
+
+### Setup in World Scene
+
+#### 3. ErrorHandler (World Scene)
+- Repeat the same steps as Boot Scene so errors in the World scene (e.g. network/API errors) can also be surfaced to the user
+- Each scene maintains its own instance; `ErrorHandler.Instance` is updated per-scene
+
+#### 4. SpeedIndicator
+1. On the HUD Canvas, add a `Text` for speed (e.g. "SPD 0 km/h")
+2. Optionally add a second `Text` for Mach / orbital info
+3. Create `SpeedIndicator` GameObject, attach the script
+4. Assign `Flight` → PlayerRig's `FlightController`; `Speed Text`; `Mach Text` (optional)
+
+#### 5. CompassHUD
+1. On the HUD Canvas, add a `Text` for the heading readout
+2. Optionally add a `RectTransform` image as a compass needle
+3. Create `CompassHUD` GameObject, attach the script
+4. Assign `Player Rig` → the PlayerRig transform; `Heading Text`; `Compass Needle` (optional)
+
+#### 6. MiniMap
+1. On the HUD Canvas, create a small panel containing:
+   - `Text` for coordinates
+   - `Text` for altitude + range label (or omit to show both in coordinate text)
+   - `Button` to toggle panel visibility (optional)
+2. Create `MiniMap` GameObject, attach the script
+3. Assign `Coord Text`, `Alt Range Text` (optional), `Mini Map Panel`, `Altitude Source`, `Toggle Button` (optional)
+
+### Updated Architecture
+
+```
+Boot Scene (Phase 4)
+  ├── BootManager (+ LoadingScreen integration)
+  ├── LoadingScreen                     ← NEW
+  │   ├── Progress Bar (Slider)
+  │   ├── Status Text
+  │   └── Tip Text (rotating)
+  └── ErrorHandler                      ← NEW
+      ├── Error Panel
+      ├── Retry / Dismiss Buttons
+
+World Scene (Phase 4)
+  ├── WorldBootstrap
+  ├── CesiumGeoreference + Cesium3DTileset
+  ├── CesiumCreditSystem
+  ├── AtmosphereController
+  ├── ComfortVignette
+  ├── TeleportController
+  ├── FavoriteManager
+  ├── SettingsManager
+  ├── AudioManager
+  ├── ErrorHandler                      ← NEW (per-scene instance)
+  ├── PlayerRig
+  │   ├── FlightController (+ CurrentSpeedMps)
+  │   ├── TouchInputRouter
+  │   ├── AltitudeController
+  │   └── Main Camera
+  └── HUD Canvas
+      ├── HudBinder
+      ├── SpeedIndicator                ← NEW
+      ├── CompassHUD                    ← NEW
+      ├── MiniMap                       ← NEW
+      ├── Vignette Overlay
+      ├── Teleport Panel
+      ├── Favorites Panel
+      ├── Settings Panel
+      ├── Screenshot Button
+      └── Tutorial Overlay
+```
