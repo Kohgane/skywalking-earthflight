@@ -68,7 +68,7 @@ namespace SWEF.Teleport
                 teleport.OnSearchResults -= HandleResults;
                 teleport.OnSearchError -= HandleError;
                 teleport.OnTeleportStarted -= OnTeleportStarted;
-                teleport.OnTeleportCompleted -= HandleTeleportCompleted;
+                teleport.OnTeleportCompleted -= OnTeleportCompleted;
             }
         }
 
