@@ -8,7 +8,7 @@ namespace SWEF.Teleport
     /// <summary>
     /// Searches for places via Google Places API (Text Search) and teleports
     /// the player by updating the CesiumGeoreference origin.
-    /// MVP: uses UnityWebRequest directly. Production: proxy via backend.
+    /// MVP: uses UnityWebRequest directly. Production: proxy through backend.
     /// </summary>
     public class TeleportController : MonoBehaviour
     {
