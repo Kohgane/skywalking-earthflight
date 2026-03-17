@@ -29,6 +29,7 @@ namespace SWEF.Flight
         private Vector3 _vel;
 
         public void SetThrottle(float t01) => Throttle01 = Mathf.Clamp01(t01);
+        public void SetMaxSpeed(float speed) => maxSpeed = Mathf.Clamp(speed, 50f, 500f);
 
         /// <summary>
         /// Call once per frame with normalized (-1..1) inputs.
