@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using SWEF.UI;
 
 namespace SWEF.Core
 {
@@ -17,6 +18,13 @@ namespace SWEF.Core
 
         [Header("UI")]
         [SerializeField] private LoadingScreen loadingScreen;
+
+        [Header("Optional — Phase 6")]
+        /// <summary>
+        /// Optional reference to a <see cref="SplashScreen"/> in the same scene.
+        /// When null the Boot flow proceeds exactly as before.
+        /// </summary>
+        [SerializeField] private SplashScreen splashScreen;
 
         private IEnumerator Start()
         {

@@ -606,3 +606,114 @@ World Scene (Phase 6)
   └── HUD Canvas additions:
       └── Milestone Toast (AltitudeMilestone) ← NEW
 ```
+
+---
+
+## Phase 6 — Release Preparation: Performance, Analytics, Localization, Splash, Deep Link
+
+Phase 6 adds 5 new scripts focused on release readiness and polishing.
+
+### New Scripts
+
+| Script | Namespace | Purpose |
+|--------|-----------|---------|
+| `Core/PerformanceManager.cs` | `SWEF.Core` | FPS monitoring + adaptive Cesium LOD quality switching (Low/Medium/High) |
+| `Core/AnalyticsLogger.cs` | `SWEF.Core` | Local PlayerPrefs-based session analytics (flight time, max altitude, teleport/screenshot counts) |
+| `UI/LocalizationManager.cs` | `SWEF.UI` | JSON-based multi-language support (en/ko/ja) with runtime switching |
+| `UI/SplashScreen.cs` | `SWEF.UI` | App launch splash with logo fade-in/hold/fade-out → Boot scene transition |
+| `Core/DeepLinkHandler.cs` | `SWEF.Core` | URL scheme handler (`swef://teleport?lat=...&lon=...&name=...`) for location sharing |
+
+### Modified Scripts
+
+| Script | Change |
+|--------|--------|
+| `Core/BootManager.cs` | Added optional `SplashScreen` serialized field |
+
+### Setup
+
+#### 1. PerformanceManager
+1. Create empty GameObject `PerformanceManager` in World scene
+2. Attach `PerformanceManager` script
+3. Assign `Tileset` → your Cesium3DTileset component
+4. Adjust target FPS and thresholds in Inspector as needed
+5. Quality auto-switches between Low (SSE=24), Medium (SSE=8), High (SSE=2)
+
+#### 2. AnalyticsLogger
+1. Create empty GameObject `AnalyticsLogger` in World scene
+2. Attach `AnalyticsLogger` script
+3. Assign `Altitude Source` → PlayerRig's `AltitudeController` (auto-found if empty)
+4. Call `RecordTeleport()` / `RecordScreenshot()` from respective controllers
+5. Stats persist across sessions via PlayerPrefs
+
+#### 3. LocalizationManager
+1. Create empty GameObject `LocalizationManager` (place in Boot scene or persistent scene)
+2. Attach `LocalizationManager` script — `DontDestroyOnLoad` is handled automatically
+3. Create `Resources/Localization/` folder in Assets
+4. Add JSON files: `en.json`, `ko.json`, `ja.json` with format:
+   `{"keys": [{"k":"ui_start","v":"Start"}, {"k":"ui_settings","v":"Settings"}, ...]}`
+5. System auto-detects device language on startup; call `SetLanguage()` to switch manually
+
+#### 4. SplashScreen
+1. Create a new scene `Splash.unity`
+2. Add a Canvas (Screen Space – Overlay) with a logo Image
+3. Add a `CanvasGroup` to the logo
+4. Attach `SplashScreen` script, wire the `CanvasGroup`
+5. Update Build Settings: `Splash` at index 0, `Boot` at index 1, `World` at index 2
+
+#### 5. DeepLinkHandler
+1. Create empty GameObject `DeepLinkHandler` (place in Boot scene or persistent scene)
+2. Attach `DeepLinkHandler` script — `DontDestroyOnLoad` handled automatically
+3. Assign `Teleport` → TeleportController (auto-found if empty)
+4. Configure URL scheme in platform settings:
+   - **iOS**: Add `swef` to URL Types in Xcode project
+   - **Android**: Add intent-filter for `swef://` scheme in AndroidManifest.xml
+5. Share links like: `swef://teleport?lat=35.6762&lon=139.6503&name=Tokyo`
+
+### Updated Architecture
+```
+Splash Scene (Phase 6) ← NEW
+  └── SplashScreen: Logo fade → Load Boot Scene
+
+Boot Scene (Phase 6)
+  ├── BootManager (+ optional SplashScreen ref)
+  ├── LoadingScreen
+  ├── ErrorHandler
+  └── DeepLinkHandler (DontDestroyOnLoad)    ← NEW
+
+World Scene (Phase 6)
+  ├── WorldBootstrap
+  ├── CesiumGeoreference + Cesium3DTileset
+  ├── CesiumCreditSystem
+  ├── PerformanceManager                      ← NEW
+  ├── AnalyticsLogger                         ← NEW
+  ├── AtmosphereController
+  ├── ComfortVignette
+  ├── TeleportController
+  ├── FavoriteManager
+  ├── SettingsManager
+  ├── AltitudeAudioTrigger
+  ├── ScreenshotController
+  ├── PlayerRig
+  │   ├── FlightController
+  │   ├── TouchInputRouter
+  │   ├── AltitudeController
+  │   └── Main Camera
+  └── HUD Canvas
+      ├── HudBinder
+      ├── SpeedIndicator
+      ├── CompassHUD
+      ├── MiniMap
+      ├── AltitudeMilestone
+      ├── StatsDashboard
+      ├── Vignette Overlay
+      ├── Teleport Panel
+      ├── Favorites Panel
+      ├── Settings Panel
+      ├── Screenshot Button
+      └── Tutorial Overlay
+
+DontDestroyOnLoad (persistent singletons)
+  ├── AudioManager
+  ├── LocalizationManager                     ← NEW
+  └── DeepLinkHandler                         ← NEW
+```
