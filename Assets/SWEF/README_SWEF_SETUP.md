@@ -717,3 +717,99 @@ DontDestroyOnLoad (persistent singletons)
   ├── LocalizationManager                     ← NEW
   └── DeepLinkHandler                         ← NEW
 ```
+
+---
+
+## Phase 7 — Multiplayer Foundation & Social Features
+
+Phase 7 adds multiplayer infrastructure and social sharing capabilities.
+
+### New Scripts
+
+| Script | Namespace | Purpose |
+|--------|-----------|---------|
+| `Multiplayer/PlayerAvatar.cs` | `SWEF.Multiplayer` | Remote player visual proxy with position/rotation interpolation and name label |
+| `Multiplayer/MultiplayerManager.cs` | `SWEF.Multiplayer` | Core multiplayer orchestrator — state broadcasting, remote avatar lifecycle, stale player cleanup |
+| `Social/ShareManager.cs` | `SWEF.Social` | Generates deep links & share text, native share sheet integration, clipboard fallback |
+| `Social/LeaderboardManager.cs` | `SWEF.Social` | Local personal records — tracks top flights by altitude, duration, speed, score |
+| `UI/LeaderboardUI.cs` | `SWEF.UI` | Scrollable leaderboard panel displaying personal best flights |
+
+### Setup
+
+#### 1. PlayerAvatar Prefab
+1. Create a 3D object (capsule/sphere) to represent remote players
+2. Attach `PlayerAvatar` script
+3. Add `TextMesh` child for name label (optional)
+4. Save as Prefab in `Assets/SWEF/Prefabs/PlayerAvatar.prefab`
+
+#### 2. MultiplayerManager
+1. Create empty GameObject `MultiplayerManager` in World scene
+2. Attach `MultiplayerManager` script
+3. Assign: `Local Flight` → PlayerRig's FlightController, `Local Altitude` → AltitudeController
+4. Assign: `Avatar Prefab` → PlayerAvatar prefab, `Avatar Parent` → an empty transform for organization
+5. Hook `OnLocalStateBroadcast` event to your network transport when ready
+
+#### 3. ShareManager
+1. Create empty GameObject `ShareManager` in World scene
+2. Attach `ShareManager` script
+3. Assign altitude source (auto-found if empty)
+4. Call `ShareManager.Instance.ShareText(ShareManager.Instance.GenerateShareText())` from a share button
+
+#### 4. LeaderboardManager
+1. Create empty GameObject `LeaderboardManager` in World scene
+2. Attach `LeaderboardManager` script
+3. Assign flight & altitude controllers (auto-found if empty)
+4. Session auto-submits on app pause/quit
+5. Call `RecordSessionTeleport()` when teleporting
+
+#### 5. LeaderboardUI
+1. Create a Panel in HUD Canvas for the leaderboard
+2. Add ScrollRect with content container
+3. Create an entry prefab with Text elements: Rank, Date, Altitude, Duration, Speed, Score
+4. Attach `LeaderboardUI`, wire all references
+5. Add a toggle button to show/hide
+
+### Updated Architecture
+```
+World Scene (Phase 7)
+  ├── WorldBootstrap
+  ├── CesiumGeoreference + Cesium3DTileset
+  ├── CesiumCreditSystem
+  ├── PerformanceManager
+  ├── AnalyticsLogger
+  ├── MultiplayerManager                     ← NEW
+  │   └── RemoteAvatars (spawned PlayerAvatar instances)
+  ├── ShareManager                            ← NEW
+  ├── LeaderboardManager                      ← NEW
+  ├── AtmosphereController
+  ├── ComfortVignette
+  ├── DayNightCycle
+  ├── CloudLayer
+  ├── ReentryEffect
+  ├── TeleportController
+  ├── FavoriteManager
+  ├── SettingsManager
+  ├── AltitudeAudioTrigger
+  ├── ScreenshotController
+  ├── PlayerRig
+  │   ├── FlightController
+  │   ├── TouchInputRouter
+  │   ├── AltitudeController
+  │   ├── JetTrail
+  │   └── Main Camera
+  └── HUD Canvas
+      ├── HudBinder
+      ├── SpeedIndicator
+      ├── CompassHUD
+      ├── MiniMap
+      ├── AltitudeMilestone
+      ├── StatsDashboard
+      ├── LeaderboardUI                       ← NEW
+      ├── Vignette Overlay
+      ├── Teleport Panel
+      ├── Favorites Panel
+      ├── Settings Panel
+      ├── Screenshot Button
+      ├── Share Button                        ← NEW
+      └── Tutorial Overlay
+```
