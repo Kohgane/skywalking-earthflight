@@ -524,3 +524,85 @@ Boot Scene / World Scene (Phase 5)
       ├── Achievement Toast + List (AchievementUI) ← NEW
       └── Stats Dashboard (StatsDashboard) ← NEW
 ```
+
+---
+
+## Phase 6 — Visual & Environment Upgrade
+
+Five new scripts enhance the visual flight experience from ground to space.
+
+### New Scripts
+
+| Script | Namespace | Role |
+|--------|-----------|------|
+| `Atmosphere/DayNightCycle.cs` | `SWEF.Atmosphere` | Real-time or accelerated day/night cycle (sun rotation, colour gradient, ambient intensity) |
+| `Atmosphere/CloudLayer.cs` | `SWEF.Atmosphere` | Altitude-based cloud layer fade in/out (above vs below cloud opacity) |
+| `Atmosphere/ReentryEffect.cs` | `SWEF.Atmosphere` | Atmospheric reentry particles + screen glow during fast descent below 120 km |
+| `Flight/JetTrail.cs` | `SWEF.Flight` | Speed-proportional `TrailRenderer` (width, colour, emission) |
+| `UI/AltitudeMilestone.cs` | `SWEF.UI` | Toast notifications at 1 km, 10 km, 20 km, 50 km, 100 km, 120 km |
+
+### Modified Scripts
+
+| Script | Change |
+|--------|--------|
+| `Atmosphere/AtmosphereController.cs` | Added optional `DayNightCycle` reference; when assigned and `IsNight`, sun intensity is multiplied by `nightIntensityFactor` (default 0.1) |
+
+### Setup — DayNightCycle
+
+1. Create an empty GameObject `DayNightCycle` in the World scene.
+2. Attach the `DayNightCycle` script.
+3. Assign `Sun Light` → your scene's directional light.
+4. Set `Day Duration Minutes` (default 24 min = 1 day per 24 real minutes).
+5. Configure `Sun Color Gradient` (warm sunrise → white noon → orange sunset → dark blue night).
+6. Configure `Sun Intensity Curve` (0 at night, 1+ at noon).
+7. Optionally enable `Use Real Time` to sync with device UTC clock.
+8. Assign this GameObject to `AtmosphereController → Day Night Cycle` for night dimming.
+
+### Setup — CloudLayer
+
+1. Create cloud GameObjects (e.g. particle systems, semi-transparent quads) at the appropriate world heights. These are user-provided assets.
+2. Create an empty GameObject `CloudLayer` and attach the script.
+3. Populate `Cloud Layers` with your cloud GameObjects and `Cloud Altitudes` with matching altitude values in meters (e.g. 2000, 5000, 10000).
+4. Assign `Altitude Source` → `AltitudeController` (auto-found if left empty).
+5. Tune `Fade Range`, `Cloud Alpha Above`, and `Cloud Alpha Below` as desired.
+
+### Setup — ReentryEffect
+
+1. Create a ParticleSystem for fire/plasma (user-provided asset). Attach it to the player rig.
+2. Create an empty GameObject `ReentryEffect` and attach the script.
+3. Assign `Reentry Particles` → the ParticleSystem above.
+4. (Optional) Create a full-screen `Image` on the HUD Canvas with an orange/red tint, add a **CanvasGroup**, and assign it to `Screen Glow`.
+5. Assign `Altitude Source` and `Flight Source` (auto-found if left empty).
+6. Tune `Activation Altitude` (default 120 000 m), `Min Descent Speed` (default 100 m/s), and `Max Glow Alpha` (default 0.3).
+
+### Setup — JetTrail
+
+1. Add a **TrailRenderer** component to the player's aircraft mesh or a child transform behind it.
+2. Create an empty GameObject `JetTrail` (or add the script directly to the aircraft).
+3. Assign `Trail` → the `TrailRenderer`.
+4. Assign `Flight` → `FlightController` (auto-found if left empty).
+5. Configure `Min Speed For Trail`, `Max Trail Speed`, `Trail Width Min/Max`, and `Trail Color Gradient`.
+
+### Setup — AltitudeMilestone
+
+1. On the HUD Canvas create a panel containing:
+   - A `Text` element for the milestone message.
+   - A **CanvasGroup** on the panel for fade control.
+2. Create `AltitudeMilestone` GameObject, attach the script.
+3. Assign `Milestone Text` and `Milestone Group`.
+4. Assign `Altitude Source` → `AltitudeController` (auto-found if left empty).
+5. Customise `Milestones` array or leave defaults (1 km → 120 km).
+
+### Updated Architecture
+
+```
+World Scene (Phase 6)
+  ├── DayNightCycle                         ← NEW
+  ├── CloudLayer                            ← NEW
+  ├── ReentryEffect                         ← NEW
+  ├── PlayerRig
+  │   ├── JetTrail (on aircraft mesh)       ← NEW
+  │   └── (existing) FlightController, AltitudeController …
+  └── HUD Canvas additions:
+      └── Milestone Toast (AltitudeMilestone) ← NEW
+```
