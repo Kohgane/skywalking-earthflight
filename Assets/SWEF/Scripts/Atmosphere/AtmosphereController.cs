@@ -32,6 +32,10 @@ namespace SWEF.Atmosphere
         [Tooltip("Multiplier applied to sun intensity when DayNightCycle reports IsNight.")]
         [SerializeField] private float nightIntensityFactor = 0.1f;
 
+        [Header("Weather Integration (optional)")]
+        [Tooltip("When a WeatherController is active and weather is not Clear, fog control is deferred to it.")]
+        [SerializeField] private WeatherController weatherController;
+
         [Header("Transition")]
         [SerializeField] private float transitionSmoothing = 3f;
 
@@ -55,6 +59,8 @@ namespace SWEF.Atmosphere
         {
             if (altitudeSource == null)
                 altitudeSource = FindFirstObjectByType<AltitudeController>();
+            if (weatherController == null)
+                weatherController = FindFirstObjectByType<WeatherController>();
 
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.ExponentialSquared;
@@ -107,6 +113,10 @@ namespace SWEF.Atmosphere
             _currentSkyColor = Color.Lerp(_currentSkyColor, targetSky, 1f - Mathf.Exp(-transitionSmoothing * dt));
             _currentBlend = ExpSmoothing.ExpLerp(_currentBlend, targetBlend, transitionSmoothing, dt);
             _currentSun = ExpSmoothing.ExpLerp(_currentSun, targetSun, transitionSmoothing, dt);
+
+            // Defer fog to WeatherController when active weather is not Clear
+            if (weatherController != null && weatherController.CurrentWeather != WeatherController.WeatherType.Clear)
+                return;
 
             RenderSettings.fogDensity = _currentFog;
             RenderSettings.ambientSkyColor = _currentSkyColor;

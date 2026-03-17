@@ -13,17 +13,20 @@ namespace SWEF.UI
         [Header("Refs")]
         [SerializeField] private FlightController flight;
         [SerializeField] private AltitudeController altitude;
+        [SerializeField] private CameraController cameraController;
 
         [Header("UI Elements")]
         [SerializeField] private Slider throttleSlider;   // Range 0..1
         [SerializeField] private Slider altitudeSlider;   // Range 0..120000
         [SerializeField] private Toggle comfortToggle;
         [SerializeField] private Text altitudeText;       // Switch to TMP_Text if using TextMeshPro
+        [SerializeField] private Button cameraCycleButton;
 
         private void Awake()
         {
             if (flight == null)   flight   = FindFirstObjectByType<FlightController>();
             if (altitude == null) altitude = FindFirstObjectByType<AltitudeController>();
+            if (cameraController == null) cameraController = FindFirstObjectByType<CameraController>();
 
             if (throttleSlider != null)
                 throttleSlider.onValueChanged.AddListener(OnThrottle);
@@ -31,6 +34,8 @@ namespace SWEF.UI
                 altitudeSlider.onValueChanged.AddListener(OnAltitude);
             if (comfortToggle != null)
                 comfortToggle.onValueChanged.AddListener(OnComfort);
+            if (cameraCycleButton != null)
+                cameraCycleButton.onClick.AddListener(OnCameraCycle);
         }
 
         private void Start()
@@ -63,6 +68,11 @@ namespace SWEF.UI
         private void OnComfort(bool on)
         {
             if (flight != null) flight.comfortMode = on;
+        }
+
+        private void OnCameraCycle()
+        {
+            cameraController?.CycleCamera();
         }
     }
 }
