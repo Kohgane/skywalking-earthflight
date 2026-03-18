@@ -143,7 +143,8 @@ namespace SWEF.Multiplayer
             OnLocalStateBroadcast?.Invoke(_localPlayerId, state);
         }
 
-
+        private void Update()
+        {
             _broadcastTimer += Time.deltaTime;
             if (_broadcastTimer >= broadcastInterval)
             {

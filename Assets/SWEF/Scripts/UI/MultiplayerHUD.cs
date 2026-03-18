@@ -246,6 +246,14 @@ namespace SWEF.UI
             var info = _roomManager?.PlayersInRoom.Count > 0
                 ? _roomManager.PlayersInRoom[0]
                 : null;
+            // Look up the specific player who hit the checkpoint
+            if (_roomManager != null)
+            {
+                foreach (var p in _roomManager.PlayersInRoom)
+                {
+                    if (p.playerId == playerId) { info = p; break; }
+                }
+            }
             string name = info?.playerName ?? playerId;
             checkpointNotification.text = $"{name} reached checkpoint {checkpointIndex + 1}!";
 
