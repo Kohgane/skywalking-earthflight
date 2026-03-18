@@ -77,6 +77,46 @@ namespace SWEF.Core
             if (SWEF.Weather.WeatherDataService.Instance != null)
                 SWEF.Weather.WeatherDataService.Instance.OnWeatherTransitionStart += (_, to) =>
                     RecordWeatherCondition(to.condition);
+
+            // Phase 20 — subscribe to multiplayer events
+            var roomManager = SWEF.Multiplayer.RoomManager.Instance != null
+                ? SWEF.Multiplayer.RoomManager.Instance
+                : FindFirstObjectByType<SWEF.Multiplayer.RoomManager>();
+            if (roomManager != null)
+            {
+                roomManager.OnRoomJoined  += info =>
+                    RecordMultiplayerEvent("room_joined",  new System.Collections.Generic.Dictionary<string, string>
+                    {
+                        { "roomId",  info.roomId  },
+                        { "region",  info.region  },
+                        { "players", info.playerCount.ToString() }
+                    });
+                roomManager.OnRoomCreated += info =>
+                    RecordMultiplayerEvent("room_created", new System.Collections.Generic.Dictionary<string, string>
+                    {
+                        { "roomId", info.roomId },
+                        { "region", info.region }
+                    });
+            }
+
+            var race = SWEF.Multiplayer.MultiplayerRace.Instance != null
+                ? SWEF.Multiplayer.MultiplayerRace.Instance
+                : FindFirstObjectByType<SWEF.Multiplayer.MultiplayerRace>();
+            if (race != null)
+            {
+                race.OnRaceStateChanged += state =>
+                {
+                    if (state == SWEF.Multiplayer.RaceState.Racing)
+                        RecordMultiplayerEvent("race_started", null);
+                };
+                race.OnRaceFinished += results =>
+                    RecordMultiplayerEvent("race_finished",
+                        new System.Collections.Generic.Dictionary<string, string>
+                        {
+                            { "players", results?.Count.ToString() ?? "0" },
+                            { "winner",  results?.Count > 0 ? results[0].playerName : "none" }
+                        });
+            }
         }
 
         private void Update()
@@ -119,6 +159,29 @@ namespace SWEF.Core
             PlayerPrefs.Save();
             LogEvent("weather_condition", condition.ToString());
         }
+
+        /// <summary>
+        /// Records a multiplayer event with optional key-value parameters.
+        /// Logs to the console using the standard SWEF format.
+        /// </summary>
+        /// <param name="eventType">Event type identifier (e.g. "room_joined").</param>
+        /// <param name="parameters">Optional string-to-string parameter map.</param>
+        public void RecordMultiplayerEvent(string eventType,
+            System.Collections.Generic.Dictionary<string, string> parameters)
+        {
+            var sb = new System.Text.StringBuilder();
+            sb.Append($"[SWEF] MP Event: {eventType}");
+
+            if (parameters != null)
+            {
+                foreach (var kvp in parameters)
+                    sb.Append($"  {kvp.Key}={kvp.Value}");
+            }
+
+            Debug.Log(sb.ToString());
+            LogEvent($"mp_{eventType}");
+        }
+
 
         /// <summary>
         /// Resets all analytics keys in PlayerPrefs and clears in-memory values.

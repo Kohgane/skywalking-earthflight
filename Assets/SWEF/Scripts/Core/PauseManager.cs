@@ -56,6 +56,16 @@ namespace SWEF.Core
         /// <summary>Toggles between paused and unpaused states.</summary>
         public void TogglePause()
         {
+            // In multiplayer rooms, do not freeze time — use overlay only
+            if (IsInMultiplayerRoom)
+            {
+                if (!_multiplayerPause)
+                    ShowMultiplayerPauseOverlay();
+                else
+                    HideMultiplayerPauseOverlay();
+                return;
+            }
+
             IsPaused = !IsPaused;
             Time.timeScale = IsPaused ? 0f : 1f;
             SetPauseVisuals(IsPaused);
@@ -121,5 +131,51 @@ namespace SWEF.Core
 
         /// <summary>Whether the game is currently paused specifically for photo mode.</summary>
         public bool IsPhotoModePaused => _photoModePause;
+
+        // ── Phase 20 — Multiplayer pause ─────────────────────────────────────────
+
+        [Header("Phase 20 — Multiplayer")]
+        [SerializeField] private CanvasGroup multiplayerPauseOverlay;
+
+        private bool _multiplayerPause;
+
+        /// <summary>
+        /// Whether the game is currently in multiplayer mode.
+        /// When true, <see cref="TogglePause"/> dims the screen instead of freezing time.
+        /// </summary>
+        public bool IsInMultiplayerRoom =>
+            FindFirstObjectByType<SWEF.Multiplayer.MultiplayerManager>()?.IsInRoom ?? false;
+
+        /// <summary>
+        /// Shows a dim overlay for multiplayer without stopping <see cref="Time.timeScale"/>,
+        /// since freezing time in a multiplayer session would desync other players.
+        /// </summary>
+        public void ShowMultiplayerPauseOverlay()
+        {
+            _multiplayerPause = true;
+            if (multiplayerPauseOverlay != null)
+            {
+                multiplayerPauseOverlay.alpha          = 0.6f;
+                multiplayerPauseOverlay.interactable   = true;
+                multiplayerPauseOverlay.blocksRaycasts = true;
+            }
+            Debug.Log("[SWEF][PauseManager] Multiplayer pause overlay shown (time not frozen).");
+        }
+
+        /// <summary>Hides the multiplayer pause overlay.</summary>
+        public void HideMultiplayerPauseOverlay()
+        {
+            _multiplayerPause = false;
+            if (multiplayerPauseOverlay != null)
+            {
+                multiplayerPauseOverlay.alpha          = 0f;
+                multiplayerPauseOverlay.interactable   = false;
+                multiplayerPauseOverlay.blocksRaycasts = false;
+            }
+            Debug.Log("[SWEF][PauseManager] Multiplayer pause overlay hidden.");
+        }
+
+        /// <summary>Whether the multiplayer pause overlay is currently visible.</summary>
+        public bool IsMultiplayerPaused => _multiplayerPause;
     }
 }

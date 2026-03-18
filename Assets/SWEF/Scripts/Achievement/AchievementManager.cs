@@ -46,6 +46,12 @@ namespace SWEF.Achievement
             new AchievementDef { id = "storm_chaser",            title = "Storm Chaser ⛈️",            description = "Fly through 10 thunderstorms",                   emoji = "⛈️" },
             new AchievementDef { id = "snowbird",                title = "Snowbird ❄️",                description = "Fly in snow conditions",                         emoji = "❄️" },
             new AchievementDef { id = "clear_skies",             title = "Clear Skies ☀️",             description = "Complete a full flight in perfect clear weather", emoji = "☀️" },
+            // Phase 20 — Multiplayer achievements
+            new AchievementDef { id = "first_multiplayer_flight", title = "Social Flyer 🌐",           description = "Join a multiplayer room for the first time",      emoji = "🌐" },
+            new AchievementDef { id = "social_butterfly",         title = "Social Butterfly 🦋",       description = "Fly with 5+ different players across sessions",   emoji = "🦋" },
+            new AchievementDef { id = "race_winner",              title = "Race Winner 🏆",             description = "Win a multiplayer altitude race",                 emoji = "🏆" },
+            new AchievementDef { id = "race_participant_10",      title = "Veteran Racer 🎽",           description = "Participate in 10 multiplayer races",             emoji = "🎽" },
+            new AchievementDef { id = "ping_master",              title = "Ping Master 📡",             description = "Send 50 pings to other players",                  emoji = "📡" },
         };
 
         // ── Inspector refs ───────────────────────────────────────────────────────
@@ -70,6 +76,13 @@ namespace SWEF.Achievement
         private int   _thunderstormCount;
         private bool  _inThunderstorm;
         private bool  _clearFlightActive;
+
+        // Phase 20 — Multiplayer counters (persisted via PlayerPrefs)
+        private const string KEY_UNIQUE_PLAYERS = "SWEF_MP_UniquePlayers";
+        private const string KEY_RACE_COUNT     = "SWEF_MP_RaceCount";
+        private const string KEY_PING_COUNT     = "SWEF_MP_PingCount";
+        private int  _raceCount;
+        private int  _pingCount;
 
         /// <summary>Number of achievements the player has unlocked.</summary>
         public int UnlockedCount
@@ -106,6 +119,44 @@ namespace SWEF.Achievement
                 weatherStateManager = SWEF.Weather.WeatherStateManager.Instance != null
                     ? SWEF.Weather.WeatherStateManager.Instance
                     : FindFirstObjectByType<SWEF.Weather.WeatherStateManager>();
+
+            // Phase 20 — Load persisted multiplayer counters
+            _raceCount = PlayerPrefs.GetInt(KEY_RACE_COUNT, 0);
+            _pingCount  = PlayerPrefs.GetInt(KEY_PING_COUNT, 0);
+
+            // Subscribe to multiplayer events
+            var roomManager = SWEF.Multiplayer.RoomManager.Instance != null
+                ? SWEF.Multiplayer.RoomManager.Instance
+                : FindFirstObjectByType<SWEF.Multiplayer.RoomManager>();
+            if (roomManager != null)
+                roomManager.OnRoomJoined += _ => NotifyMultiplayerRoomJoined();
+
+            var race = SWEF.Multiplayer.MultiplayerRace.Instance != null
+                ? SWEF.Multiplayer.MultiplayerRace.Instance
+                : FindFirstObjectByType<SWEF.Multiplayer.MultiplayerRace>();
+            if (race != null)
+            {
+                race.OnRaceStateChanged += state =>
+                {
+                    if (state == SWEF.Multiplayer.RaceState.Racing)
+                        NotifyRaceStarted();
+                };
+                race.OnRaceFinished += results =>
+                {
+                    if (results != null && results.Count > 0)
+                    {
+                        var localId = FindFirstObjectByType<SWEF.Multiplayer.MultiplayerManager>()?.LocalPlayerId ?? "";
+                        if (!string.IsNullOrEmpty(localId) && results[0].playerId == localId)
+                            TryUnlock("race_winner");
+                    }
+                };
+            }
+
+            var chat = SWEF.Multiplayer.ProximityChat.Instance != null
+                ? SWEF.Multiplayer.ProximityChat.Instance
+                : FindFirstObjectByType<SWEF.Multiplayer.ProximityChat>();
+            if (chat != null)
+                chat.OnPingReceived += (_, __) => NotifyPingSent();
         }
 
         private void Update()
@@ -182,6 +233,52 @@ namespace SWEF.Achievement
         /// <summary>Returns true if the achievement with the given id has been unlocked.</summary>
         public bool IsUnlocked(string id) =>
             PlayerPrefs.GetInt($"SWEF_ACH_{id}", 0) == 1;
+
+        // ── Phase 20 — Multiplayer Achievement Notifiers ──────────────────────────
+
+        /// <summary>
+        /// Call when the local player joins a multiplayer room for the first time.
+        /// Awards <c>first_multiplayer_flight</c>.
+        /// </summary>
+        public void NotifyMultiplayerRoomJoined()
+        {
+            TryUnlock("first_multiplayer_flight");
+
+            // Track unique player sessions for social_butterfly
+            int sessions = PlayerPrefs.GetInt(KEY_UNIQUE_PLAYERS, 0) + 1;
+            PlayerPrefs.SetInt(KEY_UNIQUE_PLAYERS, sessions);
+            PlayerPrefs.Save();
+            if (sessions >= 5)
+                TryUnlock("social_butterfly");
+        }
+
+        /// <summary>
+        /// Call when the local player participates in a multiplayer race start.
+        /// Awards <c>race_participant_10</c> after 10 races.
+        /// </summary>
+        public void NotifyRaceStarted()
+        {
+            _raceCount++;
+            PlayerPrefs.SetInt(KEY_RACE_COUNT, _raceCount);
+            PlayerPrefs.Save();
+            if (_raceCount >= 10)
+                TryUnlock("race_participant_10");
+        }
+
+        /// <summary>
+        /// Call when the local player sends a ping to another player.
+        /// Awards <c>ping_master</c> after 50 pings.
+        /// </summary>
+        public void NotifyPingSent()
+        {
+            _pingCount++;
+            PlayerPrefs.SetInt(KEY_PING_COUNT, _pingCount);
+            PlayerPrefs.Save();
+            if (_pingCount >= 50)
+                TryUnlock("ping_master");
+        }
+
+
 
         /// <summary>
         /// Attempts to unlock the achievement. Returns true if it was newly unlocked,

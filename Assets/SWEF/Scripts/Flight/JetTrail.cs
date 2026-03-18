@@ -83,5 +83,27 @@ namespace SWEF.Flight
                 trail.endColor = endColor;
             }
         }
+        // ── Phase 20 — Remote trail control ──────────────────────────────────────
+
+        /// <summary>
+        /// Sets the jet trail state from a remote sync packet.
+        /// 0 = off, 1+ = on (higher values = higher intensity override).
+        /// </summary>
+        /// <param name="state">Trail state integer from <see cref="SWEF.Multiplayer.PlayerSyncData"/>.</param>
+        public void SetTrailState(int state)
+        {
+            if (trail == null) return;
+
+            if (state <= 0)
+            {
+                trail.emitting = false;
+                return;
+            }
+
+            float intensity = Mathf.Clamp01(state / 255f);
+            trail.emitting   = true;
+            trail.startWidth = Mathf.Lerp(trailWidthMin, trailWidthMax, intensity);
+            trail.endWidth   = 0f;
+        }
     }
 }

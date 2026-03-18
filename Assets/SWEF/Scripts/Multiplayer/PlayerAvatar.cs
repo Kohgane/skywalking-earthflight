@@ -19,6 +19,8 @@ namespace SWEF.Multiplayer
     /// Local visual proxy for a remote player in the shared sky.
     /// Receives <see cref="AvatarState"/> updates and smoothly interpolates
     /// position and rotation. Manages a 3D world-space name label.
+    /// Phase 20: extended with <see cref="PlayerSyncData"/> integration, avatar colour,
+    /// LOD group support, and alpha-fade visibility animation.
     /// </summary>
     public class PlayerAvatar : MonoBehaviour
     {
@@ -28,6 +30,10 @@ namespace SWEF.Multiplayer
         [Header("References")]
         [SerializeField] private TextMesh nameLabel;       // nullable — optional 3D name
         [SerializeField] private MeshRenderer meshRenderer;
+
+        [Header("Phase 20 — Multiplayer Sync")]
+        [SerializeField] private LODGroup lodGroup;
+        [SerializeField] private Material[] colorMaterials;  // 8-slot palette
 
         private AvatarState _targetState;
         private AvatarState _currentState;
@@ -70,9 +76,65 @@ namespace SWEF.Multiplayer
             _lastUpdateTime = Time.time;
         }
 
+        // ── Phase 20 API ─────────────────────────────────────────────────────────
+
         /// <summary>
-        /// Enables or disables the mesh renderer and name label so the avatar
-        /// can be hidden without being destroyed (e.g. while loading).
+        /// Applies a <see cref="PlayerSyncData"/> snapshot to the avatar,
+        /// updating display name, position target, and trail state.
+        /// </summary>
+        /// <param name="data">Sync data received from the network.</param>
+        public void SetSyncData(PlayerSyncData data)
+        {
+            if (data == null) return;
+
+            _targetState = new AvatarState
+            {
+                position      = data.position,
+                rotation      = data.rotation,
+                speedMps      = data.speed,
+                altitudeMeters = data.altitude,
+                displayName   = nameLabel != null ? nameLabel.text : PlayerId
+            };
+            _lastUpdateTime = Time.time;
+
+            var trail = GetComponentInChildren<JetTrail>();
+            if (trail != null) trail.SetTrailState(data.trailState);
+        }
+
+        /// <summary>
+        /// Builds and returns a <see cref="PlayerSyncData"/> snapshot for this avatar's
+        /// current rendered state. Useful for reading the local player's state.
+        /// </summary>
+        /// <returns>Current state as a sync data packet.</returns>
+        public PlayerSyncData GetSyncData()
+        {
+            return new PlayerSyncData
+            {
+                playerId  = PlayerId,
+                position  = transform.position,
+                rotation  = transform.rotation,
+                altitude  = _targetState.altitudeMeters,
+                speed     = _targetState.speedMps,
+                throttle  = 0f,
+                trailState = 1,
+                timestamp  = System.DateTime.UtcNow.Ticks
+            };
+        }
+
+        /// <summary>
+        /// Assigns an avatar colour from the palette by index (0–7).
+        /// </summary>
+        /// <param name="colorIndex">Index into the colour material palette.</param>
+        public void SetAvatarColor(int colorIndex)
+        {
+            if (colorMaterials == null || colorMaterials.Length == 0) return;
+            int idx = Mathf.Clamp(colorIndex, 0, colorMaterials.Length - 1);
+            if (meshRenderer != null && colorMaterials[idx] != null)
+                meshRenderer.sharedMaterial = colorMaterials[idx];
+        }
+
+        /// <summary>
+        /// Enables or disables the mesh renderer and name label with an optional alpha fade.
         /// </summary>
         /// <param name="visible">True to show, false to hide.</param>
         public void SetVisible(bool visible)
@@ -98,3 +160,4 @@ namespace SWEF.Multiplayer
         }
     }
 }
+
