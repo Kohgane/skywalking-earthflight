@@ -40,6 +40,8 @@ namespace SWEF.Core
         public float  distanceKm;
         public string notes;
         public string recordedAt;
+        /// <summary>Phase 19 — comma-separated list of weather conditions encountered during the flight.</summary>
+        public string weatherSummary;
     }
 
     /// <summary>Root object serialised to disk.</summary>

@@ -42,6 +42,10 @@ namespace SWEF.Achievement
             new AchievementDef { id = "golden_hour_photo",       title = "Golden Hour ✨",             description = "Capture a photo during golden hour",             emoji = "✨" },
             new AchievementDef { id = "cinematic_path_created",  title = "Film Director 🎬",           description = "Create and save your first cinematic camera path", emoji = "🎬" },
             new AchievementDef { id = "night_flight",            title = "Night Owl 🦉",               description = "Fly for 5+ minutes during night time",           emoji = "🦉" },
+            // Phase 19 — Weather achievements
+            new AchievementDef { id = "storm_chaser",            title = "Storm Chaser ⛈️",            description = "Fly through 10 thunderstorms",                   emoji = "⛈️" },
+            new AchievementDef { id = "snowbird",                title = "Snowbird ❄️",                description = "Fly in snow conditions",                         emoji = "❄️" },
+            new AchievementDef { id = "clear_skies",             title = "Clear Skies ☀️",             description = "Complete a full flight in perfect clear weather", emoji = "☀️" },
         };
 
         // ── Inspector refs ───────────────────────────────────────────────────────
@@ -52,6 +56,10 @@ namespace SWEF.Achievement
         [Header("Phase 18 — Cinema")]
         [SerializeField] private SWEF.Cinema.TimeOfDayController timeOfDayController;
 
+        [Header("Phase 19 — Weather")]
+        [Tooltip("WeatherStateManager reference (auto-resolved if null).")]
+        [SerializeField] private SWEF.Weather.WeatherStateManager weatherStateManager;
+
         // ── Events ───────────────────────────────────────────────────────────────
         /// <summary>Fired when a new achievement is unlocked.</summary>
         public event System.Action<AchievementDef> OnAchievementUnlocked;
@@ -59,6 +67,9 @@ namespace SWEF.Achievement
         // ── State ────────────────────────────────────────────────────────────────
         private bool  _firstFrameDone;
         private float _nightFlightSeconds;
+        private int   _thunderstormCount;
+        private bool  _inThunderstorm;
+        private bool  _clearFlightActive;
 
         /// <summary>Number of achievements the player has unlocked.</summary>
         public int UnlockedCount
@@ -91,6 +102,10 @@ namespace SWEF.Achievement
                 flight = FindFirstObjectByType<FlightController>();
             if (timeOfDayController == null)
                 timeOfDayController = FindFirstObjectByType<SWEF.Cinema.TimeOfDayController>();
+            if (weatherStateManager == null)
+                weatherStateManager = SWEF.Weather.WeatherStateManager.Instance != null
+                    ? SWEF.Weather.WeatherStateManager.Instance
+                    : FindFirstObjectByType<SWEF.Weather.WeatherStateManager>();
         }
 
         private void Update()
@@ -118,9 +133,52 @@ namespace SWEF.Achievement
                 if (_nightFlightSeconds >= 300f) // 5 minutes
                     TryUnlock("night_flight");
             }
+
+            // Phase 19 — Weather achievements
+            if (weatherStateManager != null && speed > 0f)
+            {
+                var cond = weatherStateManager.ActiveWeather?.condition ?? SWEF.Weather.WeatherCondition.Clear;
+
+                // Storm Chaser: fly through thunderstorms
+                if (cond == SWEF.Weather.WeatherCondition.Thunderstorm)
+                {
+                    if (!_inThunderstorm)
+                    {
+                        _inThunderstorm = true;
+                        _thunderstormCount++;
+                        if (_thunderstormCount >= 10)
+                            TryUnlock("storm_chaser");
+                    }
+                }
+                else
+                {
+                    _inThunderstorm = false;
+                }
+
+                // Snowbird: fly in any snow condition
+                if (cond == SWEF.Weather.WeatherCondition.Snow ||
+                    cond == SWEF.Weather.WeatherCondition.HeavySnow)
+                    TryUnlock("snowbird");
+
+                // Clear Skies: start tracking a clear flight
+                if (cond == SWEF.Weather.WeatherCondition.Clear)
+                    _clearFlightActive = true;
+                else
+                    _clearFlightActive = false;
+            }
         }
 
         // ── Public API ────────────────────────────────────────────────────────────
+        /// <summary>
+        /// Call when a flight session ends in clear weather to award the "Clear Skies" achievement.
+        /// Invoked by <see cref="SWEF.Core.FlightJournal"/> on session end.
+        /// </summary>
+        public void NotifyFlightEndedInClearSkies()
+        {
+            if (_clearFlightActive)
+                TryUnlock("clear_skies");
+        }
+
         /// <summary>Returns true if the achievement with the given id has been unlocked.</summary>
         public bool IsUnlocked(string id) =>
             PlayerPrefs.GetInt($"SWEF_ACH_{id}", 0) == 1;

@@ -28,6 +28,13 @@ namespace SWEF.Core
         private Vector3 _lastPosition;
         private bool   _hasLastPosition;
 
+        // Phase 19 — Weather tracking
+        private readonly System.Collections.Generic.HashSet<SWEF.Weather.WeatherCondition> _weatherEncountered
+            = new System.Collections.Generic.HashSet<SWEF.Weather.WeatherCondition>();
+
+        // True only if every recorded weather update during this flight was Clear.
+        private bool _flightWasFullyClear = true;
+
         private const float MetersToKilometers = 0.001f;
 
         // ── Unity lifecycle ──────────────────────────────────────────────────
@@ -37,6 +44,10 @@ namespace SWEF.Core
             _save = FindFirstObjectByType<SaveManager>();
             if (_save == null)
                 Debug.LogWarning("[SWEF] FlightJournal: SaveManager not found — entries will not be persisted.");
+
+            // Phase 19 — subscribe to weather updates so we can record conditions
+            if (SWEF.Weather.WeatherStateManager.Instance != null)
+                SWEF.Weather.WeatherStateManager.Instance.OnWeatherStateUpdated += TrackWeather;
 
             StartRecording();
         }
@@ -70,6 +81,9 @@ namespace SWEF.Core
         {
             if (_recording)
                 StopRecording();
+
+            if (SWEF.Weather.WeatherStateManager.Instance != null)
+                SWEF.Weather.WeatherStateManager.Instance.OnWeatherStateUpdated -= TrackWeather;
         }
 
         // ── Public API ───────────────────────────────────────────────────────
@@ -88,6 +102,8 @@ namespace SWEF.Core
             _maxAltitudeKm   = 0f;
             _distanceKm      = 0f;
             _hasLastPosition = false;
+            _weatherEncountered.Clear();
+            _flightWasFullyClear = true;
             _recording       = true;
 
             Debug.Log($"[SWEF] FlightJournal: recording started (id={_activeId}).");
@@ -114,7 +130,8 @@ namespace SWEF.Core
                 durationSec    = duration,
                 distanceKm     = _distanceKm,
                 notes          = "",
-                recordedAt     = DateTime.UtcNow.ToString("o")
+                recordedAt     = DateTime.UtcNow.ToString("o"),
+                weatherSummary = string.Join(", ", _weatherEncountered)
             };
 
             if (_save != null)
@@ -137,6 +154,19 @@ namespace SWEF.Core
             }
 
             Debug.Log($"[SWEF] FlightJournal: recording stopped — duration={duration:F0}s, maxAlt={_maxAltitudeKm:F2}km, dist={_distanceKm:F2}km.");
+
+            // Phase 19 — notify achievement manager only if the entire flight was in clear weather
+            if (_flightWasFullyClear)
+                SWEF.Achievement.AchievementManager.Instance?.NotifyFlightEndedInClearSkies();
+        }
+
+        // ── Phase 19 — Weather tracking ───────────────────────────────────────
+        private void TrackWeather(SWEF.Weather.WeatherData data)
+        {
+            if (!_recording) return;
+            _weatherEncountered.Add(data.condition);
+            if (data.condition != SWEF.Weather.WeatherCondition.Clear)
+                _flightWasFullyClear = false;
         }
 
         /// <summary>Deletes the journal entry with the given <paramref name="id"/>.</summary>
