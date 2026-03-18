@@ -880,3 +880,83 @@ Boot Scene / DontDestroyOnLoad (Phase 8)
   ├── CrashReporter                          ← NEW
   └── (all existing persistent singletons)
 ```
+
+## Phase 9 — Advanced Camera, Weather System & Mini-Map
+
+Phase 9 adds 6 new scripts providing multi-mode camera control, dynamic weather simulation, wind physics, and a mini-map overlay.
+
+### New Scripts
+
+| Script | Namespace | Purpose |
+|--------|-----------|---------|
+| `Flight/CameraController.cs` | `SWEF.Flight` | Four camera modes (FirstPerson, ThirdPerson, Orbit, Cinematic) with smooth transitions |
+| `Atmosphere/WeatherController.cs` | `SWEF.Atmosphere` | Dynamic weather system (Clear/Cloudy/Rain/Storm/Snow) with altitude-based rules |
+| `Atmosphere/WindController.cs` | `SWEF.Atmosphere` | Wind simulation with gusts, Perlin noise direction, weather-scaled strength |
+| `UI/MiniMapController.cs` | `SWEF.UI` | Top-down mini-map with configurable zoom, position, and altitude-adaptive scaling |
+| `UI/CameraUI.cs` | `SWEF.UI` | Camera mode switching buttons and mode display text |
+| `UI/WeatherUI.cs` | `SWEF.UI` | Weather info display, wind indicator, manual weather override dropdown |
+
+### Modified Scripts
+
+| Script | Change |
+|--------|--------|
+| `UI/HudBinder.cs` | Added camera cycle button wiring |
+| `Atmosphere/AtmosphereController.cs` | Defers fog control to WeatherController when weather is active |
+
+### Setup
+
+#### 1. CameraController
+1. On the PlayerRig GameObject, attach `CameraController` script
+2. Assign `Main Camera` reference (or leave empty for auto-find)
+3. Adjust third-person offset, orbit distance, and cinematic speed in Inspector
+4. Default mode: FirstPerson
+
+#### 2. WeatherController
+1. Create empty GameObject `WeatherController` in World scene
+2. Attach `WeatherController` script
+3. Create ParticleSystems for rain and snow; assign them
+4. Assign `Sun Light` → your Directional Light
+5. Auto weather changes every 120 seconds by default
+
+#### 3. WindController
+1. Create empty GameObject `WindController` in World scene
+2. Attach `WindController` script
+3. References to FlightController and WeatherController are auto-found
+4. Adjust max wind force and gust parameters in Inspector
+
+#### 4. MiniMapController
+1. Create a secondary Camera named `MiniMapCamera` — set Clear Flags to Solid Color, Culling Mask as needed
+2. Create a RenderTexture (256×256) and assign to the camera
+3. On the HUD Canvas, add a `RawImage` for the mini-map display
+4. Create `MiniMapController` GameObject, attach script, wire references
+
+#### 5. CameraUI
+1. On the HUD Canvas, add a Button for camera cycling and a Text for mode display
+2. Optionally add 4 individual mode buttons
+3. Create `CameraUI` GameObject, attach script, wire references
+
+#### 6. WeatherUI
+1. On the HUD Canvas, add Text elements for weather and wind info
+2. Add an optional Image for weather icon and a Dropdown for manual override
+3. Prepare 5 weather icon sprites (Clear/Cloudy/Rain/Storm/Snow)
+4. Create `WeatherUI` GameObject, attach script, wire references
+
+### Updated Architecture
+```
+World Scene (Phase 9)
+  ├── WeatherController              ← NEW
+  ├── WindController                 ← NEW
+  ├── AtmosphereController           (modified — defers fog to WeatherController)
+  ├── PlayerRig
+  │   ├── FlightController
+  │   ├── CameraController           ← NEW
+  │   ├── TouchInputRouter
+  │   ├── AltitudeController
+  │   └── Main Camera
+  ├── MiniMapCamera                  ← NEW (secondary camera)
+  └── HUD Canvas
+      ├── HudBinder                  (modified — camera cycle button)
+      ├── MiniMapController + RawImage  ← NEW
+      ├── CameraUI                   ← NEW
+      └── WeatherUI                  ← NEW
+```
