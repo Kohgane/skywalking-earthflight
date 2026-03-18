@@ -31,6 +31,25 @@ namespace SWEF.Settings
         /// <summary>Whether local/push notifications are enabled for this device.</summary>
         public bool  NotificationsEnabled { get; private set; } = DefaultNotificationsEnabled;
 
+        // ── Phase 16 — Haptics ───────────────────────────────────────────────────
+        public const bool  DefaultHapticsEnabled  = true;
+        public const float DefaultHapticIntensity = 1.0f;
+
+        private const string KeyHapticsEnabled  = "SWEF_HapticsEnabled";
+        private const string KeyHapticIntensity = "SWEF_HapticIntensity";
+
+        /// <summary>Whether haptic feedback is enabled.</summary>
+        public bool  HapticsEnabled  { get; private set; } = DefaultHapticsEnabled;
+
+        /// <summary>Haptic intensity multiplier (0–1).</summary>
+        public float HapticIntensity { get; private set; } = DefaultHapticIntensity;
+
+        /// <summary>Raised when the haptics-enabled setting changes.</summary>
+        public static event Action<bool>  OnHapticsSettingChanged;
+
+        /// <summary>Raised when the haptic intensity setting changes.</summary>
+        public static event Action<float> OnHapticIntensityChanged;
+
         // ── References (optional — auto-found via FindFirstObjectByType if not set) ──
         [Header("Refs")]
         [SerializeField] private FlightController    flightController;
@@ -76,6 +95,8 @@ namespace SWEF.Settings
             MaxSpeed             = PlayerPrefs.GetFloat(KeyMaxSpeed,        DefaultMaxSpeed);
             NotificationsEnabled = PlayerPrefs.GetInt(KeyNotificationsEnabled,
                 DefaultNotificationsEnabled ? 1 : 0) == 1;
+            HapticsEnabled       = PlayerPrefs.GetInt(KeyHapticsEnabled,  DefaultHapticsEnabled  ? 1 : 0) == 1;
+            HapticIntensity      = PlayerPrefs.GetFloat(KeyHapticIntensity, DefaultHapticIntensity);
 
             // Phase 10 — override with SaveManager values when present
             if (_saveManager != null && _saveManager.HasSaveFile())
@@ -101,6 +122,8 @@ namespace SWEF.Settings
             PlayerPrefs.SetFloat(KeyTouchSensitivity, TouchSensitivity);
             PlayerPrefs.SetFloat(KeyMaxSpeed,         MaxSpeed);
             PlayerPrefs.SetInt(KeyNotificationsEnabled, NotificationsEnabled ? 1 : 0);
+            PlayerPrefs.SetInt(KeyHapticsEnabled,     HapticsEnabled  ? 1 : 0);
+            PlayerPrefs.SetFloat(KeyHapticIntensity,  HapticIntensity);
             PlayerPrefs.Save();
 
             // Phase 10 — mirror to SaveManager
@@ -128,6 +151,8 @@ namespace SWEF.Settings
             TouchSensitivity     = DefaultTouchSensitivity;
             MaxSpeed             = DefaultMaxSpeed;
             NotificationsEnabled = DefaultNotificationsEnabled;
+            HapticsEnabled       = DefaultHapticsEnabled;
+            HapticIntensity      = DefaultHapticIntensity;
             Save();
         }
 
@@ -143,6 +168,20 @@ namespace SWEF.Settings
         {
             NotificationsEnabled = b;
             OnNotificationSettingChanged?.Invoke(b);
+        }
+
+        /// <summary>Sets whether haptics are enabled and fires <see cref="OnHapticsSettingChanged"/>.</summary>
+        public void SetHapticsEnabled(bool b)
+        {
+            HapticsEnabled = b;
+            OnHapticsSettingChanged?.Invoke(b);
+        }
+
+        /// <summary>Sets the haptic intensity multiplier and fires <see cref="OnHapticIntensityChanged"/>.</summary>
+        public void SetHapticIntensity(float v)
+        {
+            HapticIntensity = Mathf.Clamp01(v);
+            OnHapticIntensityChanged?.Invoke(HapticIntensity);
         }
 
         // ── Internal ─────────────────────────────────────────────────────────

@@ -33,6 +33,10 @@ namespace SWEF.Settings
         [SerializeField] private Button     xrSettingsButton;
         [SerializeField] private GameObject xrSettingsPanel;
 
+        [Header("Accessibility")]
+        [SerializeField] private Button     accessibilitySettingsButton;
+        [SerializeField] private GameObject accessibilitySettingsPanel;
+
         [Header("Quality Preset (Phase 8)")]
         [SerializeField] private QualityPresetManager qualityManager;
         [SerializeField] private Dropdown             qualityDropdown;
@@ -53,6 +57,9 @@ namespace SWEF.Settings
             if (openButton  != null) openButton.onClick.AddListener(OpenPanel);
             if (closeButton != null) closeButton.onClick.AddListener(ClosePanel);
             if (resetButton != null) resetButton.onClick.AddListener(OnReset);
+
+            if (accessibilitySettingsButton != null)
+                accessibilitySettingsButton.onClick.AddListener(OpenAccessibilityPanel);
 
             if (masterVolumeSlider != null)
             {
@@ -98,6 +105,7 @@ namespace SWEF.Settings
             }
 
             if (panelRoot != null) panelRoot.SetActive(false);
+            if (accessibilitySettingsPanel != null) accessibilitySettingsPanel.SetActive(false);
         }
 
         private void OnEnable()
@@ -220,6 +228,18 @@ namespace SWEF.Settings
             bool xrActive = SWEF.XR.XRPlatformDetector.IsXRActive;
             if (xrSettingsButton != null) xrSettingsButton.gameObject.SetActive(xrActive);
             if (xrSettingsPanel  != null) xrSettingsPanel.SetActive(false); // panel starts hidden; opened via button
+        }
+
+        private void OpenAccessibilityPanel()
+        {
+            if (accessibilitySettingsPanel != null)
+                accessibilitySettingsPanel.SetActive(true);
+
+            // Delegate to AccessibilitySettingsUI.OpenPanel if present
+            var ui = accessibilitySettingsPanel != null
+                ? accessibilitySettingsPanel.GetComponent<SWEF.Settings.AccessibilitySettingsUI>()
+                : null;
+            ui?.OpenPanel();
         }
     }
 }

@@ -15,6 +15,18 @@ namespace SWEF.UI
         // ── Singleton ────────────────────────────────────────────────────────────
         public static AccessibilityManager Instance { get; private set; }
 
+        // ── Phase 16 — AccessibilityController integration ────────────────────────
+        /// <summary>
+        /// Returns the active <see cref="AccessibilityController"/> if one exists in the scene.
+        /// </summary>
+        public AccessibilityController Controller => FindFirstObjectByType<AccessibilityController>();
+
+        /// <summary>
+        /// Convenience wrapper: announces a message via <see cref="AccessibilityController.Announce"/>
+        /// when the controller is present and the screen reader is enabled.
+        /// </summary>
+        public void Announce(string message) => Controller?.Announce(message);
+
         // ── PlayerPrefs keys ─────────────────────────────────────────────────────
         private const string KeyFontScale     = "SWEF_FontScale";
         private const string KeyHighContrast  = "SWEF_HighContrast";

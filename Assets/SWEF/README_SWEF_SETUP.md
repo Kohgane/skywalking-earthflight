@@ -1510,3 +1510,153 @@ Settings Layer (Phase 15)
   ├── SettingsUI    (+ xrSettingsButton / xrSettingsPanel)  ← MODIFIED
   └── XRSettingsUI  (XR comfort / recenter panel)           ← NEW
 ```
+
+---
+
+## Phase 16 — Accessibility Enhancement & Haptic Feedback System
+
+### New Scripts
+
+| Script | Namespace | Purpose |
+|--------|-----------|---------|
+| `Haptic/HapticManager.cs` | `SWEF.Haptic` | Singleton haptic/vibration hub — iOS Taptic, Android VibrationEffect, Editor stub |
+| `Haptic/HapticPattern.cs` | `SWEF.Haptic` | Enum of all named haptic patterns |
+| `Haptic/HapticTriggerZone.cs` | `SWEF.Haptic` | Bridges gameplay events (altitude, boost, stall, teleport, screenshot, achievements) to HapticManager |
+| `UI/AccessibilityController.cs` | `SWEF.UI` | Colorblind modes, dynamic text scaling, screen-reader announcements, reduced-motion propagation |
+| `UI/ColorblindMode.cs` | `SWEF.UI` | Enum: Normal, Protanopia, Deuteranopia, Tritanopia, Achromatopsia |
+| `UI/OneHandedModeController.cs` | `SWEF.UI` | Repositions HUD elements to a single-hand reach zone (Left or Right) |
+| `UI/VoiceCommandManager.cs` | `SWEF.UI` | Text-based voice-command stub; parses transcripts against keyword table |
+| `UI/VoiceCommand.cs` | `SWEF.UI` | Enum of all recognised voice commands |
+| `Settings/AccessibilitySettingsUI.cs` | `SWEF.Settings` | Full accessibility settings panel: colorblind, text scale, reduced motion, one-handed, haptics, voice, screen reader |
+
+### Modified Scripts
+
+| Script | Change |
+|--------|--------|
+| `Core/BootManager.cs` | Calls `AccessibilityController.ApplySavedSettings()` after XR detection |
+| `Settings/SettingsUI.cs` | Added `[Header("Accessibility")]` — `accessibilitySettingsButton` + `accessibilitySettingsPanel` (nullable) |
+| `Settings/SettingsManager.cs` | Added `HapticsEnabled`, `HapticIntensity` properties, `SetHapticsEnabled/Intensity` setters, `OnHapticsSettingChanged`/`OnHapticIntensityChanged` static events |
+| `Flight/FlightController.cs` | Added `OnBoostStarted`, `OnBoostEnded`, `OnStallWarning` events; boost/stall detection in `SetThrottle`/`Step` |
+| `UI/AccessibilityManager.cs` | Added `Controller` property (returns `FindFirstObjectByType<AccessibilityController>()`) and `Announce(string)` convenience wrapper |
+
+### Haptic Pattern Reference
+
+| Pattern | Platform Behaviour | Duration |
+|---------|-------------------|---------|
+| Light | iOS: UIImpactFeedbackStyleLight / Android: 10 ms amp 80 | 10 ms |
+| Medium | iOS: UIImpactFeedbackStyleMedium / Android: 25 ms amp 128 | 25 ms |
+| Heavy | iOS: UIImpactFeedbackStyleHeavy / Android: 50 ms amp 255 | 50 ms |
+| Success | Double-tap (15 ms + pause) | 15 ms |
+| Warning | Single medium pulse | 40 ms |
+| Error | Long heavy pulse | 80 ms |
+| AltitudeWarning | 3 × 20 ms pulses, 50 ms gap | 3 × 20 ms |
+| TeleportComplete | Rising 3-step (10/20/30 ms) | 60 ms total |
+| ScreenshotSnap | Single crisp pulse | 15 ms |
+| AchievementUnlock | Rising 5-step celebration | 5 × 10 ms |
+| Boost | Continuous light (repeating via coroutine) | Loop |
+| Stall | Heavy double-pulse | 40 ms × 2 |
+
+### Colorblind Modes
+
+| Mode | Description |
+|------|-------------|
+| Normal | No correction |
+| Protanopia | Red–green (red deficiency) |
+| Deuteranopia | Red–green (green deficiency) |
+| Tritanopia | Blue–yellow blindness |
+| Achromatopsia | Total colour blindness (greyscale) |
+
+### Accessibility Settings Reference
+
+| Setting | PlayerPrefs Key | Default |
+|---------|----------------|---------|
+| Colorblind Mode | `SWEF_ColorblindMode` | 0 (Normal) |
+| Text Scale | `SWEF_TextScale` | 1.0 |
+| Reduced Motion | `SWEF_ReducedMotion` | false |
+| One-Handed Mode | `SWEF_OneHandedMode` | false |
+| Hand Preference | `SWEF_HandPreference` | 0 (Right) |
+| Haptics Enabled | `SWEF_HapticsEnabled` | true |
+| Haptic Intensity | `SWEF_HapticIntensity` | 1.0 |
+| Voice Commands | — (VoiceCommandManager field) | false |
+| Screen Reader | `SWEF_ScreenReaderEnabled` | false |
+
+### Voice Command Keywords
+
+| Phrase | Command |
+|--------|---------|
+| "screenshot", "take photo" | Screenshot |
+| "teleport", "go to" | Teleport |
+| "pause", "stop" | Pause |
+| "resume", "continue" | Resume |
+| "higher", "up" | AltitudeUp |
+| "lower", "down" | AltitudeDown |
+| "faster", "speed up" | SpeedUp |
+| "slower", "slow down" | SlowDown |
+| "hide hud", "show hud" | ToggleHUD |
+| "recenter" | Recenter |
+
+### One-Handed Mode Layout
+
+- **Right-hand mode**: all `interactiveElements` are repositioned to the right 40% of the screen.
+- **Left-hand mode**: all `interactiveElements` are repositioned to the left 40% of the screen.
+- `reachZoneWidth` (default 0.4) controls the fraction of screen width used for the reach zone.
+- Original positions are cached on `Awake` and fully restored when the mode is disabled.
+
+### Setup Instructions
+
+#### 1. HapticManager
+1. Create empty GameObject `HapticManager` (Boot scene or persistent).
+2. Attach `HapticManager` script — `DontDestroyOnLoad` handled automatically.
+3. Adjust `Haptics Enabled` and `Haptic Intensity` in the Inspector (or leave defaults).
+
+#### 2. HapticTriggerZone
+1. Attach `HapticTriggerZone` to the player rig or a persistent World-scene object.
+2. All managers are auto-found at `Start` — no Inspector wiring required.
+3. Adjust altitude/speed thresholds and cooldowns as needed.
+
+#### 3. AccessibilityController
+1. Create empty GameObject `AccessibilityController` (Boot scene or persistent).
+2. Attach `AccessibilityController` — `ApplySavedSettings()` is called on `Awake` and by `BootManager`.
+3. No Inspector wiring required.
+
+#### 4. OneHandedModeController
+1. Attach `OneHandedModeController` to a persistent HUD/World object.
+2. Assign the `Interactive Elements` array in the Inspector with the `RectTransform`s to reposition.
+3. Call `SetOneHandedMode(true/false)` from `AccessibilitySettingsUI` or code.
+
+#### 5. VoiceCommandManager
+1. Attach `VoiceCommandManager` to any persistent object.
+2. Subscribe to `OnVoiceCommandRecognized` from other systems (e.g., `ScreenshotController`, `PauseManager`).
+3. Call `ProcessVoiceInput(transcript)` from your platform speech-recognition callback.
+
+#### 6. AccessibilitySettingsUI
+1. Add an `AccessibilitySettings` panel to your Settings Canvas.
+2. Attach `AccessibilitySettingsUI` and wire all Dropdown/Slider/Toggle references in the Inspector.
+3. Point `SettingsUI.accessibilitySettingsButton` at a Button that opens the panel.
+
+### Updated Architecture
+
+```
+Boot Scene (Phase 16)
+  └── BootManager (+ accessibility init after XR)  ← MODIFIED
+
+World / Persistent (Phase 16)
+  ├── HapticManager        (singleton, DontDestroyOnLoad)  ← NEW
+  ├── HapticTriggerZone    (event bridge)                  ← NEW
+  ├── AccessibilityController (colorblind, text scale, screen reader) ← NEW
+  ├── OneHandedModeController (HUD repositioning)          ← NEW
+  └── VoiceCommandManager  (voice command stub)            ← NEW
+
+Settings Layer (Phase 16)
+  ├── SettingsUI  (+ accessibilitySettingsButton/Panel)    ← MODIFIED
+  ├── SettingsManager (+ HapticsEnabled, HapticIntensity)  ← MODIFIED
+  └── AccessibilitySettingsUI (full accessibility panel)   ← NEW
+
+Flight Layer (Phase 16)
+  └── FlightController (+ OnBoostStarted/Ended/OnStallWarning) ← MODIFIED
+
+Haptic Module (Phase 16)
+  ├── HapticManager   (singleton, platform dispatch)       ← NEW
+  ├── HapticPattern   (enum)                               ← NEW
+  └── HapticTriggerZone (gameplay → haptic bridge)         ← NEW
+```

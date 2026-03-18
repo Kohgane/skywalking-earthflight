@@ -115,6 +115,14 @@ namespace SWEF.Core
                 Debug.Log($"[SWEF] XR device detected: {SWEF.XR.XRPlatformDetector.DeviceName}");
             }
 
+            // Phase 16 — Accessibility initialization
+            var accessibility = FindFirstObjectByType<SWEF.UI.AccessibilityController>();
+            if (accessibility != null)
+            {
+                accessibility.ApplySavedSettings();
+                Debug.Log("[SWEF] Accessibility settings applied");
+            }
+
             SceneManager.LoadScene(worldSceneName);
             Debug.Log($"[SWEF] Scene load requested: {worldSceneName}");
         }
