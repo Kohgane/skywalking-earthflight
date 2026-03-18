@@ -140,15 +140,35 @@ namespace SWEF.Core
             SaveFlightStats();
         }
 
+        // ── Analytics enable flag (Phase 14 — ATT compliance) ────────────────
+        private static bool _analyticsEnabled = true;
+
+        /// <summary>Whether analytics event logging is currently enabled.</summary>
+        public static bool IsAnalyticsEnabled => _analyticsEnabled;
+
+        /// <summary>
+        /// Enables or disables analytics event logging.
+        /// Called by <see cref="SWEF.Build.AppTrackingTransparency"/> when the user
+        /// denies or restricts App Tracking Transparency authorization on iOS.
+        /// </summary>
+        /// <param name="enabled"><c>true</c> to enable, <c>false</c> to suppress all events.</param>
+        public static void SetEnabled(bool enabled)
+        {
+            _analyticsEnabled = enabled;
+            Debug.Log($"[SWEF] AnalyticsLogger: analytics {(enabled ? "enabled" : "disabled")}.");
+        }
+
         /// <summary>
         /// Records a named analytics event with an optional string value.
         /// Uses <see cref="Instance"/> when available; falls back to
         /// <see cref="Debug.Log"/> so callers never need a null-check.
+        /// No-op when analytics has been disabled via <see cref="SetEnabled"/>.
         /// </summary>
         /// <param name="eventName">The event name (e.g. "iap_purchase").</param>
         /// <param name="value">Optional value associated with the event (e.g. product ID).</param>
         public static void LogEvent(string eventName, string value = "")
         {
+            if (!_analyticsEnabled) return;
             Debug.Log($"[SWEF] Analytics: {eventName}" + (string.IsNullOrEmpty(value) ? "" : $" — {value}"));
         }
     }

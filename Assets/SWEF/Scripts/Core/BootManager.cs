@@ -35,11 +35,22 @@ namespace SWEF.Core
 
         private IEnumerator Start()
         {
-            Debug.Log("[SWEF] Boot sequence started — Phase 13: Notifications, Rate Prompt & App Lifecycle");
+            Debug.Log("[SWEF] Boot sequence started — Phase 14: Build Pipeline & ATT Compliance");
 
             loadingScreen?.Show();
 
             SWEFSession.Clear();
+
+            // Phase 14 — request App Tracking Transparency authorization before analytics
+            // Gracefully skipped if AppTrackingTransparency component is not in the scene.
+#if UNITY_IOS
+            var att = FindFirstObjectByType<SWEF.Build.AppTrackingTransparency>();
+            if (att != null)
+            {
+                loadingScreen?.SetStatus("Requesting permissions...");
+                yield return att.RequestAuthorization();
+            }
+#endif
 
             // Phase 13 — initialise app lifecycle and request notification permission
             var lifecycle = FindFirstObjectByType<AppLifecycleManager>();

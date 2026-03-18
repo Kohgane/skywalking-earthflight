@@ -1376,3 +1376,135 @@ World Scene (Phase 13)
       ├── StatsDashboard (+ SessionTracker feed)  ← MODIFIED
       └── Rate Prompt Panel (RatePromptUI)        ← NEW
 ```
+
+---
+
+## Phase 14 — App Store Submission Readiness & CI/CD Pipeline
+
+### New Scripts
+
+| Script | Namespace | Role |
+|--------|-----------|------|
+| `Build/BuildConfig.cs` | `SWEF.Build` | ScriptableObject — app identity, version, iOS/Android settings, privacy flags |
+| `Build/BuildPipeline.cs` | `SWEF.Build` | One-click iOS/Android builds with PlayerSettings automation and CI entry points |
+| `Build/PrivacyManifest.cs` | `SWEF.Build` | Generates `PrivacyInfo.xcprivacy` (iOS) and `data_safety.json` (Android) |
+| `Build/AppTrackingTransparency.cs` | `SWEF.Build` | iOS ATT authorization flow; disables analytics on denial |
+| `Build/ExportOptions.plist` | — | Xcode archive export options for TestFlight / App Store distribution |
+| `Editor/BuildValidator.cs` | `SWEF.Editor` | EditorWindow — submission readiness checklist with Fix All and Export Report |
+| `Editor/StoreMetadataExporter.cs` | `SWEF.Editor` | Exports `StoreMetadata/` with iOS/Android JSON, release notes, screenshots README |
+
+### Modified Scripts
+
+| Script | Change |
+|--------|--------|
+| `Core/BootManager.cs` | Calls `AppTrackingTransparency.RequestAuthorization()` on iOS before analytics init; null-safe (skips if component absent) |
+| `Core/AppLifecycleManager.cs` | Added `public static string AppVersion` convenience property; saves dirty BuildConfig asset on `Quitting` (editor only) |
+| `Core/AnalyticsLogger.cs` | Added `SetEnabled(bool)` static method and `IsAnalyticsEnabled` property; `LogEvent` is a no-op when disabled |
+
+### Setup Instructions
+
+#### BuildConfig
+1. Open **Assets → Create → SWEF → Build Config** to create `Assets/SWEF/Config/SWEFBuildConfig.asset`.
+2. Fill in **Bundle ID**, **App Name**, **Version**, **iOS Team ID**, and **Android Keystore** fields.
+3. Set **Uses Tracking** to `false` unless you integrate an ad network that uses IDFA.
+4. The asset is read by `BuildPipeline`, `PrivacyManifest`, `BuildValidator`, and `AppTrackingTransparency`.
+
+#### BuildPipeline
+- Use **SWEF → Build → Build iOS** / **Build Android** / **Build Both** for local one-click builds.
+- `BuildiOSCLI` / `BuildAndroidCLI` are the entry points for `game-ci/unity-builder` in CI.
+- Scenes must be set in Build Settings with Boot at index 0 and World at index 1.
+- `ApplyBuildConfig(config)` is called automatically before each build; no manual PlayerSettings editing needed.
+
+#### PrivacyManifest
+1. Run **SWEF → Build → Generate Privacy Manifests** after updating `BuildConfig`.
+2. Files are written to:
+   - `Assets/Plugins/iOS/PrivacyInfo.xcprivacy` — included in the Xcode project automatically.
+   - `Assets/Plugins/Android/data_safety.json` — reference when filling Play Console Data Safety form.
+3. Regenerate whenever privacy flags in `BuildConfig` change.
+
+#### AppTrackingTransparency
+1. Add a persistent Boot-scene GameObject and attach `AppTrackingTransparency`.
+2. Optionally assign the `BuildConfig` reference in the Inspector.
+3. The component is automatically found and called by `BootManager` on iOS; it is a no-op on Android and in the Editor.
+4. If the user denies ATT, `AnalyticsLogger.SetEnabled(false)` is called automatically.
+5. For the native dialog to appear, you must also add the `NSUserTrackingUsageDescription` key to your iOS Player Settings.
+
+#### BuildValidator
+1. Open **SWEF → Build → Validate Submission Readiness**.
+2. Click **Re-validate** to run all checks; green ✅ items are passing, red ❌ items need attention.
+3. Click **Fix All** to automatically resolve fixable issues (scripting backend, development build flag, etc.).
+4. Click **Export Report** to save a `BuildValidation_Report.txt` file for review.
+5. `ValidateFromCLI()` is called headlessly by the CI `validate` job; it exits with code 1 on any failure.
+
+#### StoreMetadataExporter
+1. Run **SWEF → Build → Export Store Metadata**.
+2. A `StoreMetadata/` folder is created at the project root containing:
+   - `ios_metadata.json` — App Store Connect listing fields.
+   - `android_metadata.json` — Play Console listing fields.
+   - `release_notes.txt` — Template to fill in before each release.
+   - `screenshots/README.txt` — Required screenshot sizes and naming guide.
+3. Copy the JSON content into App Store Connect / Play Console or use `fastlane deliver` / `supply`.
+
+### CI/CD Pipeline Setup
+
+The workflow file at `.github/workflows/build.yml` defines five jobs:
+
+| Job | Trigger | Description |
+|-----|---------|-------------|
+| `validate` | Every push / PR to `main` | Runs `BuildValidator.ValidateFromCLI` |
+| `build-android` | Tag `v*` push | Builds Android AAB, uploads as artifact |
+| `build-ios` | Tag `v*` push | Builds iOS Xcode project, uploads as artifact |
+| `deploy-testflight` | After `build-ios` on tag | Archives, exports IPA, uploads to TestFlight |
+| `deploy-play-console` | After `build-android` on tag | Publishes AAB to Play Console internal track |
+
+#### Required GitHub Secrets
+
+Configure these in **Settings → Secrets and variables → Actions**:
+
+| Secret | Description |
+|--------|-------------|
+| `UNITY_LICENSE` | Unity serial or license file content (from `game-ci/unity-builder` docs) |
+| `ANDROID_KEYSTORE_NAME` | Keystore filename (e.g. `swef-release.keystore`) |
+| `ANDROID_KEYSTORE_BASE64` | Base64-encoded keystore file |
+| `ANDROID_KEYSTORE_PASS` | Keystore password |
+| `ANDROID_KEYALIAS_NAME` | Key alias (e.g. `swef`) |
+| `ANDROID_KEYALIAS_PASS` | Key alias password |
+| `IOS_TEAM_ID` | Apple Developer Team ID (10-character string) |
+| `IOS_SIGNING_IDENTITY` | Code signing identity (e.g. `Apple Distribution: Kohgane (XXXXXXXXXX)`) |
+| `IOS_PROVISIONING_PROFILE` | Provisioning profile specifier name |
+| `APPLE_ISSUER_ID` | App Store Connect API issuer UUID |
+| `APPLE_API_KEY_ID` | App Store Connect API key ID |
+| `APPLE_API_PRIVATE_KEY` | App Store Connect API private key (`.p8` file content) |
+| `GOOGLE_PLAY_SERVICE_ACCOUNT` | Google Play service account JSON (plain text) |
+
+### Updated Architecture
+
+```
+Boot Scene (Phase 14)
+  ├── BootManager (+ ATT RequestAuthorization on iOS)          ← MODIFIED
+  ├── AppLifecycleManager (+ AppVersion property)             ← MODIFIED
+  ├── AppTrackingTransparency (DontDestroyOnLoad)             ← NEW
+  ├── NotificationManager (DontDestroyOnLoad)
+  └── AudioManager (DontDestroyOnLoad)
+
+Build Layer (Phase 14)
+  ├── BuildConfig          (ScriptableObject — Assets/SWEF/Config/)  ← NEW
+  ├── BuildPipeline        (Editor — one-click & CI builds)          ← NEW
+  ├── PrivacyManifest      (Editor — iOS xcprivacy + Android JSON)   ← NEW
+  └── AppTrackingTransparency (Runtime — ATT dialog + analytics gate) ← NEW
+
+Editor Tools (Phase 14)
+  ├── BuildValidator       (EditorWindow — submission checklist)     ← NEW
+  └── StoreMetadataExporter (static — App Store / Play metadata)    ← NEW
+
+CI/CD Pipeline (Phase 14)
+  .github/workflows/build.yml
+  ├── validate             (every push — BuildValidator.ValidateFromCLI)
+  ├── build-android        (tag v* — AAB via game-ci/unity-builder)
+  ├── build-ios            (tag v* — Xcode project via game-ci/unity-builder)
+  ├── deploy-testflight    (tag v* — xcodebuild archive + apple-actions)
+  └── deploy-play-console  (tag v* — r0adkll/upload-google-play)
+
+Analytics (Phase 14 change)
+  └── AnalyticsLogger (+ SetEnabled / IsAnalyticsEnabled)           ← MODIFIED
+```

@@ -1,0 +1,130 @@
+name: SWEF Build Pipeline
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+
+env:
+  UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+  UNITY_VERSION: 2022.3.20f1
+
+jobs:
+  validate:
+    name: Validate Project
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - uses: game-ci/unity-builder@v4
+        with:
+          targetPlatform: StandaloneLinux64
+          buildMethod: SWEF.Editor.BuildValidator.ValidateFromCLI
+          unityVersion: ${{ env.UNITY_VERSION }}
+        env:
+          UNITY_LICENSE: ${{ env.UNITY_LICENSE }}
+
+  build-android:
+    name: Build Android (AAB)
+    needs: validate
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - uses: game-ci/unity-builder@v4
+        with:
+          targetPlatform: Android
+          buildMethod: SWEF.Build.BuildPipeline.BuildAndroidCLI
+          unityVersion: ${{ env.UNITY_VERSION }}
+          androidAppBundle: true
+          androidKeystoreName: ${{ secrets.ANDROID_KEYSTORE_NAME }}
+          androidKeystoreBase64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          androidKeystorePass: ${{ secrets.ANDROID_KEYSTORE_PASS }}
+          androidKeyaliasName: ${{ secrets.ANDROID_KEYALIAS_NAME }}
+          androidKeyaliasPass: ${{ secrets.ANDROID_KEYALIAS_PASS }}
+        env:
+          UNITY_LICENSE: ${{ env.UNITY_LICENSE }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-build
+          path: Builds/Android/**/*.aab
+          retention-days: 14
+
+  build-ios:
+    name: Build iOS (Xcode Project)
+    needs: validate
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - uses: game-ci/unity-builder@v4
+        with:
+          targetPlatform: iOS
+          buildMethod: SWEF.Build.BuildPipeline.BuildiOSCLI
+          unityVersion: ${{ env.UNITY_VERSION }}
+        env:
+          UNITY_LICENSE: ${{ env.UNITY_LICENSE }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios-build
+          path: Builds/iOS/
+          retention-days: 14
+
+  deploy-testflight:
+    name: Deploy to TestFlight
+    needs: build-ios
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: macos-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: ios-build
+          path: Builds/iOS/
+      - name: Build Xcode Archive
+        run: |
+          xcodebuild -project Builds/iOS/Unity-iPhone.xcodeproj \
+            -scheme Unity-iPhone \
+            -configuration Release \
+            -archivePath Builds/iOS/SWEF.xcarchive \
+            archive \
+            CODE_SIGN_IDENTITY="${{ secrets.IOS_SIGNING_IDENTITY }}" \
+            PROVISIONING_PROFILE_SPECIFIER="${{ secrets.IOS_PROVISIONING_PROFILE }}" \
+            DEVELOPMENT_TEAM="${{ secrets.IOS_TEAM_ID }}"
+      - name: Export IPA
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath Builds/iOS/SWEF.xcarchive \
+            -exportPath Builds/iOS/Export \
+            -exportOptionsPlist Assets/SWEF/Scripts/Build/ExportOptions.plist
+      - name: Upload to TestFlight
+        uses: apple-actions/upload-testflight-build@v1
+        with:
+          app-path: Builds/iOS/Export/skywalking-earthflight.ipa
+          issuer-id: ${{ secrets.APPLE_ISSUER_ID }}
+          api-key-id: ${{ secrets.APPLE_API_KEY_ID }}
+          api-private-key: ${{ secrets.APPLE_API_PRIVATE_KEY }}
+
+  deploy-play-console:
+    name: Deploy to Play Console (Internal)
+    needs: build-android
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: android-build
+          path: Builds/Android/
+      - uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT }}
+          packageName: com.kohgane.swef.earthflight
+          releaseFiles: Builds/Android/**/*.aab
+          track: internal
+          status: draft

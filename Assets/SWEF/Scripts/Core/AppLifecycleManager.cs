@@ -33,6 +33,10 @@ namespace SWEF.Core
         /// <summary>Seconds elapsed since the session started.</summary>
         public float CurrentSessionDuration => Time.realtimeSinceStartup - SessionStartTime;
 
+        // ── Phase 14 — convenience property ─────────────────────────────────
+        /// <summary>The application version string as reported by <see cref="Application.version"/>.</summary>
+        public static string AppVersion => Application.version;
+
         // ── Inspector ────────────────────────────────────────────────────────
         [Header("Auto-Save")]
         [Tooltip("Seconds between periodic auto-saves. Set to 0 to disable.")]
@@ -107,6 +111,15 @@ namespace SWEF.Core
             SessionTracker.Instance?.EndSession();
             SaveAll();
             SWEF.Core.AnalyticsLogger.LogEvent("app_quit", CurrentSessionDuration.ToString("F1"));
+
+#if UNITY_EDITOR
+            // Phase 14 — save any dirty BuildConfig asset before quitting in the Editor
+            var config = UnityEditor.AssetDatabase.LoadAssetAtPath<SWEF.Build.BuildConfig>(
+                "Assets/SWEF/Config/SWEFBuildConfig.asset");
+            if (config != null && UnityEditor.EditorUtility.IsDirty(config))
+                UnityEditor.AssetDatabase.SaveAssets();
+#endif
+
             Debug.Log("[SWEF] AppLifecycleManager: app quitting.");
         }
 
