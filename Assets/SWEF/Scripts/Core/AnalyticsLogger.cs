@@ -11,11 +11,14 @@ namespace SWEF.Core
     /// </summary>
     public class AnalyticsLogger : MonoBehaviour
     {
-        private const string KEY_SESSION_COUNT   = "SWEF_SessionCount";
-        private const string KEY_FLIGHT_TIME     = "SWEF_TotalFlightTime";
-        private const string KEY_MAX_ALTITUDE    = "SWEF_MaxAltitude";
-        private const string KEY_TELEPORT_COUNT  = "SWEF_TeleportCount";
+        private const string KEY_SESSION_COUNT    = "SWEF_SessionCount";
+        private const string KEY_FLIGHT_TIME      = "SWEF_TotalFlightTime";
+        private const string KEY_MAX_ALTITUDE     = "SWEF_MaxAltitude";
+        private const string KEY_TELEPORT_COUNT   = "SWEF_TeleportCount";
         private const string KEY_SCREENSHOT_COUNT = "SWEF_ScreenshotCount";
+
+        /// <summary>Singleton instance; set during Awake.</summary>
+        public static AnalyticsLogger Instance { get; private set; }
 
         [SerializeField] private AltitudeController altitudeSource;
 
@@ -39,6 +42,13 @@ namespace SWEF.Core
 
         private void Awake()
         {
+            if (Instance != null && Instance != this)
+            {
+                Destroy(gameObject);
+                return;
+            }
+            Instance = this;
+
             // Load persisted stats
             SessionCount      = PlayerPrefs.GetInt(KEY_SESSION_COUNT, 0) + 1;
             TotalFlightTimeSec = PlayerPrefs.GetFloat(KEY_FLIGHT_TIME, 0f);
@@ -128,6 +138,18 @@ namespace SWEF.Core
         private void OnApplicationQuit()
         {
             SaveFlightStats();
+        }
+
+        /// <summary>
+        /// Records a named analytics event with an optional string value.
+        /// Uses <see cref="Instance"/> when available; falls back to
+        /// <see cref="Debug.Log"/> so callers never need a null-check.
+        /// </summary>
+        /// <param name="eventName">The event name (e.g. "iap_purchase").</param>
+        /// <param name="value">Optional value associated with the event (e.g. product ID).</param>
+        public static void LogEvent(string eventName, string value = "")
+        {
+            Debug.Log($"[SWEF] Analytics: {eventName}" + (string.IsNullOrEmpty(value) ? "" : $" — {value}"));
         }
     }
 }

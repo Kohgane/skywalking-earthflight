@@ -1187,3 +1187,111 @@ Util (Phase 11)
   ├── SWEFTestHelpers  (static, no MonoBehaviour)      ← NEW
   └── PerformanceProfiler  (MonoBehaviour)             ← NEW
 ```
+
+---
+
+## Phase 12 — In-App Purchase (IAP), Monetization & Premium Features
+
+### New Scripts
+
+| Script | Namespace | Role |
+|--------|-----------|------|
+| `IAP/IAPProductCatalog.cs` | `SWEF.IAP` | Static catalog of product IDs and metadata |
+| `IAP/IAPManager.cs` | `SWEF.IAP` | Unity IAP singleton wrapper (purchase / restore) |
+| `IAP/IAPRestoreButton.cs` | `SWEF.IAP` | iOS restore-purchases UI button |
+| `UI/StoreUI.cs` | `SWEF.UI` | In-app store panel with product list |
+| `Core/AdManager.cs` | `SWEF.Core` | Banner / interstitial / rewarded ad stub |
+| `Core/PremiumFeatureGate.cs` | `SWEF.Core` | Static utility for gating premium features |
+| `UI/PremiumPromptUI.cs` | `SWEF.UI` | "Upgrade to Premium" modal dialog |
+
+### Modified Scripts
+
+| Script | Change |
+|--------|--------|
+| `Core/AnalyticsLogger.cs` | Added `Instance` singleton + static `LogEvent(eventName, value)` |
+| `Favorites/FavoriteManager.cs` | Free-tier capped at 10 favorites; shows `PremiumPromptUI` on overflow |
+| `Core/CloudSaveController.cs` | `Upload()` and `Download()` gated behind `PremiumFeature.CloudSave` |
+| `Screenshot/ScreenshotController.cs` | 2× super-sampling when `PremiumFeature.HighResScreenshot` is unlocked |
+
+### Product Catalog
+
+| Product ID | Type | Default Price | Description |
+|------------|------|---------------|-------------|
+| `swef_premium` | Non-consumable | $4.99 | Unlock all premium features |
+| `swef_remove_ads` | Non-consumable | $1.99 | Remove all ads permanently |
+| `swef_donation_small` | Consumable | $0.99 | Small tip ☕ |
+| `swef_donation_medium` | Consumable | $2.99 | Medium tip 🍕 |
+| `swef_donation_large` | Consumable | $9.99 | Large tip 🚀 |
+
+### Premium Feature Mapping
+
+| PremiumFeature | Required product | Free-tier limit |
+|----------------|-----------------|-----------------|
+| `UnlimitedFavorites` | `swef_premium` | Max 10 favorites |
+| `CloudSave` | `swef_premium` | Disabled |
+| `AdvancedWeather` | `swef_premium` | Basic weather only |
+| `CustomSkins` | `swef_premium` | Default skin only |
+| `AdFree` | `swef_premium` **or** `swef_remove_ads` | Ads shown |
+| `FlightJournalExport` | `swef_premium` | No export |
+| `HighResScreenshot` | `swef_premium` | Native resolution |
+
+### Setup Instructions
+
+#### IAPManager
+1. Add a persistent GameObject (e.g. in the Boot scene) and attach `IAPManager`.
+2. Install **Unity In App Purchasing** via the Unity Package Manager (com.unity.purchasing).
+3. The script uses `#if UNITY_PURCHASING` guards — it runs as a safe stub without the package.
+4. Non-consumable purchases are persisted to `PlayerPrefs` under keys `swef_iap_{productId}`.
+
+#### AdManager
+1. Attach `AdManager` to the same persistent Boot-scene GameObject as `IAPManager`.
+2. Set **Interstitial Cooldown Seconds** in the Inspector (default: 180 s).
+3. Replace the `// TODO: replace with real SDK call` comments with your ad provider's API.
+4. All Show methods are automatically no-ops when `IAPManager.IsAdFree` is `true`.
+
+#### PremiumFeatureGate
+- Pure static class — no GameObject needed.
+- Call `PremiumFeatureGate.IsUnlocked(feature)` to check access.
+- Call `PremiumFeatureGate.TryAccess(feature, onGranted, onDenied)` for guarded actions.
+
+#### StoreUI
+1. Create a Canvas panel for the store.
+2. Attach `StoreUI` and wire: **Store Panel**, **Canvas Group**, **Content Parent**, **Product Item Prefab**, **Close Button**, **Restore Button**.
+3. The prefab must have a `ProductItemUI` component with label and button references.
+4. Call `StoreUI.Open()` / `StoreUI.Close()` from other scripts.
+
+#### PremiumPromptUI
+1. Create a modal Canvas panel and attach `PremiumPromptUI`.
+2. Wire: **Prompt Panel**, **Canvas Group**, **Feature Name Label**, **Feature Description Label**, **Upgrade Button**, **Maybe Later Button**, **Watch Ad Button** (optional), **StoreUI** reference.
+3. Call `PremiumPromptUI.Instance.Show(PremiumFeature.X)` from any gated code path.
+
+#### IAPRestoreButton
+1. Add a Button to your store UI Canvas.
+2. Attach `IAPRestoreButton` — it auto-hides on non-iOS platforms.
+3. Optionally wire a **Status Label** Text component for restore feedback.
+
+### Updated Architecture
+
+```
+Boot Scene (Phase 12)
+  ├── IAPManager     (DontDestroyOnLoad)            ← NEW
+  ├── AdManager      (DontDestroyOnLoad)            ← NEW
+  ├── AnalyticsLogger  (Instance + LogEvent added)  ← MODIFIED
+  └── (all existing Boot-scene systems)
+
+World Scene (Phase 12)
+  ├── StoreUI        (Canvas panel, fade in/out)    ← NEW
+  ├── PremiumPromptUI (modal dialog, singleton)     ← NEW
+  └── (all existing World-scene systems)
+
+IAP Layer (Phase 12)
+  ├── IAPProductCatalog  (static, no MonoBehaviour) ← NEW
+  ├── IAPManager         (Unity IAP wrapper)        ← NEW
+  └── IAPRestoreButton   (Button component, iOS)    ← NEW
+
+Premium Gates (Phase 12)
+  ├── PremiumFeatureGate  (static utility)          ← NEW
+  ├── FavoriteManager     (10-favorite free cap)    ← MODIFIED
+  ├── CloudSaveController (sync gated)              ← MODIFIED
+  └── ScreenshotController (high-res gated)         ← MODIFIED
+```

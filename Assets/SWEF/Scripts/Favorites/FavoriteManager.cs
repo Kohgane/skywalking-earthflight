@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using SWEF.Core;
 
 namespace SWEF.Favorites
 {
@@ -23,6 +24,9 @@ namespace SWEF.Favorites
         private const string PrefKey  = "SWEF_Favorites";
         private const int    MaxItems = 50;
 
+        /// <summary>Free-tier maximum. Exceeding this requires <c>swef_premium</c>.</summary>
+        private const int FreeTierMax = PremiumFeatureGate.FreeTierMaxFavorites;
+
         /// <summary>Current list of saved favorites (read-only access).</summary>
         public IReadOnlyList<FavoriteEntry> Favorites => _favorites;
 
@@ -37,10 +41,28 @@ namespace SWEF.Favorites
         }
 
         // ── Public API ───────────────────────────────────────────────────────────
-        /// <summary>Adds a favorite entry. Silently ignores if the list is at max capacity.</summary>
+        /// <summary>
+        /// Adds a favorite entry.
+        /// Free-tier users are limited to <see cref="FreeTierMax"/> entries;
+        /// exceeding that limit invokes the premium prompt instead of saving.
+        /// Silently ignores if the list is at the hard cap.
+        /// </summary>
         public void Add(string entryName, double lat, double lon, float altitude)
         {
             if (_favorites.Count >= MaxItems) return;
+
+            // Premium gate: cap free-tier at FreeTierMax
+            bool isAtFreeLimit = !PremiumFeatureGate.IsUnlocked(PremiumFeature.UnlimitedFavorites)
+                                 && _favorites.Count >= FreeTierMax;
+            if (isAtFreeLimit)
+            {
+                // Show the premium prompt if available; otherwise log a warning.
+                if (SWEF.UI.PremiumPromptUI.Instance != null)
+                    SWEF.UI.PremiumPromptUI.Instance.Show(PremiumFeature.UnlimitedFavorites);
+                else
+                    Debug.LogWarning("[SWEF] FavoriteManager: free-tier limit reached. Upgrade to Premium for unlimited favorites.");
+                return;
+            }
 
             _favorites.Add(new FavoriteEntry
             {
