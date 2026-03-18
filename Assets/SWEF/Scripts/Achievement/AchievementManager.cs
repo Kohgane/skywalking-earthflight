@@ -310,6 +310,19 @@ namespace SWEF.Achievement
 
             Debug.Log($"[SWEF] Achievement unlocked: {found.Value.title}");
             OnAchievementUnlocked?.Invoke(found.Value);
+
+            // Phase 21 — fire achievement_unlocked telemetry
+            var dispatcher = SWEF.Analytics.TelemetryDispatcher.Instance;
+            if (dispatcher != null)
+            {
+                var evt = SWEF.Analytics.TelemetryEventBuilder.Create(SWEF.Analytics.AnalyticsEvents.AchievementUnlocked)
+                    .WithCategory("social")
+                    .WithProperty("achievementId",   id)
+                    .WithProperty("achievementTitle", found.Value.title)
+                    .Build();
+                dispatcher.EnqueueEvent(evt);
+            }
+
             return true;
         }
     }
