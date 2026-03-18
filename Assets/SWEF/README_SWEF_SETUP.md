@@ -1061,3 +1061,129 @@ SaveData
   ├── allTimeMaxAltitudeKm (float)
   └── totalDistanceKm      (float)
 ```
+
+## Phase 11 — Editor Tools, Debugging & Testing Infrastructure
+
+Phase 11 adds a comprehensive suite of Editor tools, an in-game debug overlay, gizmo helpers, test utilities, and a runtime performance profiler.
+
+### New Scripts
+
+| Script | Namespace | Purpose |
+|--------|-----------|---------|
+| `Editor/SWEFEditorWindow.cs` | `SWEF.Editor` | Custom Unity Editor window (SWEF → Dashboard). Shows script counts per folder, scene list, active build target, and quick-action buttons. |
+| `Editor/SWEFSceneValidator.cs` | `SWEF.Editor` | Menu item (SWEF → Validate World Scene). Checks for all required components and logs pass/fail with `[SWEF Validator]` prefix. |
+| `Editor/SWEFBuildPreprocessor.cs` | `SWEF.Editor` | `IPreprocessBuildWithReport` (callbackOrder = 0). Validates scenes in Build Settings, checks Boot scene for SaveManager, warns if DebugConsole is active in release builds. |
+| `Core/DebugConsole.cs` | `SWEF.Core` | In-game overlay toggled by 3-finger tap or backtick. Scrollable log (last 50 messages), real-time FPS/altitude/position/memory stats, command input field. |
+| `Core/DebugGizmoDrawer.cs` | `SWEF.Core` | Editor-only gizmos: altitude-coloured wire sphere at player position, line to georeference origin, altitude label via `Handles.Label`. |
+| `Util/SWEFTestHelpers.cs` | `SWEF.Util` | Static testing utilities: `CreateMockSession`, `SimulateAltitudeChange` (coroutine), `CreateTestPlayerRig`, `ResetAllPlayerPrefs`, `GetSaveFilePath`. |
+| `Util/PerformanceProfiler.cs` | `SWEF.Util` | Runtime frame-time circular buffer (default 300 frames). Properties: `AverageFPS`, `MinFPS`, `MaxFPS`, `AverageFrameTimeMs`, `FrameTimeP99`. Methods: `StartBenchmark(durationSec)`, `GetReport()`. Event: `OnBenchmarkComplete`. |
+
+### Modified Scripts
+
+| Script | Change |
+|--------|--------|
+| `Core/BootManager.cs` | Logs `[SWEF] Boot sequence started — Phase 11 debug infrastructure available` at the start of `Start()`. After `SceneManager.LoadScene`, logs `[SWEF] Scene load requested: {worldSceneName}`. |
+
+### Setup
+
+#### 1. SWEFEditorWindow
+- Open via **SWEF → Dashboard** in the Unity menu bar.
+- No scene or inspector setup required — the window reads the project on demand.
+- **Quick Actions**: *Open Boot Scene*, *Open World Scene*, *Clear PlayerPrefs*, *Delete Save File*, *Refresh*.
+
+#### 2. SWEFSceneValidator
+- Open the World scene, then run **SWEF → Validate World Scene**.
+- The Console will list each required component as ✓ (found) or ✗ (missing).
+- Required: `CesiumGeoreference`, `Cesium3DTileset`, `FlightController`, `TouchInputRouter`, `AltitudeController`, `HudBinder`, `AtmosphereController`, `SaveManager`.
+
+#### 3. SWEFBuildPreprocessor
+- Runs automatically before every build (no manual trigger needed).
+- Ensure both `Boot` and `World` scenes are added to Build Settings to avoid errors.
+- `SaveManager` must exist in the Boot scene.
+
+#### 4. DebugConsole
+1. Add a `Canvas` to the World scene (set render mode to *Screen Space — Overlay*).
+2. Attach `DebugConsole` to a persistent GameObject.
+3. Assign **Debug Canvas**, **Log Scroll Rect**, **Log Text Prefab**, **Command Input**, and **Stats Text** in the Inspector.
+4. Connect the InputField's `OnEndEdit` event to `DebugConsole.OnSubmitCommand`.
+
+**Toggle:** 3-finger tap (mobile) or **backtick (`)** key (desktop).
+
+**Commands:**
+| Command | Effect |
+|---------|--------|
+| `clear` | Clears the on-screen log |
+| `teleport lat,lon` | Teleports to coordinates via `TeleportController` |
+| `save` | Triggers `SaveManager.Save()` |
+| `load` | Triggers `SaveManager.Load()` |
+| `fps` | Toggles the FPS counter |
+
+#### 5. DebugGizmoDrawer
+1. Attach `DebugGizmoDrawer` to the PlayerRig or any scene GameObject.
+2. Assign **Player Rig**, **Altitude Controller**, and optionally **Georeference Origin** in the Inspector.
+3. Gizmos are visible only in the Scene view (Unity Editor) and during play mode with Gizmos enabled.
+
+#### 6. SWEFTestHelpers
+- Pure static API — no GameObject attachment required.
+- `SWEFTestHelpers.CreateMockSession(lat, lon, alt)` → `MockSession` struct.
+- `SWEFTestHelpers.CreateTestPlayerRig()` → minimal player hierarchy.
+- `SWEFTestHelpers.GetSaveFilePath()` → persistent data path for the save file.
+
+#### 7. PerformanceProfiler
+1. Attach `PerformanceProfiler` to any active GameObject.
+2. Adjust **Frame Window** (default 300) in the Inspector.
+3. Call `StartBenchmark(seconds)` from code or UI button.
+4. Subscribe to `OnBenchmarkComplete` to receive the report string.
+5. Read `AverageFPS`, `MinFPS`, `MaxFPS`, `AverageFrameTimeMs`, `FrameTimeP99` at any time.
+
+### Editor Tools Usage Guide
+
+#### Opening the Dashboard
+```
+Unity menu bar → SWEF → Dashboard
+```
+The window shows a live count of `.cs` files in each `Assets/SWEF/Scripts/<Folder>` directory, all scenes in Build Settings, the active build target, and quick-action buttons.
+
+#### Running the Scene Validator
+```
+Unity menu bar → SWEF → Validate World Scene
+```
+Open the World scene first. The validator iterates all loaded scenes and DontDestroyOnLoad objects. Results appear in the Console with `[SWEF Validator]` prefix.
+
+#### Build Preprocessor
+The `SWEFBuildPreprocessor` runs automatically when you trigger a build. Inspect the Console for `[SWEF Build]` messages. Fix any `LogError` messages before shipping.
+
+### Debug Console Commands Reference
+
+| Command | Example | Description |
+|---------|---------|-------------|
+| `clear` | `clear` | Erases on-screen log entries |
+| `teleport` | `teleport 48.8566,2.3522` | Teleports player to lat/lon (Paris) |
+| `save` | `save` | Immediately writes save file to disk |
+| `load` | `load` | Reloads save data from disk |
+| `fps` | `fps` | Toggles FPS line in the stats panel |
+
+### Updated Architecture
+
+```
+Boot Scene (Phase 11)
+  ├── SaveManager (DontDestroyOnLoad)
+  ├── DataMigrator
+  ├── BootManager  (Phase 11 log added)     ← MODIFIED
+  └── (all existing Boot-scene systems)
+
+World Scene (Phase 11)
+  ├── DebugConsole  (toggle: ` / 3-finger)  ← NEW
+  ├── DebugGizmoDrawer  (on PlayerRig)      ← NEW
+  ├── PerformanceProfiler                   ← NEW
+  └── (all existing World-scene systems)
+
+Editor Tools (Phase 11)  [Editor-only, #if UNITY_EDITOR]
+  ├── SWEF → Dashboard         (SWEFEditorWindow)      ← NEW
+  ├── SWEF → Validate World Scene (SWEFSceneValidator) ← NEW
+  └── IPreprocessBuildWithReport  (SWEFBuildPreprocessor) ← NEW
+
+Util (Phase 11)
+  ├── SWEFTestHelpers  (static, no MonoBehaviour)      ← NEW
+  └── PerformanceProfiler  (MonoBehaviour)             ← NEW
+```

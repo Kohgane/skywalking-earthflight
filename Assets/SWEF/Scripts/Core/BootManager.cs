@@ -35,6 +35,8 @@ namespace SWEF.Core
 
         private IEnumerator Start()
         {
+            Debug.Log("[SWEF] Boot sequence started — Phase 11 debug infrastructure available");
+
             loadingScreen?.Show();
 
             SWEFSession.Clear();
@@ -101,6 +103,7 @@ namespace SWEF.Core
                 Debug.Log("[SWEF] BootManager: SaveManager not found in scene — consider attaching SaveManager to a persistent GameObject.");
 
             SceneManager.LoadScene(worldSceneName);
+            Debug.Log($"[SWEF] Scene load requested: {worldSceneName}");
         }
     }
 }
