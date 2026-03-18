@@ -1,3 +1,18 @@
+##############################################################################
+# SWEF Build Pipeline
+#
+# REQUIREMENTS:
+# 1. A Windows self-hosted runner with Unity 2022.3 LTS already installed and activated
+#    - Register at: Settings > Actions > Runners > New self-hosted runner
+#    - Unity must be activated with a valid license on this machine
+# 2. For iOS builds, a macOS self-hosted runner is additionally required
+# 3. Required GitHub Secrets:
+#    - ANDROID_KEYSTORE_NAME, ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASS
+#    - ANDROID_KEYALIAS_NAME, ANDROID_KEYALIAS_PASS
+#    - IOS_SIGNING_IDENTITY, IOS_PROVISIONING_PROFILE, IOS_TEAM_ID (for iOS)
+#    - APPSTORE_API_KEY, APPSTORE_API_ISSUER (for TestFlight deployment)
+##############################################################################
+
 name: SWEF Build Pipeline
 
 on:
@@ -12,7 +27,6 @@ permissions:
   contents: read
 
 env:
-  UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
   UNITY_VERSION: 2022.3.20f1
   # Must match BuildConfig.bundleId in Assets/SWEF/Config/SWEFBuildConfig.asset
   BUNDLE_ID: com.kohgane.swef.earthflight
@@ -20,32 +34,48 @@ env:
 jobs:
   validate:
     name: Validate Project
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@v4
         with:
           lfs: true
+
+      - uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-StandaloneWindows64-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Library-StandaloneWindows64-
+            Library-
+
       - uses: game-ci/unity-builder@v4
         with:
-          targetPlatform: StandaloneLinux64
+          targetPlatform: StandaloneWindows64
           buildMethod: SWEF.Editor.BuildValidator.ValidateFromCLI
           unityVersion: ${{ env.UNITY_VERSION }}
-        env:
-          UNITY_LICENSE: ${{ env.UNITY_LICENSE }}
 
   build-android:
     name: Build Android (AAB)
     needs: validate
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@v4
         with:
           lfs: true
+
+      - uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-Android-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Library-Android-
+            Library-
+
       - uses: game-ci/unity-builder@v4
         with:
           targetPlatform: Android
@@ -57,32 +87,40 @@ jobs:
           androidKeystorePass: ${{ secrets.ANDROID_KEYSTORE_PASS }}
           androidKeyaliasName: ${{ secrets.ANDROID_KEYALIAS_NAME }}
           androidKeyaliasPass: ${{ secrets.ANDROID_KEYALIAS_PASS }}
-        env:
-          UNITY_LICENSE: ${{ env.UNITY_LICENSE }}
       - uses: actions/upload-artifact@v4
         with:
           name: android-build
           path: Builds/Android/**/*.aab
           retention-days: 14
 
+  # NOTE: iOS builds require a macOS self-hosted runner to be set up separately.
+  # This job will not run until a macOS runner with Unity installed and activated
+  # is registered under: Settings > Actions > Runners
   build-ios:
     name: Build iOS (Xcode Project)
     needs: validate
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-    runs-on: macos-latest
+    runs-on: [self-hosted, macOS]
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@v4
         with:
           lfs: true
+
+      - uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-iOS-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Library-iOS-
+            Library-
+
       - uses: game-ci/unity-builder@v4
         with:
           targetPlatform: iOS
           buildMethod: SWEF.Build.BuildPipeline.BuildiOSCLI
           unityVersion: ${{ env.UNITY_VERSION }}
-        env:
-          UNITY_LICENSE: ${{ env.UNITY_LICENSE }}
       - uses: actions/upload-artifact@v4
         with:
           name: ios-build
