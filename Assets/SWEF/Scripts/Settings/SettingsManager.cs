@@ -8,11 +8,13 @@ namespace SWEF.Settings
     /// PlayerPrefs-based persistent settings for SWEF.
     /// Manages MasterVolume, SfxVolume, ComfortMode, TouchSensitivity, and MaxSpeed.
     /// Applies values to FlightController and TouchInputRouter on load/change.
+    /// When <see cref="SWEF.Core.SaveManager"/> is available, settings are also read from
+    /// and written to the JSON save file.
     /// Key prefix: "SWEF_"
     /// </summary>
     public class SettingsManager : MonoBehaviour
     {
-        // ── Defaults ────────────────────────────────────────────────────────────
+        // ── Defaults ────────────────────────────────────────────────────────
         public const float DefaultMasterVolume    = 0.7f;
         public const float DefaultSfxVolume       = 1.0f;
         public const bool  DefaultComfortMode     = true;
@@ -41,6 +43,9 @@ namespace SWEF.Settings
         private const string KeyTouchSensitivity = "SWEF_TouchSensitivity";
         private const string KeyMaxSpeed         = "SWEF_MaxSpeed";
 
+        // ── Phase 10 — SaveManager integration ──────────────────────────────
+        private SWEF.Core.SaveManager _saveManager;
+
         private void Awake()
         {
             if (flightController == null)
@@ -48,10 +53,13 @@ namespace SWEF.Settings
             if (touchInputRouter == null)
                 touchInputRouter = FindFirstObjectByType<TouchInputRouter>();
 
+            // Phase 10 — resolve SaveManager
+            _saveManager = FindFirstObjectByType<SWEF.Core.SaveManager>();
+
             Load();
         }
 
-        /// <summary>Loads all settings from PlayerPrefs and applies them.</summary>
+        /// <summary>Loads all settings from PlayerPrefs (and SaveManager when available) and applies them.</summary>
         public void Load()
         {
             MasterVolume     = PlayerPrefs.GetFloat(KeyMasterVolume,     DefaultMasterVolume);
@@ -60,10 +68,20 @@ namespace SWEF.Settings
             TouchSensitivity = PlayerPrefs.GetFloat(KeyTouchSensitivity, DefaultTouchSensitivity);
             MaxSpeed         = PlayerPrefs.GetFloat(KeyMaxSpeed,         DefaultMaxSpeed);
 
+            // Phase 10 — override with SaveManager values when present
+            if (_saveManager != null && _saveManager.HasSaveFile())
+            {
+                MasterVolume     = _saveManager.GetFloat(KeyMasterVolume,     MasterVolume);
+                SfxVolume        = _saveManager.GetFloat(KeySfxVolume,        SfxVolume);
+                ComfortMode      = _saveManager.GetInt(KeyComfortMode,        ComfortMode ? 1 : 0) == 1;
+                TouchSensitivity = _saveManager.GetFloat(KeyTouchSensitivity, TouchSensitivity);
+                MaxSpeed         = _saveManager.GetFloat(KeyMaxSpeed,         MaxSpeed);
+            }
+
             ApplyAll();
         }
 
-        /// <summary>Writes all current settings to PlayerPrefs.</summary>
+        /// <summary>Writes all current settings to PlayerPrefs and SaveManager (when available).</summary>
         public void Save()
         {
             PlayerPrefs.SetFloat(KeyMasterVolume,     MasterVolume);
@@ -72,6 +90,17 @@ namespace SWEF.Settings
             PlayerPrefs.SetFloat(KeyTouchSensitivity, TouchSensitivity);
             PlayerPrefs.SetFloat(KeyMaxSpeed,         MaxSpeed);
             PlayerPrefs.Save();
+
+            // Phase 10 — mirror to SaveManager
+            if (_saveManager != null)
+            {
+                _saveManager.SetFloat(KeyMasterVolume,     MasterVolume);
+                _saveManager.SetFloat(KeySfxVolume,        SfxVolume);
+                _saveManager.SetInt(KeyComfortMode,        ComfortMode ? 1 : 0);
+                _saveManager.SetFloat(KeyTouchSensitivity, TouchSensitivity);
+                _saveManager.SetFloat(KeyMaxSpeed,         MaxSpeed);
+                _saveManager.Save();
+            }
 
             ApplyAll();
             OnSettingsChanged?.Invoke();
@@ -88,14 +117,14 @@ namespace SWEF.Settings
             Save();
         }
 
-        // ── Setters ──────────────────────────────────────────────────────────────
+        // ── Setters ──────────────────────────────────────────────────────────
         public void SetMasterVolume(float v)     { MasterVolume     = Mathf.Clamp01(v); }
         public void SetSfxVolume(float v)        { SfxVolume        = Mathf.Clamp01(v); }
         public void SetComfortMode(bool b)       { ComfortMode      = b; }
         public void SetTouchSensitivity(float v) { TouchSensitivity = Mathf.Clamp(v, 0.5f, 3.0f); }
         public void SetMaxSpeed(float v)         { MaxSpeed         = Mathf.Clamp(v, 50f, 500f); }
 
-        // ── Internal ─────────────────────────────────────────────────────────────
+        // ── Internal ─────────────────────────────────────────────────────────
         private void ApplyAll()
         {
             if (flightController != null)

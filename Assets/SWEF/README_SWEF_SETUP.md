@@ -960,3 +960,104 @@ World Scene (Phase 9)
       ├── CameraUI                   ← NEW
       └── WeatherUI                  ← NEW
 ```
+
+## Phase 10 — Data Persistence, Cloud Save & Flight Journal
+
+Phase 10 introduces a centralised JSON save system that replaces fragmented PlayerPrefs storage, adds optional cloud backup, a flight-session journal, and automated saving.
+
+### New Scripts
+
+| Script | Namespace | Purpose |
+|--------|-----------|---------|
+| `Core/SaveManager.cs` | `SWEF.Core` | JSON-based singleton save/load system (DontDestroyOnLoad). Central store for all game data. |
+| `Core/CloudSaveController.cs` | `SWEF.Core` | Optional REST-API cloud backup — uploads (PUT) and downloads (GET) the save JSON. |
+| `Core/FlightJournal.cs` | `SWEF.Core` | Records each flight session: start location, max altitude, duration, distance. |
+| `UI/FlightJournalUI.cs` | `SWEF.UI` | Paged journal viewer (5 entries/page) with stats display and delete buttons. |
+| `Core/DataMigrator.cs` | `SWEF.Core` | One-time migration of legacy PlayerPrefs keys to the JSON save file. |
+| `Core/AutoSaveController.cs` | `SWEF.Core` | Periodic auto-save (default 60 s interval, minimum 10 s); also saves on pause/quit. |
+
+### Modified Scripts
+
+| Script | Change |
+|--------|--------|
+| `Core/BootManager.cs` | Before loading the World scene, logs a warning if `SaveManager` is absent from the scene. |
+| `Settings/SettingsManager.cs` | In `Awake`, auto-finds `SaveManager`. `Load()` reads from both PlayerPrefs and SaveManager (SaveManager takes precedence when a save file exists). `Save()` writes to both. |
+
+### Setup
+
+#### 1. SaveManager
+1. Create an empty GameObject in the **Boot scene** named `SaveManager`.
+2. Attach the `SaveManager` script — `DontDestroyOnLoad` is applied automatically.
+3. The save file is written to `Application.persistentDataPath/swef_save.json`.
+4. All other Phase 10 scripts auto-find `SaveManager` via `FindFirstObjectByType`.
+
+#### 2. CloudSaveController
+1. Create an empty GameObject in the World scene (or Boot scene) named `CloudSaveController`.
+2. Attach the `CloudSaveController` script.
+3. Fill in **Cloud Endpoint Url** and optionally **Auth Token** in the Inspector.
+4. Enable **Auto Sync On Save** to upload automatically after every local save.
+5. `IsConfigured` returns `false` (and all operations are no-ops) until the URL is set.
+
+#### 3. FlightJournal
+1. Attach `FlightJournal` to the **PlayerRig** (or any active World-scene GameObject).
+2. Recording starts automatically on `Start()` and stops on pause / destroy.
+3. Set **Max Entries** (default 100) to control how many sessions are retained.
+4. Distance tracking uses the world-space position of the host GameObject.
+
+#### 4. FlightJournalUI
+1. Create a panel GameObject in the **HUD Canvas** named `FlightJournalPanel`.
+2. Attach `FlightJournalUI` to a controller GameObject in the same canvas.
+3. Assign **Journal Panel**, **5 Entry Row** GameObjects, **Delete Buttons**, **Stats Labels**, and **Paging** controls in the Inspector.
+4. Each entry row must contain at least 4 `Text` children: `[0]` date, `[1]` max altitude, `[2]` duration, `[3]` distance.
+5. Call `Toggle()` from a HUD button to open/close the panel.
+
+#### 5. DataMigrator
+1. Create an empty GameObject in the **Boot scene** (after `SaveManager`) named `DataMigrator`.
+2. Attach the `DataMigrator` script — migration runs on `Start()`.
+3. Once migration completes, `SWEF_DataMigrated_v1 = 1` is written to PlayerPrefs so it never re-runs.
+
+#### 6. AutoSaveController
+1. Create an empty GameObject in the World scene named `AutoSaveController`.
+2. Attach the `AutoSaveController` script.
+3. Adjust **Auto Save Interval Sec** (minimum 10 s, default 60 s) in the Inspector.
+4. Toggle **Enable Auto Save** at runtime via the public property.
+
+### Updated Architecture
+```
+Boot Scene (Phase 10)
+  ├── SaveManager (DontDestroyOnLoad)        ← NEW
+  ├── DataMigrator                           ← NEW
+  ├── BootManager  (checks SaveManager)      ← MODIFIED
+  └── (all existing Boot-scene systems)
+
+World Scene (Phase 10)
+  ├── CloudSaveController                    ← NEW
+  ├── FlightJournal  (on PlayerRig)          ← NEW
+  ├── AutoSaveController                     ← NEW
+  ├── SettingsManager (reads/writes SaveMgr) ← MODIFIED
+  └── HUD Canvas
+      └── FlightJournalUI                    ← NEW
+
+DontDestroyOnLoad (persistent singletons)
+  ├── SaveManager                            ← NEW
+  ├── AudioManager
+  ├── LocalizationManager
+  └── DeepLinkHandler
+```
+
+### SaveData Schema
+
+```
+SaveData
+  ├── saveVersion          (int)
+  ├── lastSavedAt          (ISO-8601 string)
+  ├── keyValues[]          ← generic key-value store (replaces scattered PlayerPrefs)
+  │     └── { key, value }
+  ├── favorites[]          ← FavoriteEntry { id, name, lat, lon, alt, savedAt }
+  ├── journal[]            ← JournalEntry  { id, startLocation, lat, lon, maxAltKm,
+  │                                          durationSec, distanceKm, notes, recordedAt }
+  ├── totalFlights         (int)
+  ├── totalFlightTimeSec   (float)
+  ├── allTimeMaxAltitudeKm (float)
+  └── totalDistanceKm      (float)
+```

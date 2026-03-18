@@ -96,6 +96,10 @@ namespace SWEF.Core
 
             loadingScreen?.SetProgress(1f);
 
+            // Phase 10 — warn if SaveManager is not present in the scene
+            if (FindFirstObjectByType<SaveManager>() == null)
+                Debug.Log("[SWEF] BootManager: SaveManager not found in scene — consider attaching SaveManager to a persistent GameObject.");
+
             SceneManager.LoadScene(worldSceneName);
         }
     }
