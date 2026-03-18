@@ -1295,3 +1295,84 @@ Premium Gates (Phase 12)
   ├── CloudSaveController (sync gated)              ← MODIFIED
   └── ScreenshotController (high-res gated)         ← MODIFIED
 ```
+
+---
+
+## Phase 13 — Notification System, Rate Prompt & App Lifecycle Management
+
+### New Scripts
+
+| Script | Namespace | Role |
+|--------|-----------|------|
+| `Notification/NotificationManager.cs` | `SWEF.Notification` | Singleton — schedules/cancels local notifications; auto-schedules on pause |
+| `Notification/NotificationSettings.cs` | `SWEF.Notification` | Channel config (IDs, icons) for Android/iOS |
+| `Core/RatePromptManager.cs` | `SWEF.Core` | Singleton — evaluates rate-prompt conditions, triggers native review API |
+| `Core/RatePromptUI.cs` | `SWEF.Core` | Optional fallback UI panel ("Rate Now / Later / Never") with fade |
+| `Core/AppLifecycleManager.cs` | `SWEF.Core` | Singleton (DontDestroyOnLoad) — Active/Paused/Background/Quitting state machine, auto-save, session init |
+| `Core/SessionTracker.cs` | `SWEF.Core` | Per-session metrics (altitude, speed, distance, teleports, screenshots) |
+
+### Setup Instructions
+
+#### NotificationManager
+1. Add a persistent Boot-scene GameObject and attach `NotificationManager`.
+2. Optionally attach a `NotificationSettings` component on the same object and reference it.
+3. Install **Unity Mobile Notifications** via Package Manager (`com.unity.mobile.notifications`). The script compiles without it using `#if UNITY_ANDROID` / `#if UNITY_IOS` guards.
+4. Call `NotificationManager.Instance.RequestPermission()` from `BootManager` (already wired in Phase 13).
+
+#### NotificationSettings
+- Component-based config; attach to the same GameObject as `NotificationManager`.
+- Set `channelId`, `channelName`, `channelDescription`, `smallIconId`, `largeIconId` in the Inspector.
+- Small/large icon IDs must match drawable resource names in the Android project.
+
+#### RatePromptManager
+1. Add to a World-scene persistent GameObject and attach `RatePromptManager`.
+2. Fill **iOS App ID** and optionally override **Android Package Name** in the Inspector.
+3. `CheckAndPrompt()` is called automatically by `AppLifecycleManager` on app resume.
+4. For testing, call `RatePromptManager.Instance.ResetRateData()` from the debug console.
+
+#### RatePromptUI
+1. Create a Canvas panel (preferably on a separate "Overlay" canvas sorted above HUD).
+2. Attach `RatePromptUI` and wire **Rate Panel**, **Canvas Group**, **Rate Button**, **Later Button**, **Never Button**.
+3. Show via `RatePromptUI.Instance.Show()` when `RatePromptManager` determines native UI is unavailable.
+
+#### AppLifecycleManager
+1. Add to the Boot scene and attach `AppLifecycleManager` — it survives via `DontDestroyOnLoad`.
+2. Set **Auto Save Interval Seconds** (default 60 s) in the Inspector.
+3. Subscribe to `AppLifecycleManager.OnAppStateChanged` from any script that needs lifecycle events.
+4. `InitSession()` is called automatically on `Awake`; `BootManager` also calls it for explicit ordering.
+
+#### SessionTracker
+1. Add to the World scene (a new `SessionTracker` GameObject).
+2. No Inspector configuration required.
+3. `StatsDashboard` feeds altitude/speed automatically (Phase 13).
+4. Call `SessionTracker.Instance.IncrementTeleport()` from `TeleportController` and `IncrementScreenshot()` from `ScreenshotController` for full tracking.
+
+### Modified Scripts
+
+| Script | Change |
+|--------|--------|
+| `Settings/SettingsManager.cs` | Added `NotificationsEnabled` property, `KeyNotificationsEnabled` PlayerPrefs key, `OnNotificationSettingChanged` event, and `SetNotificationsEnabled()` setter |
+| `Settings/SettingsUI.cs` | Added `notificationsToggle` field; wired to `SetNotificationsEnabled()` and `NotificationManager.CancelAll()` |
+| `Core/BootManager.cs` | Calls `AppLifecycleManager.InitSession()` and `NotificationManager.RequestPermission()` on boot |
+| `UI/StatsDashboard.cs` | Per-frame altitude, speed, and distance fed into `SessionTracker.Instance` |
+
+### Updated Architecture
+
+```
+Boot Scene (Phase 13)
+  ├── BootManager (+ AppLifecycleManager.InitSession, NotificationManager.RequestPermission)
+  ├── LoadingScreen
+  ├── ErrorHandler
+  ├── AppLifecycleManager          ← NEW (DontDestroyOnLoad)
+  ├── NotificationManager          ← NEW (DontDestroyOnLoad)
+  └── AudioManager (DontDestroyOnLoad)
+
+World Scene (Phase 13)
+  ├── RatePromptManager            ← NEW
+  ├── SessionTracker               ← NEW
+  ├── SettingsManager (+ notificationsEnabled, OnNotificationSettingChanged)  ← MODIFIED
+  └── HUD Canvas
+      ├── Settings Panel (+ Notification Toggle)  ← MODIFIED
+      ├── StatsDashboard (+ SessionTracker feed)  ← MODIFIED
+      └── Rate Prompt Panel (RatePromptUI)        ← NEW
+```

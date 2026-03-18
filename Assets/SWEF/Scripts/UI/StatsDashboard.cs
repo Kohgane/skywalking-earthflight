@@ -65,11 +65,23 @@ namespace SWEF.UI
             if (currentAlt   > _maxAltitude) _maxAltitude = currentAlt;
             if (currentSpeed > _maxSpeed)    _maxSpeed    = currentSpeed;
 
+            // Phase 13 — feed live values into SessionTracker
+            var tracker = Core.SessionTracker.Instance;
+            if (tracker != null)
+            {
+                tracker.UpdateAltitude(currentAlt);
+                tracker.UpdateSpeed(currentSpeed);
+            }
+
             if (flight != null)
             {
                 Vector3 pos = flight.transform.position;
                 if (_lastPositionSet)
-                    _totalDistance += Vector3.Distance(pos, _lastPosition);
+                {
+                    float delta = Vector3.Distance(pos, _lastPosition);
+                    _totalDistance += delta;
+                    tracker?.AddDistance(delta);
+                }
                 _lastPosition    = pos;
                 _lastPositionSet = true;
             }
