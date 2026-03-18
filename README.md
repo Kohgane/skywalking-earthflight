@@ -8,6 +8,7 @@ A mobile flight-experience app powered by Google Photorealistic 3D Tiles via Ces
 - **Launch** — Start from your GPS location on real 3D terrain
 - **Flight** — Free-fly with touch controls + Comfort mode (anti-motion-sickness)
 - **Ascent** — Rise through atmosphere layers to the Kármán line and beyond
+- **XR/VR** — VR headset support with comfort options + hand tracking (planned)
 
 ## Tech Stack
 | Layer | Technology |
@@ -16,7 +17,7 @@ A mobile flight-experience app powered by Google Photorealistic 3D Tiles via Ces
 | Earth Data | Google Photorealistic 3D Tiles (Map Tiles API) |
 | Tile Renderer | Cesium for Unity |
 | Location | GPS (foreground) |
-| Platforms | iOS, Android (XR planned) |
+| Platforms | iOS, Android, XR (Meta Quest, Vision Pro planned) |
 
 ## Project Structure
 ```
@@ -26,6 +27,7 @@ Assets/SWEF/
 │   ├── Core/        # BootManager, SWEFSession, WorldBootstrap
 │   ├── Flight/      # FlightController, TouchInputRouter, AltitudeController, HoldButton
 │   ├── UI/          # HudBinder
+│   ├── XR/          # XRPlatformDetector, XRRigManager, XRInputAdapter, XRHandTracker, XRComfortSettings, XRUIAdapter
 │   └── Util/        # ExpSmoothing
 └── README_SWEF_SETUP.md
 ```

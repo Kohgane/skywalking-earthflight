@@ -35,6 +35,20 @@ namespace SWEF.Flight
         public void SetMaxSpeed(float speed) => maxSpeed = Mathf.Clamp(speed, 50f, 500f);
 
         /// <summary>
+        /// Feeds XR controller input directly into the flight system,
+        /// bypassing touch input. Called each frame by <c>XRInputAdapter</c>.
+        /// </summary>
+        /// <param name="throttle">Normalised throttle (0–1).</param>
+        /// <param name="yaw">Normalised yaw input (−1 to 1).</param>
+        /// <param name="pitch">Normalised pitch input (−1 to 1).</param>
+        /// <param name="roll">Normalised roll input (−1 to 1).</param>
+        public void SetInputFromXR(float throttle, float yaw, float pitch, float roll)
+        {
+            SetThrottle(throttle);
+            Step(yaw, pitch, roll);
+        }
+
+        /// <summary>
         /// Call once per frame with normalized (-1..1) inputs.
         /// </summary>
         public void Step(float yawInput, float pitchInput, float rollInput)

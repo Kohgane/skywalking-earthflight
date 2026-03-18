@@ -1376,3 +1376,137 @@ World Scene (Phase 13)
       ├── StatsDashboard (+ SessionTracker feed)  ← MODIFIED
       └── Rate Prompt Panel (RatePromptUI)        ← NEW
 ```
+
+---
+
+## Phase 15 — XR/VR Support Foundation
+
+### New Scripts
+
+| Script | Namespace | Role |
+|--------|-----------|------|
+| `XR/XRPlatformDetector.cs` | `SWEF.XR` | Static utility — detects XR platform at runtime (lazy, cached) |
+| `XR/XRRigManager.cs` | `SWEF.XR` | Singleton — manages XR camera rig and mobile/VR mode switching |
+| `XR/XRInputAdapter.cs` | `SWEF.XR` | MonoBehaviour — bridges XR controller input to FlightController |
+| `XR/XRHandTracker.cs` | `SWEF.XR` | MonoBehaviour stub — future hand tracking support |
+| `XR/XRComfortSettings.cs` | `SWEF.XR` | MonoBehaviour — VR comfort/anti-motion-sickness settings |
+| `XR/XRUIAdapter.cs` | `SWEF.XR` | MonoBehaviour — converts Canvas UI to VR world-space rendering |
+| `Settings/XRSettingsUI.cs` | `SWEF.Settings` | MonoBehaviour — XR settings panel (comfort, recenter, UI distance) |
+
+### Modified Scripts
+
+| Script | Change |
+|--------|--------|
+| `Core/BootManager.cs` | Added XR detection after boot sequence; logs device name when XR active |
+| `Settings/SettingsUI.cs` | Added XR header with `xrSettingsButton` and `xrSettingsPanel`; button shown only when XR active |
+| `Flight/FlightController.cs` | Added `SetInputFromXR(throttle, yaw, pitch, roll)` public API for XRInputAdapter |
+
+### XR Platform Support Matrix
+
+| Platform | Status | Notes |
+|----------|--------|-------|
+| Meta Quest (2/3/Pro) | Foundation ready | Detected via `"oculus"/"meta"/"quest"` device name |
+| Apple Vision Pro | Planned | Detected via `"realitykit"/"visionos"/"polyspatial"` device name |
+| PC VR (SteamVR / OpenVR) | Foundation ready | Detected via `"openvr"/"steamvr"/"windowsmr"` device name |
+| Mobile (iOS/Android) | Unchanged | Default mode when XR not active |
+
+### XR Comfort Level Presets
+
+| Level | Snap Turning | Tunnel Vision | Max Turn Speed |
+|-------|-------------|---------------|----------------|
+| Low | Off | Off | 90 °/s |
+| Medium *(default)* | Off | On | 60 °/s |
+| High | On | On | 45 °/s |
+| Custom | User-set | User-set | User-set |
+
+Comfort settings are persisted to PlayerPrefs under keys:
+- `SWEF_XR_ComfortLevel`
+- `SWEF_XR_SnapTurning`
+- `SWEF_XR_TunnelVision`
+
+### XR Input Mapping
+
+| Controller Input | Action |
+|-----------------|--------|
+| Left thumbstick Y | Throttle (`FlightController.SetThrottle`) |
+| Left thumbstick X | Yaw |
+| Right thumbstick X | Roll |
+| Right thumbstick Y | Pitch |
+| Right trigger | Altitude up (boost) |
+| Left trigger | Altitude down (descend) |
+| Left grip | Toggle comfort mode |
+| Right grip | Screenshot |
+| Menu button (left) | Pause |
+| Secondary button (right) | Toggle HUD visibility |
+
+### Setup Instructions
+
+#### XRPlatformDetector
+- Pure static class — no GameObject required.
+- All calls guarded by `#if UNITY_XR_MANAGEMENT`; safe to call without the XR Management package.
+- Returns `XRPlatformType.None` and `IsXRActive = false` when XR packages are absent.
+
+#### XRRigManager
+1. Add a persistent World-scene (or DontDestroyOnLoad) GameObject and attach `XRRigManager`.
+2. Wire **Mobile Rig** (PlayerRig) and optionally **XR Rig** (XR Origin) in the Inspector.
+3. On Awake, the manager auto-detects XR and switches mode if a headset is connected.
+4. If `xrRig` is `null`, the manager gracefully falls back to mobile mode and logs a warning.
+5. Call `XRRigManager.Instance.RecenterXR()` from a button to recenter the headset.
+
+#### XRInputAdapter
+1. Attach to the same GameObject as `XRRigManager` or the PlayerRig.
+2. `FlightController` and `AltitudeController` are auto-found if not assigned.
+3. Requires `#define UNITY_XR_MANAGEMENT` (set automatically by the XR Management package).
+4. Without the package the component disables itself on Awake.
+
+#### XRHandTracker
+- Attach to the XR Rig if desired.
+- `enableHandTracking` must be `true` **and** `XRPlatformDetector.IsHandTrackingAvailable` must return `true` before any processing occurs.
+- All gesture logic is stubbed — implement with the **XR Hands** package when ready.
+
+#### XRComfortSettings
+1. Attach to the World-scene persistent manager GameObject.
+2. `ComfortVignette` is auto-found if not assigned.
+3. Call `SetComfortLevel(ComfortLevel.High)` programmatically to enforce a preset.
+
+#### XRUIAdapter
+1. Attach to a UI manager GameObject in the World scene.
+2. Assign all HUD canvases in the `uiCanvases` array.
+3. The adapter automatically listens to `XRRigManager.OnRigModeChanged` and converts canvases accordingly.
+4. Adjust `worldSpaceDistance` (default 2 m) and `worldSpaceScale` (default 0.001) in the Inspector.
+
+#### XRSettingsUI
+1. Create a settings panel Canvas and attach `XRSettingsUI`.
+2. Wire: **XR Settings Panel**, **Comfort Level Dropdown**, **Snap Turning Toggle**, **Tunnel Vision Toggle**, **UI Distance Slider** (1–5 m), **Follow Head Toggle**, **Recenter Button**, **Platform Info Text**.
+3. The panel's visibility is automatically controlled by `XRPlatformDetector.IsXRActive`.
+
+### Updated Architecture
+
+```
+Boot Scene (Phase 15)
+  └── BootManager (+ XR detection on boot)  ← MODIFIED
+
+World Scene (Phase 15)
+  ├── XRRigManager    (singleton, rig switching)    ← NEW
+  ├── XRInputAdapter  (controller → flight input)   ← NEW
+  ├── XRHandTracker   (hand tracking stub)          ← NEW
+  ├── XRComfortSettings (VR comfort presets)        ← NEW
+  ├── XRUIAdapter     (Canvas → WorldSpace)         ← NEW
+  └── HUD Canvas
+      └── XR Settings Panel  (XRSettingsUI)        ← NEW
+
+XR Module (Phase 15)
+  ├── XRPlatformDetector  (static utility)           ← NEW
+  ├── XRRigManager        (singleton MonoBehaviour)  ← NEW
+  ├── XRInputAdapter      (XR → SWEF input bridge)   ← NEW
+  ├── XRHandTracker       (hand tracking stub)       ← NEW
+  ├── XRComfortSettings   (comfort presets + prefs)  ← NEW
+  └── XRUIAdapter         (world-space canvas adapter) ← NEW
+
+Flight Layer (Phase 15)
+  └── FlightController (+ SetInputFromXR)  ← MODIFIED
+
+Settings Layer (Phase 15)
+  ├── SettingsUI    (+ xrSettingsButton / xrSettingsPanel)  ← MODIFIED
+  └── XRSettingsUI  (XR comfort / recenter panel)           ← NEW
+```

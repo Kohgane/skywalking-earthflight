@@ -109,6 +109,12 @@ namespace SWEF.Core
             if (FindFirstObjectByType<SaveManager>() == null)
                 Debug.Log("[SWEF] BootManager: SaveManager not found in scene — consider attaching SaveManager to a persistent GameObject.");
 
+            // Phase 15 — XR detection
+            if (SWEF.XR.XRPlatformDetector.IsXRActive)
+            {
+                Debug.Log($"[SWEF] XR device detected: {SWEF.XR.XRPlatformDetector.DeviceName}");
+            }
+
             SceneManager.LoadScene(worldSceneName);
             Debug.Log($"[SWEF] Scene load requested: {worldSceneName}");
         }
