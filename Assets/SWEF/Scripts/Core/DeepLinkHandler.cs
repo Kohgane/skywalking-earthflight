@@ -50,7 +50,8 @@ namespace SWEF.Core
 
         /// <summary>
         /// Called when the OS delivers a deep link URL to the app.
-        /// Parses the query parameters and triggers a teleport if the data is valid.
+        /// Routes to the appropriate handler based on the URL path.
+        /// Supports <c>swef://teleport</c> and <c>swef://replay</c>.
         /// </summary>
         private void OnDeepLink(string url)
         {
@@ -58,6 +59,30 @@ namespace SWEF.Core
 
             Debug.Log($"[SWEF] DeepLinkHandler: received URL → {url}");
 
+            string path = ParsePath(url);
+
+            // Phase 17 — Replay deep links
+            if (path == "replay")
+            {
+                var replayShare = FindFirstObjectByType<SWEF.Replay.ReplayShareManager>();
+                if (replayShare != null)
+                {
+                    replayShare.HandleDeepLink(url);
+                    Debug.Log($"[SWEF] Replay deep link handled: {url}");
+                }
+                else
+                {
+                    Debug.LogWarning("[SWEF] DeepLinkHandler: ReplayShareManager not found for replay deep link.");
+                }
+                return;
+            }
+
+            // Default: teleport link
+            HandleTeleportLink(url);
+        }
+
+        private void HandleTeleportLink(string url)
+        {
             string latStr  = ParseQueryParam(url, "lat");
             string lonStr  = ParseQueryParam(url, "lon");
             string name    = ParseQueryParam(url, "name") ?? string.Empty;
@@ -98,10 +123,6 @@ namespace SWEF.Core
             teleport.TeleportTo(lat, lon, name);
         }
 
-        // ------------------------------------------------------------------ //
-        //  URL parsing helper                                                  //
-        // ------------------------------------------------------------------ //
-
         /// <summary>
         /// Extracts the value of <paramref name="key"/> from the query string of
         /// <paramref name="url"/>, or returns <c>null</c> when the key is absent.
@@ -124,6 +145,21 @@ namespace SWEF.Core
                 }
             }
             return null;
+        }
+
+        /// <summary>
+        /// Extracts the path component from a <c>swef://path?…</c> URL.
+        /// Returns an empty string when the URL has no recognisable path segment.
+        /// </summary>
+        private static string ParsePath(string url)
+        {
+            // swef://path?... → "path"
+            int schemeEnd = url.IndexOf("://");
+            if (schemeEnd < 0) return string.Empty;
+            int pathStart = schemeEnd + 3;
+            int queryStart = url.IndexOf('?', pathStart);
+            int pathEnd    = queryStart >= 0 ? queryStart : url.Length;
+            return url.Substring(pathStart, pathEnd - pathStart).Trim('/');
         }
 
         /// <summary>Decodes percent-encoded characters in a URL component.</summary>

@@ -10,6 +10,7 @@ A mobile flight-experience app powered by Google Photorealistic 3D Tiles via Ces
 - **Ascent** — Rise through atmosphere layers to the Kármán line and beyond
 - **XR/VR** — VR headset support with comfort options + hand tracking (planned)
 - **Accessibility** — Colorblind modes, dynamic text scaling, one-handed mode, screen reader support, haptic feedback
+- **Replay System** — Save, share, and race against ghost replays with 3D flight path visualization
 
 ## Tech Stack
 | Layer | Technology |
@@ -28,6 +29,7 @@ Assets/SWEF/
 │   ├── Core/        # BootManager, SWEFSession, WorldBootstrap
 │   ├── Flight/      # FlightController, TouchInputRouter, AltitudeController, HoldButton
 │   ├── Haptic/      # HapticManager, HapticTriggerZone
+│   ├── Replay/      # ReplayData, ReplayFileManager, GhostRacer, FlightPathRenderer, ReplayShareManager
 │   ├── UI/          # HudBinder, AccessibilityController, OneHandedModeController, VoiceCommandManager
 │   ├── XR/          # XRPlatformDetector, XRRigManager, XRInputAdapter, XRHandTracker, XRComfortSettings, XRUIAdapter
 │   └── Util/        # ExpSmoothing
