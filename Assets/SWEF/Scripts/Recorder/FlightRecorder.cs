@@ -80,6 +80,24 @@ namespace SWEF.Recorder
             Debug.Log("[SWEF] FlightRecorder: Recording cleared.");
         }
 
+        // ── Phase 17 — Replay export ──────────────────────────────────────────────
+
+        /// <summary>Exports the current recording to a <see cref="SWEF.Replay.ReplayData"/> instance.</summary>
+        public SWEF.Replay.ReplayData ExportToReplayData()
+        {
+            return SWEF.Replay.ReplayData.FromFlightRecorder(this);
+        }
+
+        /// <summary>Returns a copy of the recorded frames list.</summary>
+        public List<FlightFrame> GetFrames() => new List<FlightFrame>(_frames);
+
+        /// <summary>Returns the total recorded duration in seconds, or 0 when empty.</summary>
+        public float GetRecordedDuration()
+        {
+            if (_frames.Count < 2) return 0f;
+            return _frames[_frames.Count - 1].time - _frames[0].time;
+        }
+
         // ── Internal ─────────────────────────────────────────────────────────────
         private IEnumerator RecordCoroutine()
         {

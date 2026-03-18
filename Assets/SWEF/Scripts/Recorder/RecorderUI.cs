@@ -25,6 +25,10 @@ namespace SWEF.Recorder
         [SerializeField] private Text statusText;
         [SerializeField] private GameObject recorderPanel;
 
+        [Header("Phase 17 — Replay")]
+        [SerializeField] private Button saveReplayButton;
+        [SerializeField] private Button openReplayBrowserButton;
+
         private float _recordStartTime;
 
         // ── Unity lifecycle ───────────────────────────────────────────────────────
@@ -45,6 +49,12 @@ namespace SWEF.Recorder
                 clearButton.onClick.AddListener(OnClearPressed);
             if (toggleButton != null)
                 toggleButton.onClick.AddListener(TogglePanel);
+
+            // Phase 17 — Replay
+            if (saveReplayButton != null)
+                saveReplayButton.onClick.AddListener(OnSaveReplayPressed);
+            if (openReplayBrowserButton != null)
+                openReplayBrowserButton.onClick.AddListener(OnOpenReplayBrowserPressed);
         }
 
         private void Update()
@@ -85,6 +95,63 @@ namespace SWEF.Recorder
         {
             if (recorderPanel != null)
                 recorderPanel.SetActive(!recorderPanel.activeSelf);
+        }
+
+        // ── Phase 17 — Replay callbacks ───────────────────────────────────────────
+
+        private void OnSaveReplayPressed()
+        {
+            if (recorder == null) return;
+
+            // Stop active recording before exporting
+            if (recorder.IsRecording)
+                recorder.StopRecording();
+
+            if (recorder.GetFrames().Count == 0)
+            {
+                Debug.LogWarning("[SWEF] RecorderUI: No frames to save.");
+                return;
+            }
+
+            var fileManager = Replay.ReplayFileManager.Instance
+                ?? FindFirstObjectByType<Replay.ReplayFileManager>();
+
+            if (fileManager == null)
+            {
+                Debug.LogWarning("[SWEF] RecorderUI: ReplayFileManager not found.");
+                return;
+            }
+
+            var data = recorder.ExportToReplayData();
+            fileManager.SaveReplay(data);
+
+            // Toast
+            if (statusText != null)
+            {
+                statusText.text = "Replay saved! ✈️";
+                CancelInvoke(nameof(ResetStatusText));
+                Invoke(nameof(ResetStatusText), 3f);
+            }
+            Debug.Log("[SWEF] RecorderUI: Replay saved via save button.");
+        }
+
+        private void OnOpenReplayBrowserPressed()
+        {
+            var browser = FindFirstObjectByType<UI.ReplayBrowserUI>();
+            if (browser != null)
+            {
+                browser.gameObject.SetActive(true);
+                browser.Refresh();
+            }
+            else
+            {
+                Debug.LogWarning("[SWEF] RecorderUI: ReplayBrowserUI not found in scene.");
+            }
+        }
+
+        private void ResetStatusText()
+        {
+            UpdateStatusText();
         }
 
         // ── UI update ─────────────────────────────────────────────────────────────

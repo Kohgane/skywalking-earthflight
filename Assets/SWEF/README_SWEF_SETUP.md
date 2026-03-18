@@ -1660,3 +1660,163 @@ Haptic Module (Phase 16)
   ├── HapticPattern   (enum)                               ← NEW
   └── HapticTriggerZone (gameplay → haptic bridge)         ← NEW
 ```
+
+---
+
+## Phase 17 — Replay Sharing, Ghost Racing & Flight Path Visualization
+
+### New Scripts (7)
+
+| # | File | Namespace | Purpose |
+|---|------|-----------|---------|
+| 1 | `Replay/ReplayData.cs` | `SWEF.Replay` | Serializable replay file model; `FromFlightRecorder`, `ToJson`, `FromJson` |
+| 2 | `Replay/ReplayFileManager.cs` | `SWEF.Replay` | Singleton file I/O — save / load / list / delete / export / import replays |
+| 3 | `Replay/GhostRacer.cs` | `SWEF.Replay` | Binary-search interpolated ghost playback; live comparison stats |
+| 4 | `Replay/FlightPathRenderer.cs` | `SWEF.Replay` | LineRenderer-based 3D path with altitude colour coding + Douglas–Peucker simplification |
+| 5 | `Replay/ReplayShareManager.cs` | `SWEF.Replay` | Native share-sheet integration; deep-link encode/decode; clipboard import |
+| 6 | `UI/ReplayBrowserUI.cs` | `SWEF.UI` | Paginated replay browser; sort, play, share, ghost-race, view path, delete |
+| 7 | `UI/GhostRaceHUD.cs` | `SWEF.UI` | Race overlay HUD; time/altitude/speed delta; progress slider; pause/resume |
+
+### Modified Scripts (5)
+
+| File | Change |
+|------|--------|
+| `Recorder/FlightRecorder.cs` | Added `ExportToReplayData()`, `GetFrames()`, `GetRecordedDuration()` |
+| `Recorder/RecorderUI.cs` | Added `saveReplayButton` and `openReplayBrowserButton` with handlers |
+| `Core/DeepLinkHandler.cs` | Added path-based routing; `swef://replay?…` forwarded to `ReplayShareManager` |
+| `Social/ShareManager.cs` | Added `ShareReplayText(string)` convenience wrapper |
+| `Achievement/AchievementManager.cs` | Added `first_ghost_race` and `replay_shared` achievements |
+
+### Replay File Format (.swefr)
+
+Replay files are stored as UTF-8 JSON under `Application.persistentDataPath/Replays/`.
+The extension is `.swefr`. Maximum file size is **10 MB**. Up to **50 replays** are
+retained before the oldest are pruned by `CleanupOldReplays()`.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `replayId` | string | GUID |
+| `playerName` | string | Device display name |
+| `version` | int | Format version (currently 1) |
+| `createdAt` | string | ISO-8601 UTC timestamp |
+| `totalDurationSec` | float | Total flight duration |
+| `maxAltitudeM` | float | Peak altitude (metres) |
+| `maxSpeedMps` | float | Peak speed (m/s) |
+| `totalDistanceKm` | float | Flight distance (km) |
+| `startLat` / `startLon` | double | Starting coordinates |
+| `startLocationName` | string | Human-readable start location |
+| `frames` | ReplayFrame[] | Per-frame flight state |
+
+Each `ReplayFrame` captures: `time`, `px/py/pz` (position), `rx/ry/rz/rw` (quaternion), `altitude`, `speed`.
+
+### Ghost Racing
+
+1. Open Replay Browser → choose a saved replay → tap **Ghost Race**.
+2. A semi-transparent ghost aircraft spawns at the starting position and flies
+   the recorded path using binary-search frame interpolation (`Vector3.Lerp` /
+   `Quaternion.Slerp`).
+3. The **GhostRaceHUD** shows:
+   - Time delta (ahead = green, behind = red, ≤0.5 s = white)
+   - Altitude delta (↑ / ↓ metres)
+   - Speed delta (km/h)
+   - Progress slider + percentage
+4. Completing a ghost race unlocks the **Ghost Hunter 👻** achievement.
+
+### Flight Path Colour Legend
+
+| Altitude Range | Colour |
+|----------------|--------|
+| 0 – 2,000 m | 🟢 Green |
+| 2,000 – 20,000 m | 🟡 Yellow |
+| 20,000 – 80,000 m | 🟠 Orange-Red |
+| 80,000 – 120,000 m | 🔴 Red-Purple |
+| 120,000 m+ | ⚪ Purple-White (space) |
+
+Path simplification uses the **Douglas–Peucker** algorithm (default tolerance 10 m).
+Maximum rendered points: **2,000** (configurable via `maxPoints`).
+
+### Deep Link Format
+
+| Scheme | Purpose |
+|--------|---------|
+| `swef://replay?id={replayId}` | Short link for cloud download (stub) |
+| `swef://replay?id={id}&name={name}&alt={alt}&dur={dur}` | Metadata deep link |
+| `swef://replay?data={base64}` | Inline encoded replay (≤ 10,000 chars) |
+
+### Storage Management
+
+- Max replays kept: **50** (call `ReplayFileManager.CleanupOldReplays()`)
+- Max per-file size: **10 MB**
+- Use `GetTotalReplaySizeBytes()` to display storage usage in `storageInfoText`
+
+### Setup Instructions
+
+#### 1. ReplayFileManager
+1. Create empty GameObject `ReplayFileManager` (Boot scene).
+2. Attach `ReplayFileManager` — `DontDestroyOnLoad` is handled automatically.
+
+#### 2. GhostRacer
+1. Attach `GhostRacer` to any World-scene object.
+2. Assign `ghostPrefab` (semi-transparent aircraft model) in the Inspector.
+3. Optionally wire `playerFlight` and `playerAltitude` for live comparison stats.
+
+#### 3. FlightPathRenderer
+1. Attach `FlightPathRenderer` to a World-scene GameObject.
+2. A `LineRenderer` is added automatically if not present.
+3. Optionally assign a custom `pathMaterial`.
+4. Call `StartLiveTracking(playerRig.transform)` to enable real-time path display.
+
+#### 4. ReplayShareManager
+1. Attach `ReplayShareManager` to any World-scene object.
+2. Wire `fileManager` and `shareManager` in the Inspector (or leave null for auto-find).
+
+#### 5. ReplayBrowserUI
+1. Add a Canvas panel for the replay browser.
+2. Attach `ReplayBrowserUI` and assign all `[SerializeField]` references.
+3. The `replayItemPrefab` must contain named children:
+   `NameText`, `DateText`, `DurationText`, `AltitudeText`,
+   `PlayButton`, `ShareButton`, `GhostRaceButton`, `DeleteButton`, `ViewPathButton`.
+
+#### 6. GhostRaceHUD
+1. Add a Canvas overlay for the race HUD.
+2. Attach `GhostRaceHUD` and assign all `[SerializeField]` references.
+3. The panel auto-shows on `GhostRacer.OnRaceStarted` and auto-hides 5 s after `OnRaceFinished`.
+
+#### 7. RecorderUI (updated)
+- Wire `saveReplayButton` → saves current recording as a `.swefr` file.
+- Wire `openReplayBrowserButton` → opens `ReplayBrowserUI`.
+
+### Updated Architecture
+
+```
+Boot Scene (Phase 17)
+  └── ReplayFileManager (singleton, DontDestroyOnLoad)     ← NEW
+
+World Scene (Phase 17)
+  ├── GhostRacer        (replay playback + comparison)     ← NEW
+  ├── FlightPathRenderer (LineRenderer path vis)           ← NEW
+  ├── ReplayShareManager (share / import)                  ← NEW
+  └── Canvas
+      ├── ReplayBrowserUI (paginated list)                 ← NEW
+      └── GhostRaceHUD   (race overlay)                    ← NEW
+
+Recorder Layer (Phase 17)
+  ├── FlightRecorder  (+ ExportToReplayData, GetFrames)    ← MODIFIED
+  └── RecorderUI      (+ saveReplayButton, openBrowser)    ← MODIFIED
+
+Core Layer (Phase 17)
+  └── DeepLinkHandler (+ swef://replay routing)            ← MODIFIED
+
+Social Layer (Phase 17)
+  └── ShareManager    (+ ShareReplayText)                  ← MODIFIED
+
+Achievement Layer (Phase 17)
+  └── AchievementManager (+ first_ghost_race, replay_shared) ← MODIFIED
+
+Replay Module (Phase 17)
+  ├── ReplayData        (serializable model)               ← NEW
+  ├── ReplayFileManager (file I/O, singleton)              ← NEW
+  ├── GhostRacer        (ghost playback)                   ← NEW
+  ├── FlightPathRenderer (3D path rendering)               ← NEW
+  └── ReplayShareManager (share / import)                  ← NEW
+```

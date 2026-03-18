@@ -110,5 +110,16 @@ namespace SWEF.Social
 
             ShareText(text);
         }
+
+        // Phase 17 — Replay sharing
+        /// <summary>
+        /// Convenience wrapper for sharing replay content via the native share sheet.
+        /// </summary>
+        /// <param name="replayText">Pre-formatted replay share text or deep link.</param>
+        public void ShareReplayText(string replayText)
+        {
+            ShareText(replayText);
+            Debug.Log("[SWEF] Replay shared via ShareManager");
+        }
     }
 }

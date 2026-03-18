@@ -26,14 +26,17 @@ namespace SWEF.Achievement
         /// <summary>All achievable milestones in the game.</summary>
         public static readonly AchievementDef[] Definitions = new AchievementDef[]
         {
-            new AchievementDef { id = "first_flight",    title = "First Flight ✈️",        description = "Complete your first flight",              emoji = "✈️" },
-            new AchievementDef { id = "reach_10km",      title = "Sky High 🌤️",            description = "Reach 10,000 meters altitude",            emoji = "🌤️" },
-            new AchievementDef { id = "reach_karman",    title = "Edge of Space 🌍",        description = "Cross the Kármán line at 100km",          emoji = "🌍" },
-            new AchievementDef { id = "reach_120km",     title = "Space Pioneer 🚀",        description = "Reach 120,000 meters",                    emoji = "🚀" },
-            new AchievementDef { id = "mach1",           title = "Sound Barrier 💥",        description = "Break the sound barrier (Mach 1)",        emoji = "💥" },
-            new AchievementDef { id = "orbital_speed",   title = "Orbital Velocity ⚡",     description = "Reach orbital speed (7,900 m/s)",         emoji = "⚡" },
-            new AchievementDef { id = "first_teleport",  title = "World Traveler 🗺️",      description = "Teleport to a new location",              emoji = "🗺️" },
-            new AchievementDef { id = "first_screenshot",title = "Photographer 📸",         description = "Take your first screenshot",              emoji = "📸" },
+            new AchievementDef { id = "first_flight",     title = "First Flight ✈️",        description = "Complete your first flight",              emoji = "✈️" },
+            new AchievementDef { id = "reach_10km",       title = "Sky High 🌤️",            description = "Reach 10,000 meters altitude",            emoji = "🌤️" },
+            new AchievementDef { id = "reach_karman",     title = "Edge of Space 🌍",        description = "Cross the Kármán line at 100km",          emoji = "🌍" },
+            new AchievementDef { id = "reach_120km",      title = "Space Pioneer 🚀",        description = "Reach 120,000 meters",                    emoji = "🚀" },
+            new AchievementDef { id = "mach1",            title = "Sound Barrier 💥",        description = "Break the sound barrier (Mach 1)",        emoji = "💥" },
+            new AchievementDef { id = "orbital_speed",    title = "Orbital Velocity ⚡",     description = "Reach orbital speed (7,900 m/s)",         emoji = "⚡" },
+            new AchievementDef { id = "first_teleport",   title = "World Traveler 🗺️",      description = "Teleport to a new location",              emoji = "🗺️" },
+            new AchievementDef { id = "first_screenshot", title = "Photographer 📸",         description = "Take your first screenshot",              emoji = "📸" },
+            // Phase 17 — Replay achievements
+            new AchievementDef { id = "first_ghost_race", title = "Ghost Hunter 👻",         description = "Complete your first ghost race",          emoji = "👻" },
+            new AchievementDef { id = "replay_shared",    title = "Flight Broadcaster 📡",   description = "Share a replay with another player",      emoji = "📡" },
         };
 
         // ── Inspector refs ───────────────────────────────────────────────────────
