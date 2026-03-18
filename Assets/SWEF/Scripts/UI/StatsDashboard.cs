@@ -134,7 +134,7 @@ namespace SWEF.UI
             if (dash != null)
             {
                 if (dailyStreakText != null)
-                    dailyStreakText.text = $"{dash.DailyActiveStreak} day streak 🔥";
+                    dailyStreakText.text = $"{dash.DailyActiveStreak} {(dash.DailyActiveStreak == 1 ? "day" : "days")} streak 🔥";
                 if (totalFlightsText != null)
                     totalFlightsText.text = $"{dash.TotalFlights} total flights";
                 if (avgFlightDurationText != null)

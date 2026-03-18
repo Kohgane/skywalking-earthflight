@@ -164,7 +164,12 @@ namespace SWEF.Analytics
                 PlayerPrefs.SetString(PrefsSaltKey, salt);
             }
 
-            string raw  = SystemInfo.deviceUniqueIdentifier + salt;
+            // deviceUniqueIdentifier may be empty on some platforms; fall back to a random GUID
+            string deviceId = SystemInfo.deviceUniqueIdentifier;
+            if (string.IsNullOrEmpty(deviceId) || deviceId == SystemInfo.unsupportedIdentifier)
+                deviceId = Guid.NewGuid().ToString("N");
+
+            string raw  = deviceId + salt;
             string hash = ComputeSha256(raw);
 
             PlayerPrefs.SetString(PrefsUserIdKey, hash);

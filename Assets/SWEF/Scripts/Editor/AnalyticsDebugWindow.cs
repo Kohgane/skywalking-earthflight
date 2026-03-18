@@ -125,7 +125,7 @@ namespace SWEF.Editor
             _showPerf = EditorGUILayout.Foldout(_showPerf, "Performance");
             if (!_showPerf) return;
 
-            var collector = Object.FindFirstObjectByType<Analytics.PerformanceTelemetryCollector>();
+            var collector = Object.FindAnyObjectByType<Analytics.PerformanceTelemetryCollector>();
             if (collector == null)
             {
                 EditorGUILayout.LabelField("PerformanceTelemetryCollector not found.");

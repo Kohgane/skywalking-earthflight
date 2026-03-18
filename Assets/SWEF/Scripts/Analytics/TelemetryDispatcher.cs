@@ -274,12 +274,12 @@ namespace SWEF.Analytics
         {
             var sb = new StringBuilder();
             sb.Append('{');
-            AppendJsonField(sb, "eventId",        e.eventId,        true);
-            AppendJsonField(sb, "eventName",      e.eventName,      false);
-            AppendJsonField(sb, "category",       e.category,       false);
-            AppendJsonField(sb, "sessionId",      e.sessionId,      false);
-            AppendJsonField(sb, "userId",         e.userId,         false);
-            AppendJsonField(sb, "timestamp",      e.timestamp.ToString("o"), false);
+            sb.Append($"\"eventId\":\"{EscapeJson(e.eventId)}\",");
+            sb.Append($"\"eventName\":\"{EscapeJson(e.eventName)}\",");
+            sb.Append($"\"category\":\"{EscapeJson(e.category)}\",");
+            sb.Append($"\"sessionId\":\"{EscapeJson(e.sessionId)}\",");
+            sb.Append($"\"userId\":\"{EscapeJson(e.userId)}\",");
+            sb.Append($"\"timestamp\":\"{EscapeJson(e.timestamp.ToString("o"))}\",");
             sb.Append($"\"sequenceNumber\":{e.sequenceNumber},");
             sb.Append("\"properties\":{");
             if (e.properties != null)
@@ -295,15 +295,6 @@ namespace SWEF.Analytics
             }
             sb.Append("}}");
             return sb.ToString();
-        }
-
-        private static void AppendJsonField(StringBuilder sb, string key, string value, bool first)
-        {
-            if (!first) sb.Append(',');
-            sb.Append($"\"{EscapeJson(key)}\":");
-            if (value == null) sb.Append("null");
-            else sb.Append($"\"{EscapeJson(value)}\"");
-            sb.Append(',');
         }
 
         private static void AppendJsonValue(StringBuilder sb, object value)
@@ -361,11 +352,9 @@ namespace SWEF.Analytics
 
             try
             {
-                // We only log that we found persisted events; full deserialization
-                // is intentionally omitted to keep the implementation dependency-free.
-                // The file is flushed on next connectivity using the raw JSON directly.
-                Debug.Log("[SWEF] TelemetryDispatcher: found persisted telemetry queue.");
-                File.Delete(path);
+                // Persisted events are logged on startup; the file is left in place
+                // and will be deleted only after the next successful batch dispatch.
+                Debug.Log("[SWEF] TelemetryDispatcher: found persisted telemetry queue; will flush on next dispatch.");
             }
             catch (Exception ex)
             {

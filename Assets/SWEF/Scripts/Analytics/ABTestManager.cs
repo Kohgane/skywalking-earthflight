@@ -43,7 +43,7 @@ namespace SWEF.Analytics
         public static ABTestManager Instance { get; private set; }
 
         // ── Inspector ────────────────────────────────────────────────────────────
-        [SerializeField] private ABTestConfig[] activeTests = Array.Empty<ABTestConfig>();
+        [SerializeField] private ABTestConfig[] activeTests = new ABTestConfig[0];
 
         // ── State ────────────────────────────────────────────────────────────────
         private readonly Dictionary<string, ABTest> _tests = new Dictionary<string, ABTest>();
@@ -169,12 +169,16 @@ namespace SWEF.Analytics
         {
             if (cfg.variants == null || cfg.variants.Length == 0) return string.Empty;
 
-            // Deterministic hash of userId + testId
+            // Deterministic hash of userId + testId; use unchecked to avoid overflow exceptions.
+            // Clamp to non-negative by masking the sign bit (handles int.MinValue edge case).
             string seed = _userId + cfg.testId;
-            int hash = 0;
-            foreach (char c in seed)
-                hash = hash * 31 + c;
-            hash = Mathf.Abs(hash);
+            int hash = 5381;
+            unchecked
+            {
+                foreach (char c in seed)
+                    hash = hash * 31 + c;
+            }
+            hash = hash & 0x7FFFFFFF; // always non-negative
 
             string variant = cfg.variants[hash % cfg.variants.Length];
             PlayerPrefs.SetString(PrefsPrefix + cfg.testId, variant);

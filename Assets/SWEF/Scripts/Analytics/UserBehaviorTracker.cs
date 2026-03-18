@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -16,7 +15,11 @@ namespace SWEF.Analytics
 
         // ── Inspector ────────────────────────────────────────────────────────────
         [Header("Button Tracking")]
-        [SerializeField] private string[] trackedButtonNames = Array.Empty<string>();
+        [Tooltip("Only buttons whose GameObject name appears in this list will be tracked automatically. Leave empty to track all button clicks manually via TrackButtonClick().")]
+        [SerializeField] private string[] trackedButtonNames = new string[0];
+
+        // Pre-built HashSet for O(1) lookup
+        private readonly HashSet<string> _trackedButtonSet = new HashSet<string>();
 
         // ── Feature discovery ─────────────────────────────────────────────────────
         private const string PrefsDiscoveredKey = "SWEF_DiscoveredFeatures";
@@ -40,6 +43,13 @@ namespace SWEF.Analytics
             if (Instance != null && Instance != this) { Destroy(gameObject); return; }
             Instance = this;
             DontDestroyOnLoad(gameObject);
+
+            // Populate the tracked-button lookup set
+            if (trackedButtonNames != null)
+            {
+                foreach (string n in trackedButtonNames)
+                    if (!string.IsNullOrEmpty(n)) _trackedButtonSet.Add(n);
+            }
 
             LoadDiscoveredFeatures();
 
@@ -119,6 +129,8 @@ namespace SWEF.Analytics
         {
             if (btn == null) return;
             string name = btn.gameObject.name;
+            // Only wire if the button is in the tracked set (or if no filter is configured)
+            if (_trackedButtonSet.Count > 0 && !_trackedButtonSet.Contains(name)) return;
             btn.onClick.AddListener(() => TrackButtonClick(name));
         }
 

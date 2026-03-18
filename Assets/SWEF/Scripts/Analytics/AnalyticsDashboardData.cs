@@ -171,7 +171,10 @@ namespace SWEF.Analytics
             {
                 int idx = entry.IndexOf('=');
                 if (idx > 0 && int.TryParse(entry.Substring(idx + 1), out int cnt))
-                    FeatureUsageCounts[entry.Substring(0, idx)] = cnt;
+                {
+                    string key = UnescapeFeatureKey(entry.Substring(0, idx));
+                    FeatureUsageCounts[key] = cnt;
+                }
             }
         }
 
@@ -179,9 +182,16 @@ namespace SWEF.Analytics
         {
             var parts = new List<string>();
             foreach (var kvp in FeatureUsageCounts)
-                parts.Add($"{kvp.Key}={kvp.Value}");
+                parts.Add($"{EscapeFeatureKey(kvp.Key)}={kvp.Value}");
             PlayerPrefs.SetString(KeyFeatureUsage, string.Join(";", parts));
         }
+
+        // Escape ';' → "\sc" and '=' → "\eq" and '\' → "\bs" to avoid parsing ambiguity.
+        private static string EscapeFeatureKey(string key) =>
+            key.Replace("\\", "\\bs").Replace(";", "\\sc").Replace("=", "\\eq");
+
+        private static string UnescapeFeatureKey(string key) =>
+            key.Replace("\\eq", "=").Replace("\\sc", ";").Replace("\\bs", "\\");
 
         private void UpdateDailyStreak()
         {

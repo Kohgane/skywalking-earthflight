@@ -195,7 +195,7 @@ namespace SWEF.Analytics
                 { "deviceModel",  SystemInfo.deviceModel },
                 { "osVersion",    SystemInfo.operatingSystem },
                 { "weather",      GetWeatherName() },
-                { "timeOfDayHour", DateTime.Now.Hour },
+                { "timeOfDayHour", DateTime.UtcNow.Hour },
             };
             return props;
         }
