@@ -1,19 +1,14 @@
-name: Acquire Unity License (.alf)
+name: Acquire Unity License
 on:
-  workflow_dispatch: {}   # 수동으로만 실행
+  workflow_dispatch: {}
 
 jobs:
-  request-alf:
+  activate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: game-ci/unity-request-activation-file@v2
-        id: getAlf
+      - uses: game-ci/unity-license-activate@v1
         with:
-          unityVersion: 6000.3.11f1   # ← 본인 Unity 버전으로 변경!
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: unity-activation-file
-          path: ${{ steps.getAlf.outputs.filePath }}
+          unity-version: 6000.3.11f1
+          username: ${{ secrets.UNITY_EMAIL }}
+          password: ${{ secrets.UNITY_PASSWORD }}
+      # 활성화 후 생성된 .ulf 파일을 아티팩트로 다운로드
