@@ -9,6 +9,8 @@ namespace SWEF.Multiplayer
     /// and manages the lifecycle of remote player avatars. Uses an abstract event-based
     /// transport layer so any networking backend (WebSocket, Photon, etc.) can be
     /// plugged in by subscribing to <see cref="OnLocalStateBroadcast"/>.
+    /// Phase 20: extended with <see cref="RoomManager"/>, <see cref="PlayerSyncController"/>
+    /// references, proximity helpers, and lifecycle hooks.
     /// </summary>
     public class MultiplayerManager : MonoBehaviour
     {
@@ -23,6 +25,10 @@ namespace SWEF.Multiplayer
         [Header("Timing")]
         [SerializeField] private float broadcastInterval = 0.1f;  // 10 Hz
         [SerializeField] private float stalePlayerTimeout = 10f;
+
+        [Header("Phase 20 — Multiplayer Sync")]
+        [SerializeField] private RoomManager roomManager;
+        [SerializeField] private PlayerSyncController playerSyncController;
 
         private readonly Dictionary<string, PlayerAvatar> _remotePlayers = new();
         private float _broadcastTimer;
@@ -40,6 +46,12 @@ namespace SWEF.Multiplayer
         /// <summary>Number of currently tracked remote players.</summary>
         public int RemotePlayerCount => _remotePlayers.Count;
 
+        /// <summary>Whether the local player is currently inside a multiplayer room.</summary>
+        public bool IsInRoom => roomManager != null && roomManager.IsInRoom;
+
+        /// <summary>Whether the local player is the host of the current room.</summary>
+        public bool IsHost => roomManager != null && roomManager.IsHost;
+
         private void Awake()
         {
             if (localFlight == null)
@@ -48,12 +60,90 @@ namespace SWEF.Multiplayer
             if (localAltitude == null)
                 localAltitude = FindFirstObjectByType<AltitudeController>();
 
+            if (roomManager == null)
+                roomManager = RoomManager.Instance != null
+                    ? RoomManager.Instance
+                    : FindFirstObjectByType<RoomManager>();
+
+            if (playerSyncController == null)
+                playerSyncController = FindFirstObjectByType<PlayerSyncController>();
+
             // Generate a short unique ID for this session's local player.
             _localPlayerId = System.Guid.NewGuid().ToString("N").Substring(0, 8);
         }
 
-        private void Update()
+        /// <summary>
+        /// Initialises multiplayer subsystems. Called from BootManager after scene load.
+        /// </summary>
+        public void InitializeMultiplayer()
         {
+            Debug.Log("[SWEF][MultiplayerManager] InitializeMultiplayer called.");
+
+            // Subscribe RoomManager events for analytics forwarding
+            if (roomManager != null)
+            {
+                roomManager.OnRoomJoined  += info => Core.AnalyticsLogger.LogEvent("mp_room_joined", info.roomId);
+                roomManager.OnRoomCreated += info => Core.AnalyticsLogger.LogEvent("mp_room_created", info.roomId);
+            }
+        }
+
+        /// <summary>
+        /// Cleans up multiplayer state. Call when leaving a multiplayer session.
+        /// </summary>
+        public void ShutdownMultiplayer()
+        {
+            if (roomManager != null && roomManager.IsInRoom)
+                roomManager.LeaveRoom();
+
+            RemoveAllPlayers();
+            Debug.Log("[SWEF][MultiplayerManager] ShutdownMultiplayer complete.");
+        }
+
+        /// <summary>
+        /// Returns all players within <paramref name="radius"/> metres of the local player's position.
+        /// </summary>
+        /// <param name="radius">Search radius in metres.</param>
+        /// <returns>List of <see cref="PlayerInfo"/> entries within range.</returns>
+        public List<PlayerInfo> GetNearbyPlayers(float radius)
+        {
+            var result = new List<PlayerInfo>();
+            if (roomManager == null || !roomManager.IsInRoom) return result;
+            if (playerSyncController == null) return result;
+
+            foreach (var info in roomManager.PlayersInRoom)
+            {
+                if (info.playerId == _localPlayerId) continue;
+
+                PlayerSyncData data = playerSyncController.GetRemotePlayerData(info.playerId);
+                if (data == null) continue;
+
+                if (Vector3.Distance(transform.position, data.position) <= radius)
+                    result.Add(info);
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Broadcasts a <see cref="PlayerSyncData"/> packet. Called by <see cref="PlayerSyncController"/>.
+        /// </summary>
+        /// <param name="data">Local player sync data to send.</param>
+        public void BroadcastSyncData(PlayerSyncData data)
+        {
+            // In a real implementation this would serialise data and send via INetworkTransport.
+            // For now, fire the legacy state broadcast so existing subscribers keep working.
+            var state = new AvatarState
+            {
+                position     = data.position,
+                rotation     = data.rotation,
+                speedMps     = data.speed,
+                altitudeMeters = data.altitude,
+                displayName  = "Me"
+            };
+            OnLocalStateBroadcast?.Invoke(_localPlayerId, state);
+        }
+
+
             _broadcastTimer += Time.deltaTime;
             if (_broadcastTimer >= broadcastInterval)
             {

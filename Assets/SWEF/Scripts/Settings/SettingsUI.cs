@@ -41,6 +41,16 @@ namespace SWEF.Settings
         [SerializeField] private Toggle defaultRealTimeToggle;
         [SerializeField] private Slider defaultTimeOfDaySlider;
 
+        [Header("Phase 20 — Multiplayer")]
+        [SerializeField] private InputField playerNameInput;
+        [SerializeField] private Slider     avatarColorSlider;
+        [SerializeField] private Toggle     showOtherPlayersToggle;
+        [SerializeField] private Toggle     showNameLabelsToggle;
+        [SerializeField] private Toggle     showTrailsToggle;
+        [SerializeField] private Toggle     voiceChatToggle;
+        [SerializeField] private Slider     voiceVolumeSlider;
+
+
         [Header("Quality Preset (Phase 8)")]
         [SerializeField] private QualityPresetManager qualityManager;
         [SerializeField] private Dropdown             qualityDropdown;
@@ -110,6 +120,31 @@ namespace SWEF.Settings
 
             if (panelRoot != null) panelRoot.SetActive(false);
             if (accessibilitySettingsPanel != null) accessibilitySettingsPanel.SetActive(false);
+
+            // Phase 20 — Multiplayer settings wiring
+            if (playerNameInput != null)
+                playerNameInput.onEndEdit.AddListener(OnPlayerNameChanged);
+            if (avatarColorSlider != null)
+            {
+                avatarColorSlider.minValue = 0;
+                avatarColorSlider.maxValue = 7;
+                avatarColorSlider.wholeNumbers = true;
+                avatarColorSlider.onValueChanged.AddListener(OnAvatarColorChanged);
+            }
+            if (showOtherPlayersToggle != null)
+                showOtherPlayersToggle.onValueChanged.AddListener(OnShowOtherPlayersChanged);
+            if (showNameLabelsToggle   != null)
+                showNameLabelsToggle.onValueChanged.AddListener(OnShowNameLabelsChanged);
+            if (showTrailsToggle       != null)
+                showTrailsToggle.onValueChanged.AddListener(OnShowTrailsChanged);
+            if (voiceChatToggle        != null)
+                voiceChatToggle.onValueChanged.AddListener(OnVoiceChatEnabledChanged);
+            if (voiceVolumeSlider != null)
+            {
+                voiceVolumeSlider.minValue = 0f;
+                voiceVolumeSlider.maxValue = 1f;
+                voiceVolumeSlider.onValueChanged.AddListener(OnVoiceVolumeChanged);
+            }
         }
 
         private void OnEnable()
@@ -244,6 +279,54 @@ namespace SWEF.Settings
                 ? accessibilitySettingsPanel.GetComponent<SWEF.Settings.AccessibilitySettingsUI>()
                 : null;
             ui?.OpenPanel();
+        }
+
+        // ── Phase 20 — Multiplayer Callbacks ─────────────────────────────────────
+
+        private void OnPlayerNameChanged(string value)
+        {
+            var mp = SWEF.Settings.MultiplayerSettings.Instance;
+            if (mp == null) return;
+            mp.SetPlayerName(value);
+            mp.ApplySettings();
+        }
+
+        private void OnAvatarColorChanged(float value)
+        {
+            var mp = SWEF.Settings.MultiplayerSettings.Instance;
+            if (mp == null) return;
+            mp.SetAvatarColorIndex((int)value);
+        }
+
+        private void OnShowOtherPlayersChanged(bool value)
+        {
+            SWEF.Settings.MultiplayerSettings.Instance?.SetShowOtherPlayers(value);
+        }
+
+        private void OnShowNameLabelsChanged(bool value)
+        {
+            SWEF.Settings.MultiplayerSettings.Instance?.SetShowNameLabels(value);
+        }
+
+        private void OnShowTrailsChanged(bool value)
+        {
+            SWEF.Settings.MultiplayerSettings.Instance?.SetShowTrails(value);
+        }
+
+        private void OnVoiceChatEnabledChanged(bool value)
+        {
+            var mp = SWEF.Settings.MultiplayerSettings.Instance;
+            if (mp == null) return;
+            mp.SetVoiceChatEnabled(value);
+            mp.ApplySettings();
+        }
+
+        private void OnVoiceVolumeChanged(float value)
+        {
+            var mp = SWEF.Settings.MultiplayerSettings.Instance;
+            if (mp == null) return;
+            mp.SetVoiceChatVolume(value);
+            mp.ApplySettings();
         }
     }
 }
