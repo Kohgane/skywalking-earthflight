@@ -26,6 +26,9 @@ namespace SWEF.Settings
         [SerializeField] private Slider sensitivitySlider;
         [SerializeField] private Slider speedSlider;
 
+        [Header("Phase 13 — Notifications")]
+        [SerializeField] private Toggle notificationsToggle;
+
         [Header("Quality Preset (Phase 8)")]
         [SerializeField] private QualityPresetManager qualityManager;
         [SerializeField] private Dropdown             qualityDropdown;
@@ -61,6 +64,8 @@ namespace SWEF.Settings
             }
             if (comfortToggle != null)
                 comfortToggle.onValueChanged.AddListener(OnComfortToggleChanged);
+            if (notificationsToggle != null)
+                notificationsToggle.onValueChanged.AddListener(OnNotificationsToggleChanged);
             if (sensitivitySlider != null)
             {
                 sensitivitySlider.minValue = 0.5f;
@@ -139,6 +144,7 @@ namespace SWEF.Settings
             if (comfortToggle      != null) comfortToggle.isOn       = settings.ComfortMode;
             if (sensitivitySlider  != null) sensitivitySlider.value  = settings.TouchSensitivity;
             if (speedSlider        != null) speedSlider.value        = settings.MaxSpeed;
+            if (notificationsToggle != null) notificationsToggle.isOn = settings.NotificationsEnabled;
             _ignoreCallbacks = false;
         }
 
@@ -162,6 +168,17 @@ namespace SWEF.Settings
             if (_ignoreCallbacks || settings == null) return;
             settings.SetComfortMode(b);
             settings.Save();
+        }
+
+        private void OnNotificationsToggleChanged(bool b)
+        {
+            if (_ignoreCallbacks || settings == null) return;
+            settings.SetNotificationsEnabled(b);
+            settings.Save();
+
+            // Propagate to NotificationManager immediately
+            var nm = SWEF.Notification.NotificationManager.Instance;
+            if (nm != null && !b) nm.CancelAll();
         }
 
         private void OnSensitivityChanged(float v)

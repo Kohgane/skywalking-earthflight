@@ -20,13 +20,16 @@ namespace SWEF.Settings
         public const bool  DefaultComfortMode     = true;
         public const float DefaultTouchSensitivity = 1.4f;
         public const float DefaultMaxSpeed        = 250f;
+        public const bool  DefaultNotificationsEnabled = true;
 
         // ── Current values ───────────────────────────────────────────────────────
-        public float MasterVolume     { get; private set; } = DefaultMasterVolume;
-        public float SfxVolume        { get; private set; } = DefaultSfxVolume;
-        public bool  ComfortMode      { get; private set; } = DefaultComfortMode;
-        public float TouchSensitivity { get; private set; } = DefaultTouchSensitivity;
-        public float MaxSpeed         { get; private set; } = DefaultMaxSpeed;
+        public float MasterVolume         { get; private set; } = DefaultMasterVolume;
+        public float SfxVolume            { get; private set; } = DefaultSfxVolume;
+        public bool  ComfortMode          { get; private set; } = DefaultComfortMode;
+        public float TouchSensitivity     { get; private set; } = DefaultTouchSensitivity;
+        public float MaxSpeed             { get; private set; } = DefaultMaxSpeed;
+        /// <summary>Whether local/push notifications are enabled for this device.</summary>
+        public bool  NotificationsEnabled { get; private set; } = DefaultNotificationsEnabled;
 
         // ── References (optional — auto-found via FindFirstObjectByType if not set) ──
         [Header("Refs")]
@@ -36,12 +39,16 @@ namespace SWEF.Settings
         /// <summary>Raised whenever settings are saved/applied.</summary>
         public event Action OnSettingsChanged;
 
+        /// <summary>Raised when the notifications-enabled setting changes, passing the new value.</summary>
+        public event Action<bool> OnNotificationSettingChanged;
+
         // ── PlayerPrefs keys ─────────────────────────────────────────────────────
-        private const string KeyMasterVolume     = "SWEF_MasterVolume";
-        private const string KeySfxVolume        = "SWEF_SfxVolume";
-        private const string KeyComfortMode      = "SWEF_ComfortMode";
-        private const string KeyTouchSensitivity = "SWEF_TouchSensitivity";
-        private const string KeyMaxSpeed         = "SWEF_MaxSpeed";
+        private const string KeyMasterVolume          = "SWEF_MasterVolume";
+        private const string KeySfxVolume             = "SWEF_SfxVolume";
+        private const string KeyComfortMode           = "SWEF_ComfortMode";
+        private const string KeyTouchSensitivity      = "SWEF_TouchSensitivity";
+        private const string KeyMaxSpeed              = "SWEF_MaxSpeed";
+        private const string KeyNotificationsEnabled  = "SWEF_NotificationsEnabled";
 
         // ── Phase 10 — SaveManager integration ──────────────────────────────
         private SWEF.Core.SaveManager _saveManager;
@@ -62,20 +69,24 @@ namespace SWEF.Settings
         /// <summary>Loads all settings from PlayerPrefs (and SaveManager when available) and applies them.</summary>
         public void Load()
         {
-            MasterVolume     = PlayerPrefs.GetFloat(KeyMasterVolume,     DefaultMasterVolume);
-            SfxVolume        = PlayerPrefs.GetFloat(KeySfxVolume,        DefaultSfxVolume);
-            ComfortMode      = PlayerPrefs.GetInt(KeyComfortMode,        DefaultComfortMode ? 1 : 0) == 1;
-            TouchSensitivity = PlayerPrefs.GetFloat(KeyTouchSensitivity, DefaultTouchSensitivity);
-            MaxSpeed         = PlayerPrefs.GetFloat(KeyMaxSpeed,         DefaultMaxSpeed);
+            MasterVolume         = PlayerPrefs.GetFloat(KeyMasterVolume,    DefaultMasterVolume);
+            SfxVolume            = PlayerPrefs.GetFloat(KeySfxVolume,       DefaultSfxVolume);
+            ComfortMode          = PlayerPrefs.GetInt(KeyComfortMode,       DefaultComfortMode ? 1 : 0) == 1;
+            TouchSensitivity     = PlayerPrefs.GetFloat(KeyTouchSensitivity, DefaultTouchSensitivity);
+            MaxSpeed             = PlayerPrefs.GetFloat(KeyMaxSpeed,        DefaultMaxSpeed);
+            NotificationsEnabled = PlayerPrefs.GetInt(KeyNotificationsEnabled,
+                DefaultNotificationsEnabled ? 1 : 0) == 1;
 
             // Phase 10 — override with SaveManager values when present
             if (_saveManager != null && _saveManager.HasSaveFile())
             {
-                MasterVolume     = _saveManager.GetFloat(KeyMasterVolume,     MasterVolume);
-                SfxVolume        = _saveManager.GetFloat(KeySfxVolume,        SfxVolume);
-                ComfortMode      = _saveManager.GetInt(KeyComfortMode,        ComfortMode ? 1 : 0) == 1;
-                TouchSensitivity = _saveManager.GetFloat(KeyTouchSensitivity, TouchSensitivity);
-                MaxSpeed         = _saveManager.GetFloat(KeyMaxSpeed,         MaxSpeed);
+                MasterVolume         = _saveManager.GetFloat(KeyMasterVolume,     MasterVolume);
+                SfxVolume            = _saveManager.GetFloat(KeySfxVolume,        SfxVolume);
+                ComfortMode          = _saveManager.GetInt(KeyComfortMode,        ComfortMode ? 1 : 0) == 1;
+                TouchSensitivity     = _saveManager.GetFloat(KeyTouchSensitivity, TouchSensitivity);
+                MaxSpeed             = _saveManager.GetFloat(KeyMaxSpeed,         MaxSpeed);
+                NotificationsEnabled = _saveManager.GetInt(KeyNotificationsEnabled,
+                    NotificationsEnabled ? 1 : 0) == 1;
             }
 
             ApplyAll();
@@ -89,6 +100,7 @@ namespace SWEF.Settings
             PlayerPrefs.SetInt(KeyComfortMode,        ComfortMode ? 1 : 0);
             PlayerPrefs.SetFloat(KeyTouchSensitivity, TouchSensitivity);
             PlayerPrefs.SetFloat(KeyMaxSpeed,         MaxSpeed);
+            PlayerPrefs.SetInt(KeyNotificationsEnabled, NotificationsEnabled ? 1 : 0);
             PlayerPrefs.Save();
 
             // Phase 10 — mirror to SaveManager
@@ -99,6 +111,7 @@ namespace SWEF.Settings
                 _saveManager.SetInt(KeyComfortMode,        ComfortMode ? 1 : 0);
                 _saveManager.SetFloat(KeyTouchSensitivity, TouchSensitivity);
                 _saveManager.SetFloat(KeyMaxSpeed,         MaxSpeed);
+                _saveManager.SetInt(KeyNotificationsEnabled, NotificationsEnabled ? 1 : 0);
                 _saveManager.Save();
             }
 
@@ -109,11 +122,12 @@ namespace SWEF.Settings
         /// <summary>Resets all settings to their default values and saves.</summary>
         public void ResetToDefaults()
         {
-            MasterVolume     = DefaultMasterVolume;
-            SfxVolume        = DefaultSfxVolume;
-            ComfortMode      = DefaultComfortMode;
-            TouchSensitivity = DefaultTouchSensitivity;
-            MaxSpeed         = DefaultMaxSpeed;
+            MasterVolume         = DefaultMasterVolume;
+            SfxVolume            = DefaultSfxVolume;
+            ComfortMode          = DefaultComfortMode;
+            TouchSensitivity     = DefaultTouchSensitivity;
+            MaxSpeed             = DefaultMaxSpeed;
+            NotificationsEnabled = DefaultNotificationsEnabled;
             Save();
         }
 
@@ -123,6 +137,13 @@ namespace SWEF.Settings
         public void SetComfortMode(bool b)       { ComfortMode      = b; }
         public void SetTouchSensitivity(float v) { TouchSensitivity = Mathf.Clamp(v, 0.5f, 3.0f); }
         public void SetMaxSpeed(float v)         { MaxSpeed         = Mathf.Clamp(v, 50f, 500f); }
+
+        /// <summary>Sets whether local notifications are enabled and fires <see cref="OnNotificationSettingChanged"/>.</summary>
+        public void SetNotificationsEnabled(bool b)
+        {
+            NotificationsEnabled = b;
+            OnNotificationSettingChanged?.Invoke(b);
+        }
 
         // ── Internal ─────────────────────────────────────────────────────────
         private void ApplyAll()

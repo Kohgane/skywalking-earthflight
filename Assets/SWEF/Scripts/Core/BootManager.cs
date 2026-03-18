@@ -35,11 +35,18 @@ namespace SWEF.Core
 
         private IEnumerator Start()
         {
-            Debug.Log("[SWEF] Boot sequence started — Phase 11 debug infrastructure available");
+            Debug.Log("[SWEF] Boot sequence started — Phase 13: Notifications, Rate Prompt & App Lifecycle");
 
             loadingScreen?.Show();
 
             SWEFSession.Clear();
+
+            // Phase 13 — initialise app lifecycle and request notification permission
+            var lifecycle = FindFirstObjectByType<AppLifecycleManager>();
+            if (lifecycle != null)
+                lifecycle.InitSession();
+
+            SWEF.Notification.NotificationManager.Instance?.RequestPermission();
 
             // Phase 8 — check for previous crash
             if (crashReporter == null)
