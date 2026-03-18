@@ -4,6 +4,9 @@
 [Oo]bj/
 [Bb]uild/
 [Bb]uilds/
+# Re-include SWEF source code in Build/ subfolder (not build artifacts)
+!Assets/SWEF/Scripts/Build/
+!Assets/SWEF/Scripts/Build/**
 [Ll]ogs/
 [Uu]ser[Ss]ettings/
 [Mm]emoryCaptures/
