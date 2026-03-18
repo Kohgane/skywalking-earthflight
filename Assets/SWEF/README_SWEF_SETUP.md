@@ -2002,3 +2002,105 @@ Achievement Layer (Phase 18)
                             cinematic_path_created,
                             night_flight)                   ← MODIFIED
 ```
+
+---
+
+## Phase 19 — Weather System: Real-time Weather Integration & Environmental Flight Effects
+
+### Overview
+Phase 19 adds a comprehensive Weather System that fetches real-time weather data (via the Open-Meteo API), applies visual/physical environmental effects during flight, and integrates with achievements, analytics, and the flight journal.
+
+### New Files
+
+| File | Namespace | Role |
+|------|-----------|------|
+| `Weather/WeatherCondition.cs` | `SWEF.Weather` | `WeatherCondition` enum (13 conditions) + `WeatherData` class |
+| `Weather/WeatherDataService.cs` | `SWEF.Weather` | Singleton — API fetch (Open-Meteo), polling, offline/procedural fallback |
+| `Weather/WeatherStateManager.cs` | `SWEF.Weather` | Singleton — owns authoritative weather state, altitude zones, smooth transitions |
+| `Weather/WeatherVFXController.cs` | `SWEF.Weather` | Particle system control — rain, snow, fog, lightning, sandstorm, hail |
+| `Weather/WeatherFlightModifier.cs` | `SWEF.Weather` | Flight physics modifiers — wind force, turbulence shake, icing, thermals |
+| `Weather/WeatherSkyboxController.cs` | `SWEF.Weather` | URP skybox/lighting adjustments per weather condition |
+| `Weather/WeatherAudioController.cs` | `SWEF.Weather` | Ambient weather audio — rain loops, wind, thunder SFX, crossfades |
+| `UI/WeatherHUD.cs` | `SWEF.UI` | Corner HUD widget — condition icon, temperature, wind, visibility |
+| `Settings/WeatherSettings.cs` | `SWEF.Settings` | Persisted weather settings — quality, physics, audio, manual override |
+| `Editor/WeatherDebugWindow.cs` | `SWEF.Editor` | Editor window (SWEF → Weather Debug) — force conditions, quick scenarios |
+
+### Modified Files
+
+| File | Changes |
+|------|---------|
+| `Achievement/AchievementManager.cs` | Added `storm_chaser`, `snowbird`, `clear_skies` achievements; weather state tracking |
+| `Core/AnalyticsLogger.cs` | Added `RecordWeatherCondition()`, `WeatherEventCount`; subscribes to weather transitions |
+| `Core/FlightJournal.cs` | Records weather conditions encountered; persists `weatherSummary` in `JournalEntry` |
+| `Core/SaveManager.cs` | Added `weatherSummary` field to `JournalEntry` |
+
+### Setup in Unity Editor
+
+1. **WeatherDataService** — Add to a persistent GameObject (e.g. WorldBootstrap).
+   - The default endpoint is the free [Open-Meteo API](https://open-meteo.com/) — no API key required.
+   - To use a paid provider, enter the `apiBaseUrl` and `apiKey` in the Inspector.
+   - **Never commit a real API key to source control.** Use Unity Cloud Config or environment variables.
+
+2. **WeatherStateManager** — Add to the same persistent GameObject.
+
+3. **WeatherVFXController** — Add to a GameObject in the World scene; assign particle system prefabs.
+
+4. **WeatherFlightModifier** — Add alongside `FlightController`; call `ApplyToFlightController(fc)` each FixedUpdate/Update.
+
+5. **WeatherSkyboxController** — Add to any persistent GameObject; assign the `Sun Light` directional light.
+
+6. **WeatherAudioController** — Add to a persistent GameObject; assign audio clips in the Inspector.
+
+7. **WeatherHUD** — Add to the HUD Canvas; assign `CanvasGroup`, `TextMeshProUGUI` labels, condition icon sprites (one per `WeatherCondition` enum value, in order).
+
+8. **WeatherSettings** — Add to the settings persistent GameObject; integrates with `SettingsManager`.
+
+9. **WeatherDebugWindow** — Open via **SWEF → Weather Debug** in the Unity menu bar (Editor only).
+
+### Altitude Zones
+
+| Zone | Altitude | Weather Behaviour |
+|------|----------|-------------------|
+| Ground | 0 – 2,000 m | Full weather effects |
+| Cloud transition | 2,000 – 10,000 m | Precipitation fades, cloud coverage thins |
+| Stratosphere | 10,000 – 30,000 m | Always clear above clouds; extreme cold (down to −60 °C) |
+| Near-space | 30,000 m+ | No weather; temperature −80 °C |
+
+### New Achievements
+
+| ID | Title | Description |
+|----|-------|-------------|
+| `storm_chaser` | Storm Chaser ⛈️ | Fly through 10 thunderstorms |
+| `snowbird` | Snowbird ❄️ | Fly in snow conditions |
+| `clear_skies` | Clear Skies ☀️ | Complete a full flight in perfect clear weather |
+
+### Architecture Diagram (Phase 19)
+
+```
+Weather Module (Phase 19)
+  ├── WeatherCondition      (enum + WeatherData)            ← NEW
+  ├── WeatherDataService    (Open-Meteo API + fallback)     ← NEW
+  ├── WeatherStateManager   (state, altitude zones)         ← NEW
+  ├── WeatherVFXController  (particles, lightning)          ← NEW
+  ├── WeatherFlightModifier (wind, turbulence, icing)       ← NEW
+  ├── WeatherSkyboxController (URP lighting/sky)            ← NEW
+  └── WeatherAudioController  (ambient audio)               ← NEW
+
+UI Layer (Phase 19)
+  └── WeatherHUD (corner widget)                            ← NEW
+
+Settings Layer (Phase 19)
+  └── WeatherSettings (PlayerPrefs persistence)             ← NEW
+
+Editor Layer (Phase 19)
+  └── WeatherDebugWindow (SWEF → Weather Debug)             ← NEW
+
+Achievement Layer (Phase 19)
+  └── AchievementManager (+ storm_chaser, snowbird,
+                            clear_skies)                    ← MODIFIED
+
+Core Layer (Phase 19)
+  ├── AnalyticsLogger (+ RecordWeatherCondition)            ← MODIFIED
+  ├── FlightJournal   (+ weatherSummary tracking)           ← MODIFIED
+  └── SaveManager     (+ JournalEntry.weatherSummary)       ← MODIFIED
+```

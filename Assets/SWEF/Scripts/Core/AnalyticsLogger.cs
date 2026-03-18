@@ -16,6 +16,8 @@ namespace SWEF.Core
         private const string KEY_MAX_ALTITUDE     = "SWEF_MaxAltitude";
         private const string KEY_TELEPORT_COUNT   = "SWEF_TeleportCount";
         private const string KEY_SCREENSHOT_COUNT = "SWEF_ScreenshotCount";
+        // Phase 19 — Weather
+        private const string KEY_WEATHER_EVENTS   = "SWEF_WeatherEventCount";
 
         /// <summary>Singleton instance; set during Awake.</summary>
         public static AnalyticsLogger Instance { get; private set; }
@@ -37,6 +39,9 @@ namespace SWEF.Core
         /// <summary>Total number of screenshots taken across all sessions.</summary>
         public int ScreenshotCount { get; private set; }
 
+        /// <summary>Total number of weather condition change events recorded across all sessions.</summary>
+        public int WeatherEventCount { get; private set; }
+
         private float _sessionFlightTime;
         private float _sessionMaxAltitude;
 
@@ -55,6 +60,7 @@ namespace SWEF.Core
             MaxAltitudeMeters  = PlayerPrefs.GetFloat(KEY_MAX_ALTITUDE, 0f);
             TeleportCount      = PlayerPrefs.GetInt(KEY_TELEPORT_COUNT, 0);
             ScreenshotCount    = PlayerPrefs.GetInt(KEY_SCREENSHOT_COUNT, 0);
+            WeatherEventCount  = PlayerPrefs.GetInt(KEY_WEATHER_EVENTS, 0);
 
             // Persist incremented session count immediately
             PlayerPrefs.SetInt(KEY_SESSION_COUNT, SessionCount);
@@ -66,6 +72,11 @@ namespace SWEF.Core
             // Run after all Awake() calls so FindFirstObjectByType is reliable
             if (altitudeSource == null)
                 altitudeSource = FindFirstObjectByType<AltitudeController>();
+
+            // Phase 19 — subscribe to weather transitions
+            if (SWEF.Weather.WeatherDataService.Instance != null)
+                SWEF.Weather.WeatherDataService.Instance.OnWeatherTransitionStart += (_, to) =>
+                    RecordWeatherCondition(to.condition);
         }
 
         private void Update()
@@ -94,6 +105,19 @@ namespace SWEF.Core
             ScreenshotCount++;
             PlayerPrefs.SetInt(KEY_SCREENSHOT_COUNT, ScreenshotCount);
             PlayerPrefs.Save();
+        }
+
+        /// <summary>
+        /// Records a weather condition change event during a flight session.
+        /// Also emits a <see cref="LogEvent"/> entry for external analytics hooks.
+        /// </summary>
+        /// <param name="condition">The new weather condition that was encountered.</param>
+        public void RecordWeatherCondition(SWEF.Weather.WeatherCondition condition)
+        {
+            WeatherEventCount++;
+            PlayerPrefs.SetInt(KEY_WEATHER_EVENTS, WeatherEventCount);
+            PlayerPrefs.Save();
+            LogEvent("weather_condition", condition.ToString());
         }
 
         /// <summary>
