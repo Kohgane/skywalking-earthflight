@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.IO;
 using UnityEngine;
+using SWEF.Core;
 
 namespace SWEF.Screenshot
 {
@@ -9,6 +10,8 @@ namespace SWEF.Screenshot
     /// Captures the screen to a PNG file inside Application.persistentDataPath/Screenshots/.
     /// Hides the HUD Canvas before the capture frame, then restores it.
     /// Plays SFX(2) via AudioManager if available.
+    /// When the user owns <see cref="PremiumFeature.HighResScreenshot"/> the capture
+    /// is taken at 2× supersampling via <see cref="ScreenCapture.CaptureScreenshot(string,int)"/>.
     /// </summary>
     public class ScreenshotController : MonoBehaviour
     {
@@ -17,6 +20,10 @@ namespace SWEF.Screenshot
 
         [Header("Timing")]
         [SerializeField] private float hideDelay = 0.1f;
+
+        [Header("High-Res (Premium)")]
+        [Tooltip("Supersampling multiplier used when the High-Res Screenshot premium feature is active.")]
+        [SerializeField] private int highResSuperSize = 2;
 
         /// <summary>Raised after a screenshot is saved, passing the full file path.</summary>
         public event Action<string> OnScreenshotCaptured;
@@ -54,8 +61,12 @@ namespace SWEF.Screenshot
             string timestamp = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
             string filePath  = Path.Combine(dir, $"SWEF_{timestamp}.png");
 
-            // Capture
-            ScreenCapture.CaptureScreenshot(filePath);
+            // Capture — use high-res supersampling if the premium feature is unlocked
+            bool highRes = PremiumFeatureGate.IsUnlocked(PremiumFeature.HighResScreenshot);
+            if (highRes)
+                ScreenCapture.CaptureScreenshot(filePath, highResSuperSize);
+            else
+                ScreenCapture.CaptureScreenshot(filePath);
 
             // Restore HUD
             if (hudCanvas != null)
@@ -65,7 +76,7 @@ namespace SWEF.Screenshot
             if (Audio.AudioManager.Instance != null)
                 Audio.AudioManager.Instance.PlaySFX(2); // Screenshot
 
-            Debug.Log($"[SWEF] Screenshot saved: {filePath}");
+            Debug.Log($"[SWEF] Screenshot{(highRes ? " (High-Res)" : "")} saved: {filePath}");
             OnScreenshotCaptured?.Invoke(filePath);
 
             // Achievement: first screenshot

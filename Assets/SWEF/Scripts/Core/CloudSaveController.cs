@@ -70,7 +70,8 @@ namespace SWEF.Core
 
         /// <summary>
         /// Uploads the current local save JSON to the cloud endpoint (HTTP PUT).
-        /// No-op when <see cref="IsConfigured"/> is false or a transfer is already running.
+        /// No-op when <see cref="IsConfigured"/> is false, a transfer is already running,
+        /// or the user does not have the <see cref="PremiumFeature.CloudSave"/> feature.
         /// </summary>
         public void Upload()
         {
@@ -84,12 +85,22 @@ namespace SWEF.Core
                 Debug.LogWarning("[SWEF] CloudSaveController: transfer already in progress.");
                 return;
             }
-            StartCoroutine(UploadCoroutine());
+
+            PremiumFeatureGate.TryAccess(
+                PremiumFeature.CloudSave,
+                onGranted: () => StartCoroutine(UploadCoroutine()),
+                onDenied:  () =>
+                {
+                    Debug.LogWarning("[SWEF] CloudSaveController: Cloud Save requires Premium.");
+                    if (SWEF.UI.PremiumPromptUI.Instance != null)
+                        SWEF.UI.PremiumPromptUI.Instance.Show(PremiumFeature.CloudSave);
+                });
         }
 
         /// <summary>
         /// Downloads the cloud save JSON and merges it into the local save (HTTP GET).
-        /// No-op when <see cref="IsConfigured"/> is false or a transfer is already running.
+        /// No-op when <see cref="IsConfigured"/> is false, a transfer is already running,
+        /// or the user does not have the <see cref="PremiumFeature.CloudSave"/> feature.
         /// </summary>
         public void Download()
         {
@@ -103,7 +114,16 @@ namespace SWEF.Core
                 Debug.LogWarning("[SWEF] CloudSaveController: transfer already in progress.");
                 return;
             }
-            StartCoroutine(DownloadCoroutine());
+
+            PremiumFeatureGate.TryAccess(
+                PremiumFeature.CloudSave,
+                onGranted: () => StartCoroutine(DownloadCoroutine()),
+                onDenied:  () =>
+                {
+                    Debug.LogWarning("[SWEF] CloudSaveController: Cloud Save requires Premium.");
+                    if (SWEF.UI.PremiumPromptUI.Instance != null)
+                        SWEF.UI.PremiumPromptUI.Instance.Show(PremiumFeature.CloudSave);
+                });
         }
 
         // ── Coroutines ───────────────────────────────────────────────────────
