@@ -37,6 +37,11 @@ namespace SWEF.Achievement
             // Phase 17 — Replay achievements
             new AchievementDef { id = "first_ghost_race", title = "Ghost Hunter 👻",         description = "Complete your first ghost race",          emoji = "👻" },
             new AchievementDef { id = "replay_shared",    title = "Flight Broadcaster 📡",   description = "Share a replay with another player",      emoji = "📡" },
+            // Phase 18 — Cinema achievements
+            new AchievementDef { id = "first_photo",             title = "Photographer Pro 📷",       description = "Capture your first photo in Photo Mode",         emoji = "📷" },
+            new AchievementDef { id = "golden_hour_photo",       title = "Golden Hour ✨",             description = "Capture a photo during golden hour",             emoji = "✨" },
+            new AchievementDef { id = "cinematic_path_created",  title = "Film Director 🎬",           description = "Create and save your first cinematic camera path", emoji = "🎬" },
+            new AchievementDef { id = "night_flight",            title = "Night Owl 🦉",               description = "Fly for 5+ minutes during night time",           emoji = "🦉" },
         };
 
         // ── Inspector refs ───────────────────────────────────────────────────────
@@ -44,12 +49,16 @@ namespace SWEF.Achievement
         [SerializeField] private AltitudeController altitudeSource;
         [SerializeField] private FlightController flight;
 
+        [Header("Phase 18 — Cinema")]
+        [SerializeField] private SWEF.Cinema.TimeOfDayController timeOfDayController;
+
         // ── Events ───────────────────────────────────────────────────────────────
         /// <summary>Fired when a new achievement is unlocked.</summary>
         public event System.Action<AchievementDef> OnAchievementUnlocked;
 
         // ── State ────────────────────────────────────────────────────────────────
-        private bool _firstFrameDone;
+        private bool  _firstFrameDone;
+        private float _nightFlightSeconds;
 
         /// <summary>Number of achievements the player has unlocked.</summary>
         public int UnlockedCount
@@ -80,6 +89,8 @@ namespace SWEF.Achievement
                 altitudeSource = FindFirstObjectByType<AltitudeController>();
             if (flight == null)
                 flight = FindFirstObjectByType<FlightController>();
+            if (timeOfDayController == null)
+                timeOfDayController = FindFirstObjectByType<SWEF.Cinema.TimeOfDayController>();
         }
 
         private void Update()
@@ -99,6 +110,14 @@ namespace SWEF.Achievement
             if (alt   >= 120000f) TryUnlock("reach_120km");
             if (speed >= 343f)    TryUnlock("mach1");
             if (speed >= 7900f)   TryUnlock("orbital_speed");
+
+            // Phase 18 — night_flight: accumulate time flying during night
+            if (timeOfDayController != null && timeOfDayController.IsNight && speed > 0f)
+            {
+                _nightFlightSeconds += Time.deltaTime;
+                if (_nightFlightSeconds >= 300f) // 5 minutes
+                    TryUnlock("night_flight");
+            }
         }
 
         // ── Public API ────────────────────────────────────────────────────────────

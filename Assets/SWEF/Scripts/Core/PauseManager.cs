@@ -98,5 +98,28 @@ namespace SWEF.Core
                 pauseOverlay.blocksRaycasts = paused;
             }
         }
+
+        // ── Phase 18 — Photo Mode pause ───────────────────────────────────────────
+        [Header("Phase 18 — Photo Mode")]
+        private bool _photoModePause = false;
+
+        /// <summary>Freezes time for photo mode without showing the pause panel.</summary>
+        public void PauseForPhotoMode()
+        {
+            _photoModePause = true;
+            Time.timeScale = 0f;
+            Debug.Log("[SWEF] Game paused for Photo Mode");
+        }
+
+        /// <summary>Restores normal time after photo mode is exited.</summary>
+        public void ResumeFromPhotoMode()
+        {
+            _photoModePause = false;
+            Time.timeScale = 1f;
+            Debug.Log("[SWEF] Game resumed from Photo Mode");
+        }
+
+        /// <summary>Whether the game is currently paused specifically for photo mode.</summary>
+        public bool IsPhotoModePaused => _photoModePause;
     }
 }

@@ -37,6 +37,10 @@ namespace SWEF.Settings
         [SerializeField] private Button     accessibilitySettingsButton;
         [SerializeField] private GameObject accessibilitySettingsPanel;
 
+        [Header("Phase 18 — Cinema")]
+        [SerializeField] private Toggle defaultRealTimeToggle;
+        [SerializeField] private Slider defaultTimeOfDaySlider;
+
         [Header("Quality Preset (Phase 8)")]
         [SerializeField] private QualityPresetManager qualityManager;
         [SerializeField] private Dropdown             qualityDropdown;
