@@ -1820,3 +1820,185 @@ Replay Module (Phase 17)
   ├── FlightPathRenderer (3D path rendering)               ← NEW
   └── ReplayShareManager (share / import)                  ← NEW
 ```
+
+---
+
+## Phase 18 — Time-of-Day System, Photo Mode & Cinematic Camera
+
+### New Scripts (6)
+
+#### `Cinema/TimeOfDayController.cs` — namespace `SWEF.Cinema`
+Controls sun/moon position and scene lighting based on a 0–24 h time-of-day value.
+
+**Setup:**
+1. Create a `TimeOfDayController` GameObject in the World scene.
+2. Assign `sunLight` (main Directional Light) and optionally `moonLight`.
+3. Assign `skyboxMaterial` (must expose `_Tint` or `_Color`).
+4. Optionally assign `starParticles` for a particle-based star field.
+5. Set `timeOfDay` (0–24, default 12 = noon) and `timeSpeed` (0 = paused).
+6. Enable `useRealWorldTime` to sync to the device clock.
+
+**Key API:**
+- `SetTimeOfDay(float hour)` — clamp 0–24, update all lighting immediately.
+- `SetTimeSpeed(float speed)` — clamp 0–100; 3600 = 1 game-hour per real second.
+- `ToggleRealWorldTime(bool)` — enable/disable real-world sync.
+- `GetTimeString()` → `"14:30"`.
+- `IsDaytime` / `IsGoldenHour` / `IsNight` — period helpers.
+- `OnTimeChanged(float)` / `OnDayNightTransition(bool)` — events.
+
+**Sun position formula:** `sunAltitude = 90 − |timeOfDay − 12| × 15`
+
+---
+
+#### `Cinema/PhotoModeController.cs` — namespace `SWEF.Cinema`
+Dedicated photo mode with free-camera movement, post-processing knobs, filter presets, and frame overlays.
+
+**Setup:**
+1. Add `PhotoModeController` component to any persistent GameObject.
+2. Optionally assign `photoCamera`; falls back to `Camera.main`.
+3. Populate `filterPresets` list with `FilterPreset` objects (name must match `PhotoFilter` enum).
+4. Populate `frameSprites` list — one `Sprite` per `PhotoFrame` enum entry.
+5. Assign `watermarkSprite` if watermark is desired.
+
+**State machine:** `Inactive → Active → Capturing → Active`
+
+**Key API:**
+- `EnterPhotoMode()` / `ExitPhotoMode()` — toggle with PauseManager integration.
+- `SetFilter(PhotoFilter)` / `SetFrame(PhotoFrame)`.
+- `CapturePhoto()` — delegates to `ScreenshotController`.
+- `CapturePhotoWithEffects()` — renders at `captureResolution`, saves via `ScreenshotController.SaveTextureToGallery`.
+- `StartTimer(float seconds)` — countdown then auto-capture.
+
+---
+
+#### `Cinema/CinematicCameraPath.cs` — namespace `SWEF.Cinema`
+Defines and plays back a spline-based cinematic camera path.
+
+**Setup:**
+1. Add `CinematicCameraPath` to a persistent GameObject.
+2. Assign `cameraTarget` (the camera Transform to animate).
+3. Add waypoints via `AddWaypoint()` while in play mode, or configure in Inspector.
+
+**Key API:**
+- `Play()` / `Pause()` / `Resume()` / `Stop()` / `Seek(float time)`.
+- `AddWaypoint()` / `InsertWaypoint(int)` / `RemoveWaypoint(int)` / `UpdateWaypoint(int)`.
+- `ToJson()` / `FromJson(string)` — serialise paths to/from JSON.
+- `GetTotalDuration()` — returns path length in seconds.
+- `loopMode` — `Once`, `Loop`, or `PingPong`.
+- `useCatmullRom` — toggle Catmull-Rom vs linear interpolation.
+
+**Camera path file format (JSON):**
+```json
+{
+  "waypoints": [
+    { "position": { "x": 0, "y": 100, "z": 0 }, "rotation": { "x": 0, "y": 0, "z": 0, "w": 1 }, "fov": 60, "timeAtWaypoint": 0, "holdDuration": 0 },
+    { "position": { "x": 200, "y": 150, "z": 50 }, "rotation": { "x": 0, "y": 0.7, "z": 0, "w": 0.7 }, "fov": 45, "timeAtWaypoint": 5, "holdDuration": 1 }
+  ]
+}
+```
+Files are stored in `Application.persistentDataPath/CameraPaths/<name>.json`.
+
+---
+
+#### `Cinema/CinematicCameraUI.cs` — namespace `SWEF.Cinema`
+Editor-style UI panel for building and controlling cinematic camera paths.
+
+**Setup:**
+1. Wire `cameraPath` reference and assign the scrollable `waypointListContent` transform.
+2. Assign `waypointItemPrefab` — should contain a `Text`, a Delete `Button`, and an Update `Button`.
+3. Wire playback control buttons and sliders.
+
+---
+
+#### `UI/PhotoModeUI.cs` — namespace `SWEF.UI`
+Photo mode overlay UI with filter/frame scroll lists, composition grid, shutter flash, and info display.
+
+**Setup:**
+1. Place `PhotoModeUI` on the HUD canvas.
+2. Assign `photoController` and optionally `timeController`.
+3. Wire all sliders, buttons, scroll content transforms, and overlay images.
+4. `filterItemPrefab` / `frameItemPrefab` must contain a `Text` label and a `Button`.
+
+---
+
+#### `UI/TimeOfDayUI.cs` — namespace `SWEF.UI`
+Compact HUD panel exposing time-of-day controls: slider, quick-set buttons, period label, speed slider.
+
+**Setup:**
+1. Add `TimeOfDayUI` to the HUD canvas.
+2. Assign `timeController`.
+3. Wire all sliders, text labels, and quick-set buttons (sunrise=6h, noon=12h, sunset=18h, midnight=0h).
+
+---
+
+### Modified Scripts (6)
+
+#### `Atmosphere/DayNightCycle.cs`
+- Added `[Header("Phase 18 — Time of Day")]` with `timeOfDayController` field.
+- `OnEnable` / `OnDisable` subscribe/unsubscribe to `TimeOfDayController.OnTimeChanged`.
+- `HandleTimeChanged(float hour)` syncs the internal `_timeOfDay` (0–1 normalised) from the 0–24 h value.
+
+#### `Screenshot/ScreenshotController.cs`
+- Added `CaptureAtResolution(int width, int height) → Texture2D` — renders via `RenderTexture`, reads pixels.
+- Added `SaveTextureToGallery(Texture2D tex, string filename = null)` — encodes PNG, writes to `persistentDataPath`.
+
+#### `Flight/CameraController.cs`
+- Added `_cinematicOverride` bool field.
+- `EnableCinematicOverride()` / `DisableCinematicOverride()` — hand off / return camera control.
+- `IsCinematicActive` property.
+- `LateUpdate()` now returns early when `_cinematicOverride == true`.
+
+#### `Core/PauseManager.cs`
+- Added `PauseForPhotoMode()` — sets `Time.timeScale = 0` without showing the pause panel.
+- Added `ResumeFromPhotoMode()` — restores `Time.timeScale = 1`.
+- Added `IsPhotoModePaused` property.
+
+#### `Settings/SettingsUI.cs`
+- Added `[Header("Phase 18 — Cinema")]` with `defaultRealTimeToggle` and `defaultTimeOfDaySlider` fields.
+
+#### `Achievement/AchievementManager.cs`
+- Added four new achievements: `first_photo`, `golden_hour_photo`, `cinematic_path_created`, `night_flight`.
+- Added `timeOfDayController` Inspector field; auto-resolved via `FindFirstObjectByType` in `Awake`.
+- `Update()` accumulates `_nightFlightSeconds` when `IsNight && speed > 0`, unlocking `night_flight` after 300 s.
+
+---
+
+### Updated Architecture Diagram
+
+```
+Cinema Module (Phase 18)
+  ├── TimeOfDayController  (sun/moon, sky, stars)           ← NEW
+  ├── PhotoModeController  (photo mode state machine)       ← NEW
+  ├── CinematicCameraPath  (spline path, playback)          ← NEW
+  └── CinematicCameraUI    (path editing panel)             ← NEW
+
+UI Layer (Phase 18)
+  ├── PhotoModeUI   (filters, frames, sliders, flash)       ← NEW
+  └── TimeOfDayUI   (quick-set, slider, period label)       ← NEW
+
+Atmosphere Layer (Phase 18)
+  └── DayNightCycle (+ TimeOfDayController sync)            ← MODIFIED
+
+Screenshot Layer (Phase 18)
+  └── ScreenshotController (+ CaptureAtResolution,
+                              SaveTextureToGallery)         ← MODIFIED
+
+Flight Layer (Phase 18)
+  └── CameraController (+ EnableCinematicOverride,
+                          DisableCinematicOverride,
+                          IsCinematicActive)                ← MODIFIED
+
+Core Layer (Phase 18)
+  └── PauseManager (+ PauseForPhotoMode,
+                      ResumeFromPhotoMode,
+                      IsPhotoModePaused)                    ← MODIFIED
+
+Settings Layer (Phase 18)
+  └── SettingsUI (+ defaultRealTimeToggle,
+                    defaultTimeOfDaySlider)                 ← MODIFIED
+
+Achievement Layer (Phase 18)
+  └── AchievementManager (+ first_photo, golden_hour_photo,
+                            cinematic_path_created,
+                            night_flight)                   ← MODIFIED
+```

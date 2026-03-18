@@ -83,5 +83,54 @@ namespace SWEF.Screenshot
             if (Achievement.AchievementManager.Instance != null)
                 Achievement.AchievementManager.Instance.TryUnlock("first_screenshot");
         }
+
+        // ── Phase 18 — Photo Mode integration ────────────────────────────────────
+
+        /// <summary>
+        /// Renders the main camera into a <see cref="RenderTexture"/> at the given resolution
+        /// and returns the result as a <see cref="Texture2D"/>.
+        /// </summary>
+        [Header("Phase 18 — Photo Mode")]
+        public Texture2D CaptureAtResolution(int width, int height)
+        {
+            RenderTexture rt  = RenderTexture.GetTemporary(width, height, 24);
+            Camera        cam = Camera.main;
+            if (cam == null)
+            {
+                RenderTexture.ReleaseTemporary(rt);
+                Debug.LogWarning("[SWEF] CaptureAtResolution: No main camera found.");
+                return null;
+            }
+
+            cam.targetTexture = rt;
+            cam.Render();
+
+            RenderTexture.active = rt;
+            Texture2D tex = new Texture2D(width, height, TextureFormat.RGB24, false);
+            tex.ReadPixels(new Rect(0, 0, width, height), 0, 0);
+            tex.Apply();
+
+            cam.targetTexture    = null;
+            RenderTexture.active = null;
+            RenderTexture.ReleaseTemporary(rt);
+
+            Debug.Log($"[SWEF] Photo captured at {width}x{height}");
+            return tex;
+        }
+
+        /// <summary>Encodes <paramref name="tex"/> to PNG and writes it to persistentDataPath.</summary>
+        public void SaveTextureToGallery(Texture2D tex, string filename = null)
+        {
+            if (tex == null) return;
+
+            if (filename == null)
+                filename = $"SWEF_Photo_{System.DateTime.Now:yyyyMMdd_HHmmss}.png";
+
+            byte[] bytes = tex.EncodeToPNG();
+            string path  = System.IO.Path.Combine(Application.persistentDataPath, filename);
+            System.IO.File.WriteAllBytes(path, bytes);
+            Debug.Log($"[SWEF] Photo saved: {path}");
+            OnScreenshotCaptured?.Invoke(path);
+        }
     }
 }

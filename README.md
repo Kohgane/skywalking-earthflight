@@ -10,6 +10,7 @@ A mobile flight-experience app powered by Google Photorealistic 3D Tiles via Ces
 - **Ascent** — Rise through atmosphere layers to the Kármán line and beyond
 - **XR/VR** — VR headset support with comfort options + hand tracking (planned)
 - **Accessibility** — Colorblind modes, dynamic text scaling, one-handed mode, screen reader support, haptic feedback
+- **Cinema System** — Time-of-day control, photo mode with filters/frames, and cinematic camera paths
 - **Replay System** — Save, share, and race against ghost replays with 3D flight path visualization
 
 ## Tech Stack
@@ -26,6 +27,7 @@ A mobile flight-experience app powered by Google Photorealistic 3D Tiles via Ces
 Assets/SWEF/
 ├── Scenes/          # Boot.unity + World.unity (created in Unity Editor)
 ├── Scripts/
+│   ├── Cinema/      # TimeOfDayController, PhotoModeController, CinematicCameraPath, CinematicCameraUI
 │   ├── Core/        # BootManager, SWEFSession, WorldBootstrap
 │   ├── Flight/      # FlightController, TouchInputRouter, AltitudeController, HoldButton
 │   ├── Haptic/      # HapticManager, HapticTriggerZone

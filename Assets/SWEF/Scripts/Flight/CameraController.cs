@@ -82,8 +82,30 @@ namespace SWEF.Flight
             SetCameraMode((CameraMode)next);
         }
 
+        // ── Phase 18 — Cinematic camera override ─────────────────────────────────
+        [Header("Phase 18 — Cinema")]
+        private bool _cinematicOverride = false;
+
+        /// <summary>Disables player camera updates so the cinematic system can take over.</summary>
+        public void EnableCinematicOverride()
+        {
+            _cinematicOverride = true;
+            Debug.Log("[SWEF] Camera control handed to cinematic system");
+        }
+
+        /// <summary>Re-enables player camera updates.</summary>
+        public void DisableCinematicOverride()
+        {
+            _cinematicOverride = false;
+            Debug.Log("[SWEF] Camera control returned to player");
+        }
+
+        /// <summary>Whether the cinematic system currently has camera control.</summary>
+        public bool IsCinematicActive => _cinematicOverride;
+
         private void LateUpdate()
         {
+            if (_cinematicOverride) return;
             if (playerRig == null || mainCamera == null) return;
 
             switch (CurrentMode)

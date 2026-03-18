@@ -72,6 +72,30 @@ namespace SWEF.Atmosphere
             ApplySunTransform();
         }
 
+        // ── Phase 18 — Time of Day ────────────────────────────────────────────────
+        [Header("Phase 18 — Time of Day")]
+        [SerializeField] private SWEF.Cinema.TimeOfDayController timeOfDayController;
+
+        private void OnEnable()
+        {
+            if (timeOfDayController != null)
+                timeOfDayController.OnTimeChanged += HandleTimeChanged;
+        }
+
+        private void OnDisable()
+        {
+            if (timeOfDayController != null)
+                timeOfDayController.OnTimeChanged -= HandleTimeChanged;
+        }
+
+        private void HandleTimeChanged(float hour)
+        {
+            // Sync internal state with TimeOfDayController (hour 0–24 → normalised 0–1)
+            _timeOfDay = hour / 24f;
+            ApplySunTransform();
+            Debug.Log($"[SWEF] DayNightCycle synced to TimeOfDay: {hour:F1}h");
+        }
+
         // ── Helpers ───────────────────────────────────────────────────────────────
 
         private void ApplySunTransform()
