@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using SWEF.Util;
 
@@ -24,14 +25,49 @@ namespace SWEF.Flight
         [SerializeField] private float autoLevelStrength = 2.0f;
         [SerializeField] private float pitchClamp = 70f; // degrees
 
+        [Header("Phase 16 — Haptic Thresholds")]
+        [SerializeField] private float boostThrottleThreshold = 0.9f;
+        [SerializeField] private float stallSpeedThreshold    = 10f;
+
         public float Throttle01 { get; private set; } = 0.25f;
 
         private Vector3 _vel;
 
+        // ── Phase 16 — Events ────────────────────────────────────────────────
+        /// <summary>Raised when throttle crosses the boost threshold upward.</summary>
+        public event Action OnBoostStarted;
+
+        /// <summary>Raised when throttle drops below the boost threshold.</summary>
+        public event Action OnBoostEnded;
+
+        /// <summary>Raised when speed drops below the stall threshold.</summary>
+        public event Action OnStallWarning;
+
+        private bool _boostActive;
+        private bool _stallActive;
+
         /// <summary>Current speed in meters per second.</summary>
         public float CurrentSpeedMps => _vel.magnitude;
 
-        public void SetThrottle(float t01) => Throttle01 = Mathf.Clamp01(t01);
+        public void SetThrottle(float t01)
+        {
+            float prev = Throttle01;
+            Throttle01 = Mathf.Clamp01(t01);
+
+            // Phase 16 — boost event
+            bool nowBoosting = Throttle01 >= boostThrottleThreshold;
+            if (nowBoosting && !_boostActive)
+            {
+                _boostActive = true;
+                OnBoostStarted?.Invoke();
+            }
+            else if (!nowBoosting && _boostActive)
+            {
+                _boostActive = false;
+                OnBoostEnded?.Invoke();
+            }
+        }
+
         public void SetMaxSpeed(float speed) => maxSpeed = Mathf.Clamp(speed, 50f, 500f);
 
         /// <summary>
@@ -80,6 +116,18 @@ namespace SWEF.Flight
             Vector3 targetVel = transform.forward * (maxSpeed * Throttle01);
             _vel = ExpSmoothing.ExpLerp(_vel, targetVel, accelSmoothing, dt);
             transform.position += _vel * dt;
+
+            // Phase 16 — stall warning
+            bool stalling = CurrentSpeedMps < stallSpeedThreshold && Throttle01 > 0.01f;
+            if (stalling && !_stallActive)
+            {
+                _stallActive = true;
+                OnStallWarning?.Invoke();
+            }
+            else if (!stalling)
+            {
+                _stallActive = false;
+            }
         }
     }
 }

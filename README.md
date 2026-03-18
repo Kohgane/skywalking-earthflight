@@ -9,6 +9,7 @@ A mobile flight-experience app powered by Google Photorealistic 3D Tiles via Ces
 - **Flight** — Free-fly with touch controls + Comfort mode (anti-motion-sickness)
 - **Ascent** — Rise through atmosphere layers to the Kármán line and beyond
 - **XR/VR** — VR headset support with comfort options + hand tracking (planned)
+- **Accessibility** — Colorblind modes, dynamic text scaling, one-handed mode, screen reader support, haptic feedback
 
 ## Tech Stack
 | Layer | Technology |
@@ -26,7 +27,8 @@ Assets/SWEF/
 ├── Scripts/
 │   ├── Core/        # BootManager, SWEFSession, WorldBootstrap
 │   ├── Flight/      # FlightController, TouchInputRouter, AltitudeController, HoldButton
-│   ├── UI/          # HudBinder
+│   ├── Haptic/      # HapticManager, HapticTriggerZone
+│   ├── UI/          # HudBinder, AccessibilityController, OneHandedModeController, VoiceCommandManager
 │   ├── XR/          # XRPlatformDetector, XRRigManager, XRInputAdapter, XRHandTracker, XRComfortSettings, XRUIAdapter
 │   └── Util/        # ExpSmoothing
 └── README_SWEF_SETUP.md
