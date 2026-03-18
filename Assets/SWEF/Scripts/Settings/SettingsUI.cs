@@ -29,6 +29,10 @@ namespace SWEF.Settings
         [Header("Phase 13 — Notifications")]
         [SerializeField] private Toggle notificationsToggle;
 
+        [Header("XR")]
+        [SerializeField] private Button     xrSettingsButton;
+        [SerializeField] private GameObject xrSettingsPanel;
+
         [Header("Quality Preset (Phase 8)")]
         [SerializeField] private QualityPresetManager qualityManager;
         [SerializeField] private Dropdown             qualityDropdown;
@@ -100,6 +104,7 @@ namespace SWEF.Settings
         {
             if (settings != null)
                 settings.OnSettingsChanged += RefreshUI;
+            UpdateXRVisibility();
         }
 
         private void OnDisable()
@@ -119,6 +124,9 @@ namespace SWEF.Settings
                 qualityDropdown.value     = (int)qualityManager.CurrentQuality;
                 _ignoreCallbacks          = false;
             }
+
+            // Show XR settings button only when an XR device is active
+            UpdateXRVisibility();
         }
 
         // ── Panel toggle ─────────────────────────────────────────────────────────
@@ -205,6 +213,13 @@ namespace SWEF.Settings
         {
             if (_ignoreCallbacks || qualityManager == null) return;
             qualityManager.SetQuality((QualityPresetManager.QualityLevel)index);
+        }
+
+        private void UpdateXRVisibility()
+        {
+            bool xrActive = SWEF.XR.XRPlatformDetector.IsXRActive;
+            if (xrSettingsButton != null) xrSettingsButton.gameObject.SetActive(xrActive);
+            if (xrSettingsPanel  != null) xrSettingsPanel.SetActive(false); // panel starts hidden; opened via button
         }
     }
 }
