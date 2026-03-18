@@ -84,6 +84,13 @@ namespace SWEF.Weather
 
         private WeatherCondition _lastCondition = WeatherCondition.Clear;
 
+        // Target (unattentuated) volumes, set by OnWeatherUpdated — altitude attenuation
+        // is applied each frame as a separate multiplier so we can restore volumes on ascent.
+        private float _targetRainVolume;
+        private float _targetWindVolume;
+        private float _targetSnowVolume;
+        private float _targetSandVolume;
+
         // ── Unity lifecycle ───────────────────────────────────────────────────────
 
         private void Awake()
@@ -127,45 +134,60 @@ namespace SWEF.Weather
 
             float intensity = data.precipitationIntensity;
 
+            // Reset target volumes before setting new ones
+            _targetRainVolume = 0f;
+            _targetWindVolume = 0f;
+            _targetSnowVolume = 0f;
+            _targetSandVolume = 0f;
+
             // Stop all, then start what's needed
             CrossfadeAll(0f, crossfadeDuration);
 
             switch (data.condition)
             {
                 case WeatherCondition.Rain:
-                    StartCoroutine(FadeSource(_srcRain, clipRainLight,  rainMaxVolume * Mathf.Max(0.3f, intensity), crossfadeDuration));
-                    StartCoroutine(FadeSource(_srcWind, clipWind,       windMaxVolume * 0.3f, crossfadeDuration));
+                    _targetRainVolume = rainMaxVolume * Mathf.Max(0.3f, intensity);
+                    _targetWindVolume = windMaxVolume * 0.3f;
+                    StartCoroutine(FadeSource(_srcRain, clipRainLight, _targetRainVolume, crossfadeDuration));
+                    StartCoroutine(FadeSource(_srcWind, clipWind,      _targetWindVolume, crossfadeDuration));
                     _thunderActive = false;
                     break;
 
                 case WeatherCondition.HeavyRain:
-                    StartCoroutine(FadeSource(_srcRain, clipRainHeavy,  rainMaxVolume * intensity, crossfadeDuration));
-                    StartCoroutine(FadeSource(_srcWind, clipWind,       windMaxVolume * 0.5f, crossfadeDuration));
+                    _targetRainVolume = rainMaxVolume * intensity;
+                    _targetWindVolume = windMaxVolume * 0.5f;
+                    StartCoroutine(FadeSource(_srcRain, clipRainHeavy, _targetRainVolume, crossfadeDuration));
+                    StartCoroutine(FadeSource(_srcWind, clipWind,      _targetWindVolume, crossfadeDuration));
                     _thunderActive = false;
                     break;
 
                 case WeatherCondition.Thunderstorm:
-                    StartCoroutine(FadeSource(_srcRain, clipRainHeavy,  rainMaxVolume, crossfadeDuration));
-                    StartCoroutine(FadeSource(_srcWind, clipWind,       windMaxVolume, crossfadeDuration));
+                    _targetRainVolume = rainMaxVolume;
+                    _targetWindVolume = windMaxVolume;
+                    StartCoroutine(FadeSource(_srcRain, clipRainHeavy, _targetRainVolume, crossfadeDuration));
+                    StartCoroutine(FadeSource(_srcWind, clipWind,      _targetWindVolume, crossfadeDuration));
                     _thunderActive = true;
                     _thunderTimer  = 0f;
                     break;
 
                 case WeatherCondition.Snow:
                 case WeatherCondition.HeavySnow:
-                    StartCoroutine(FadeSource(_srcSnow, clipSnow, snowMaxVolume * Mathf.Max(0.3f, intensity), crossfadeDuration));
+                    _targetSnowVolume = snowMaxVolume * Mathf.Max(0.3f, intensity);
+                    StartCoroutine(FadeSource(_srcSnow, clipSnow, _targetSnowVolume, crossfadeDuration));
                     _thunderActive = false;
                     break;
 
                 case WeatherCondition.Sandstorm:
-                    StartCoroutine(FadeSource(_srcSand, clipSandstorm, sandMaxVolume, crossfadeDuration));
-                    StartCoroutine(FadeSource(_srcWind, clipWind,      windMaxVolume * 0.8f, crossfadeDuration));
+                    _targetSandVolume = sandMaxVolume;
+                    _targetWindVolume = windMaxVolume * 0.8f;
+                    StartCoroutine(FadeSource(_srcSand, clipSandstorm, _targetSandVolume, crossfadeDuration));
+                    StartCoroutine(FadeSource(_srcWind, clipWind,      _targetWindVolume, crossfadeDuration));
                     _thunderActive = false;
                     break;
 
                 case WeatherCondition.Windy:
-                    StartCoroutine(FadeSource(_srcWind, clipWind,
-                        windMaxVolume * Mathf.Clamp01(data.windSpeedMs / 20f), crossfadeDuration));
+                    _targetWindVolume = windMaxVolume * Mathf.Clamp01(data.windSpeedMs / 20f);
+                    StartCoroutine(FadeSource(_srcWind, clipWind, _targetWindVolume, crossfadeDuration));
                     _thunderActive = false;
                     break;
 
@@ -203,10 +225,10 @@ namespace SWEF.Weather
         private void ApplyAltitudeAttenuation()
         {
             float att = GetAltitudeAttenuation();
-            if (_srcRain   != null) _srcRain.volume   = _srcRain.volume   * att;
-            if (_srcWind   != null) _srcWind.volume   = _srcWind.volume   * att;
-            if (_srcSnow   != null) _srcSnow.volume   = _srcSnow.volume   * att;
-            if (_srcSand   != null) _srcSand.volume   = _srcSand.volume   * att;
+            if (_srcRain != null && _srcRain.isPlaying)   _srcRain.volume  = _targetRainVolume * att;
+            if (_srcWind != null && _srcWind.isPlaying)   _srcWind.volume  = _targetWindVolume * att;
+            if (_srcSnow != null && _srcSnow.isPlaying)   _srcSnow.volume  = _targetSnowVolume * att;
+            if (_srcSand != null && _srcSand.isPlaying)   _srcSand.volume  = _targetSandVolume * att;
         }
 
         private float GetAltitudeAttenuation()

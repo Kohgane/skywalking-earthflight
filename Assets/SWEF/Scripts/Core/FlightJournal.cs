@@ -32,6 +32,9 @@ namespace SWEF.Core
         private readonly System.Collections.Generic.HashSet<SWEF.Weather.WeatherCondition> _weatherEncountered
             = new System.Collections.Generic.HashSet<SWEF.Weather.WeatherCondition>();
 
+        // True only if every recorded weather update during this flight was Clear.
+        private bool _flightWasFullyClear = true;
+
         private const float MetersToKilometers = 0.001f;
 
         // ── Unity lifecycle ──────────────────────────────────────────────────
@@ -100,6 +103,7 @@ namespace SWEF.Core
             _distanceKm      = 0f;
             _hasLastPosition = false;
             _weatherEncountered.Clear();
+            _flightWasFullyClear = true;
             _recording       = true;
 
             Debug.Log($"[SWEF] FlightJournal: recording started (id={_activeId}).");
@@ -151,15 +155,18 @@ namespace SWEF.Core
 
             Debug.Log($"[SWEF] FlightJournal: recording stopped — duration={duration:F0}s, maxAlt={_maxAltitudeKm:F2}km, dist={_distanceKm:F2}km.");
 
-            // Phase 19 — notify achievement manager if flight ended in clear weather
-            SWEF.Achievement.AchievementManager.Instance?.NotifyFlightEndedInClearSkies();
+            // Phase 19 — notify achievement manager only if the entire flight was in clear weather
+            if (_flightWasFullyClear)
+                SWEF.Achievement.AchievementManager.Instance?.NotifyFlightEndedInClearSkies();
         }
 
         // ── Phase 19 — Weather tracking ───────────────────────────────────────
         private void TrackWeather(SWEF.Weather.WeatherData data)
         {
-            if (_recording)
-                _weatherEncountered.Add(data.condition);
+            if (!_recording) return;
+            _weatherEncountered.Add(data.condition);
+            if (data.condition != SWEF.Weather.WeatherCondition.Clear)
+                _flightWasFullyClear = false;
         }
 
         /// <summary>Deletes the journal entry with the given <paramref name="id"/>.</summary>
