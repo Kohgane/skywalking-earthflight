@@ -28,6 +28,12 @@ namespace SWEF.Screenshot
         /// <summary>Raised after a screenshot is saved, passing the full file path.</summary>
         public event Action<string> OnScreenshotCaptured;
 
+        /// <summary>Raised after a screenshot is saved; mirrors <see cref="OnScreenshotCaptured"/> for Phase 25 social feed consumers.</summary>
+        public event Action<string> OnScreenshotSaved;
+
+        /// <summary>Full file path of the most recently saved screenshot, or <c>null</c> if none yet.</summary>
+        public string LastScreenshotPath { get; private set; }
+
         private void Awake()
         {
             if (hudCanvas == null)
@@ -77,7 +83,9 @@ namespace SWEF.Screenshot
                 Audio.AudioManager.Instance.PlaySFX(2); // Screenshot
 
             Debug.Log($"[SWEF] Screenshot{(highRes ? " (High-Res)" : "")} saved: {filePath}");
+            LastScreenshotPath = filePath;
             OnScreenshotCaptured?.Invoke(filePath);
+            OnScreenshotSaved?.Invoke(filePath);
 
             // Achievement: first screenshot
             if (Achievement.AchievementManager.Instance != null)
@@ -130,7 +138,9 @@ namespace SWEF.Screenshot
             string path  = System.IO.Path.Combine(Application.persistentDataPath, filename);
             System.IO.File.WriteAllBytes(path, bytes);
             Debug.Log($"[SWEF] Photo saved: {path}");
+            LastScreenshotPath = path;
             OnScreenshotCaptured?.Invoke(path);
+            OnScreenshotSaved?.Invoke(path);
         }
     }
 }
