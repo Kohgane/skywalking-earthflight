@@ -2104,3 +2104,103 @@ Core Layer (Phase 19)
   ├── FlightJournal   (+ weatherSummary tracking)           ← MODIFIED
   └── SaveManager     (+ JournalEntry.weatherSummary)       ← MODIFIED
 ```
+
+---
+
+## Phase 22 — Offline Mode, Data Caching & Tile Prefetch System
+
+### Overview
+Phase 22 adds an offline-first capability so users can pre-download 3D tile regions and fly without an active internet connection.  A new `Assets/SWEF/Scripts/Offline/` module handles connectivity detection, persistent tile caching, intelligent prefetching, and graceful service degradation.
+
+---
+
+### New Scripts
+
+| Script | Namespace | Description |
+|--------|-----------|-------------|
+| `OfflineManager.cs` | `SWEF.Offline` | Singleton — monitors `Application.internetReachability` every 2 s, maintains `IsOffline` / `ConnectionType`, fires connectivity events, supports forced-offline via PlayerPrefs key `SWEF_ForceOffline` |
+| `TileCacheManager.cs` | `SWEF.Offline` | Persists 3D tile region metadata as JSON in `Application.persistentDataPath/TileCache/regions.json`; simulates tile download with progress callback; LRU eviction when 2 GB limit is reached |
+| `TilePrefetchController.cs` | `SWEF.Offline` | Predicts future flight position from heading/speed, prefetches tiles 30 s ahead at 5 km radius; WiFi-only; throttled to one request per 10 s |
+| `OfflineFallbackController.cs` | `SWEF.Offline` | Disables weather API, multiplayer sync, and telemetry upload when offline; queues up to 1 000 deferred operations and flushes on reconnect |
+| `OfflineHUD.cs` | `SWEF.Offline` | Top-right HUD widget — offline icon + label, expandable cache-usage panel with progress bar and time-since-online; 0.3 s alpha fade |
+| `RegionDownloadUI.cs` | `SWEF.Offline` | Settings panel listing 10 predefined popular regions + "Cache Current Location"; per-region download/delete/progress rows inside a `ScrollRect` |
+
+---
+
+### Modified Scripts
+
+| Script | Change |
+|--------|--------|
+| `Core/BootManager.cs` | Phase 22 block: finds `OfflineManager` after scene load and logs current online/offline state |
+| `Settings/WeatherSettings.cs` | Added `ForceOfflineMode` property (get/set) — reads/writes `SWEF_ForceOffline` PlayerPrefs key and delegates to `OfflineManager.Instance` |
+| `Weather/WeatherDataService.cs` | Added `SetFallbackMode(bool)` public method — switches `offlineMode` flag and triggers procedural weather generation when going offline |
+| `Analytics/TelemetryDispatcher.cs` | Added `SetOfflineMode(bool)` and `FlushQueue()` public methods — suspends upload while offline and flushes accumulated events on reconnect |
+
+---
+
+### Setup Instructions
+
+1. **OfflineManager** — attach `OfflineManager` to a persistent GameObject (e.g. the same object as `BootManager` or a dedicated `OfflineSystem` prefab).  Ensure `DontDestroyOnLoad` keeps it alive across scene transitions.
+
+2. **TileCacheManager** — attach `TileCacheManager` to the same persistent GameObject.  Configure `maxCacheSizeBytes` in the Inspector (default 2 GB).
+
+3. **TilePrefetchController** — attach to the persistent GameObject.  Assign `FlightController` in the Inspector or leave blank for auto-find.  Disable on cellular/offline via `Enable(false)`.
+
+4. **OfflineFallbackController** — attach to the persistent GameObject.  Wire `OfflineHUD` in the Inspector or leave blank for auto-find.
+
+5. **OfflineHUD** — add to the HUD Canvas (below the weather widget in the hierarchy).  Assign `CanvasGroup`, `Image`, `TextMeshProUGUI` labels, and `Slider` cacheBar in the Inspector.
+
+6. **RegionDownloadUI** — add the panel to the Settings canvas.  Assign a region-row prefab containing child objects named `NameLabel`, `SizeLabel`, `StatusLabel`, `ProgressBar`, `DownloadButton`, `DeleteButton`, and place the panel inside a `ScrollRect`.  Wire the `cacheCurrentLocationButton`.
+
+---
+
+### Architecture Diagram (Phase 22)
+
+```
+Offline Module (Phase 22)
+  ├── OfflineManager          (connectivity detection, force-offline)   ← NEW
+  ├── TileCacheManager        (persistent tile region cache, LRU)       ← NEW
+  ├── TilePrefetchController  (trajectory-based prefetch, WiFi only)    ← NEW
+  ├── OfflineFallbackController (service degradation + deferred ops)    ← NEW
+  ├── OfflineHUD              (status widget, cache bar)                ← NEW
+  └── RegionDownloadUI        (manual download panel, 10 regions)       ← NEW
+
+Core Layer (Phase 22)
+  └── BootManager             (+ Phase 22 offline init block)           ← MODIFIED
+
+Settings Layer (Phase 22)
+  └── WeatherSettings         (+ ForceOfflineMode property)             ← MODIFIED
+
+Weather Layer (Phase 22)
+  └── WeatherDataService      (+ SetFallbackMode)                       ← MODIFIED
+
+Analytics Layer (Phase 22)
+  └── TelemetryDispatcher     (+ SetOfflineMode, FlushQueue)            ← MODIFIED
+```
+
+---
+
+### Cache Storage Notes
+
+| Parameter | Value |
+|-----------|-------|
+| Storage root | `Application.persistentDataPath/TileCache/` |
+| Metadata file | `…/TileCache/regions.json` |
+| Default max size | 2 GB (configurable in Inspector) |
+| Eviction policy | LRU — least-recently-accessed region deleted first |
+| Size estimate | π × r² × 5 MB/km² (placeholder; real Cesium payload sizes will differ) |
+| Actual tile download | Stubbed — wire to Cesium offline API when available |
+
+---
+
+### Offline Behaviour Matrix
+
+| Feature | Online | Offline |
+|---------|--------|---------|
+| 3D Tile rendering | Live Cesium stream | Cached regions (if pre-downloaded) |
+| Weather data | Open-Meteo API poll | Procedural fallback (`SetFallbackMode(true)`) |
+| Multiplayer sync | Active | Disabled (`RoomManager.enabled = false`) |
+| Telemetry upload | Immediate dispatch | Queued locally, flushed on reconnect |
+| Cloud save | Immediate | Deferred via `OfflineFallbackController` queue |
+| HUD indicator | Hidden | Visible — shows connection type + cache usage |
+| Tile prefetch | WiFi only, auto | N/A (prefetch disabled while offline) |

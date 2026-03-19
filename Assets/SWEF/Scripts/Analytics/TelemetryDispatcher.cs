@@ -148,6 +148,30 @@ namespace SWEF.Analytics
             _queue.Clear();
         }
 
+        // ── Phase 22 — Offline support ────────────────────────────────────────────
+
+        private bool _offlineMode;
+
+        /// <summary>
+        /// Enables or disables offline (no-upload) mode.  While offline, events
+        /// are accumulated in the queue instead of being dispatched to the server.
+        /// Call <see cref="FlushQueue"/> to send them once connectivity is restored.
+        /// </summary>
+        /// <param name="offline"><c>true</c> to suspend dispatching.</param>
+        public void SetOfflineMode(bool offline)
+        {
+            _offlineMode = offline;
+            Debug.Log($"[SWEF] TelemetryDispatcher: offline mode {offline}");
+            if (!offline)
+                FlushQueue();
+        }
+
+        /// <summary>
+        /// Flushes the event queue to the server.  Alias for <see cref="FlushNow"/>
+        /// used by <see cref="SWEF.Offline.OfflineFallbackController"/> on reconnect.
+        /// </summary>
+        public void FlushQueue() => FlushNow();
+
         /// <summary>Sets the anonymized user ID provided by <see cref="PrivacyConsentManager"/>.</summary>
         public void SetUserId(string anonymizedId) => _userId = anonymizedId ?? "";
 

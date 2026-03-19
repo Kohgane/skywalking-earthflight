@@ -134,6 +134,20 @@ namespace SWEF.Weather
         }
 
         /// <summary>
+        /// Enables or disables fallback (procedural) mode for offline operation.
+        /// When <paramref name="fallback"/> is <c>true</c>, no network requests
+        /// are made and procedural weather is used instead.
+        /// </summary>
+        /// <param name="fallback"><c>true</c> to enter offline/fallback mode.</param>
+        public void SetFallbackMode(bool fallback)
+        {
+            offlineMode = fallback;
+            Debug.Log($"[SWEF][Weather] Fallback mode: {fallback}");
+            if (fallback)
+                GenerateAndPublishProcedural();
+        }
+
+        /// <summary>
         /// Forces an immediate weather data refresh regardless of the poll timer.
         /// </summary>
         public void RefreshWeather()
