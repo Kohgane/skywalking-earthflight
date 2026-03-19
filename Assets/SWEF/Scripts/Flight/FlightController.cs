@@ -31,6 +31,16 @@ namespace SWEF.Flight
 
         public float Throttle01 { get; private set; } = 0.25f;
 
+        // ── Phase 24 — Advanced Physics additions ────────────────────────────
+        /// <summary>Current velocity vector in metres per second (world space).</summary>
+        public Vector3 Velocity => _vel;
+
+        /// <summary>Convenience accessor for the craft's forward direction.</summary>
+        public Vector3 Forward => transform.forward;
+
+        /// <summary>Pending external acceleration (m/s²) to apply on next Step().</summary>
+        private Vector3 _externalAccel;
+
         private Vector3 _vel;
 
         // ── Phase 16 — Events ────────────────────────────────────────────────
@@ -69,6 +79,17 @@ namespace SWEF.Flight
         }
 
         public void SetMaxSpeed(float speed) => maxSpeed = Mathf.Clamp(speed, 50f, 500f);
+
+        /// <summary>
+        /// Queues an external acceleration (m/s²) to be integrated into velocity
+        /// on the next call to <see cref="Step"/>. Called by
+        /// <see cref="FlightPhysicsIntegrator"/> each FixedUpdate.
+        /// </summary>
+        /// <param name="accel">Acceleration vector in world space (m/s²).</param>
+        public void ApplyExternalAcceleration(Vector3 accel)
+        {
+            _externalAccel += accel;
+        }
 
         /// <summary>
         /// Feeds XR controller input directly into the flight system,
@@ -115,6 +136,11 @@ namespace SWEF.Flight
             // --- Translation ---
             Vector3 targetVel = transform.forward * (maxSpeed * Throttle01);
             _vel = ExpSmoothing.ExpLerp(_vel, targetVel, accelSmoothing, dt);
+
+            // Phase 24 — integrate any external acceleration (aerodynamics, gravity, etc.)
+            _vel += _externalAccel * dt;
+            _externalAccel = Vector3.zero;
+
             transform.position += _vel * dt;
 
             // Phase 16 — stall warning

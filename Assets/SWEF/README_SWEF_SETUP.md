@@ -2266,3 +2266,73 @@ Analytics Layer (Phase 22)
 | `tutorial_teleport` | Tap Teleport to search for any place on Earth. |
 | `tutorial_achievements` | Check your Achievements to discover goals. |
 | `tutorial_complete` | You're ready! Enjoy exploring Earth from above. |
+
+---
+
+## Phase 24 — Advanced Flight Physics: Aerodynamics, Drag, Lift & Orbital Mechanics
+
+### New Scripts
+
+| Script | Namespace | Purpose |
+|--------|-----------|---------|
+| `Flight/AeroState.cs` | `SWEF.Flight` | Immutable struct — per-tick aerodynamic snapshot (density, Mach, AoA, dynamic pressure, etc.) |
+| `Flight/AeroPhysicsModel.cs` | `SWEF.Flight` | Exponential atmosphere model, drag/lift/gravity/thrust calculations, Mach number |
+| `Flight/OrbitState.cs` | `SWEF.Flight` | Enum: `Atmospheric`, `SubOrbital`, `LowOrbit`, `HighOrbit`, `Escape` |
+| `Flight/OrbitalMechanics.cs` | `SWEF.Flight` | Orbital/escape velocity, 2-body gravity, apoapsis/periapsis estimation |
+| `Flight/FlightPhysicsSnapshot.cs` | `SWEF.Flight` | Immutable struct for HUD/telemetry — G-force, net force, L/W ratio, orbit state |
+| `Flight/FlightPhysicsIntegrator.cs` | `SWEF.Flight` | **Main integration point** — FixedUpdate physics loop connecting all systems |
+| `Flight/StallWarningSystem.cs` | `SWEF.Flight` | Monitors AoA, dynamic pressure, G-force; fires stall/overspeed/G-force events |
+| `UI/FlightPhysicsHUD.cs` | `SWEF.UI` | HUD MonoBehaviour — Mach, G-force, AoA, dynamic pressure, orbit state display |
+
+### Modified Files
+
+| File | Change |
+|------|--------|
+| `Flight/FlightController.cs` | + `Velocity` property, `ApplyExternalAcceleration()`, `Forward` property |
+
+### Architecture
+
+```
+TouchInputRouter
+    └── FlightController.Step()        ← original kinematic system (unchanged)
+            ↑ ApplyExternalAcceleration()
+FlightPhysicsIntegrator (FixedUpdate)
+    ├── AltitudeController             ← reads current altitude
+    ├── AeroPhysicsModel               ← drag, lift, gravity, Mach, air density
+    ├── OrbitalMechanics               ← orbit state, orbital/escape velocity
+    └── StallWarningSystem             ← stall / overspeed / G-force warnings
+            └── OnPhysicsSnapshot ──→ FlightPhysicsHUD  (UI update)
+```
+
+### Setup in World Scene
+
+1. On the **Player** GameObject, add the following components:
+   - `AeroPhysicsModel`
+   - `OrbitalMechanics`
+   - `StallWarningSystem`
+   - `FlightPhysicsIntegrator`
+2. Wire `AltitudeController` and the three new components in the `FlightPhysicsIntegrator` Inspector fields (or let them auto-locate via `GetComponent`).
+3. Add `FlightPhysicsHUD` to a HUD Canvas child and wire optional `Text`/`Slider` fields.
+
+### Disabling Advanced Physics
+
+Set `enableAdvancedPhysics = false` on `FlightPhysicsIntegrator` (or `physicsBlendFactor = 0`) to restore the exact original kinematic behaviour. All existing events (`OnSpeedChanged`, `OnComfortModeChanged`, `OnBoostStarted`, etc.) continue to fire unmodified.
+
+### Physics Model Summary
+
+| Parameter | Value |
+|-----------|-------|
+| Sea-level air density ρ₀ | 1.225 kg/m³ |
+| Scale height H | 8,500 m |
+| Drag coefficient Cd | 0.04 |
+| Reference area A | 12 m² |
+| Lift slope Cl/°AoA | 0.1 |
+| Max lift coefficient Cl_max | 1.5 |
+| Stall angle | 15° |
+| Sea-level gravity g₀ | 9.81 m/s² |
+| Earth radius R | 6,371,000 m |
+| Earth GM | 3.986 × 10¹⁴ m³/s² |
+| Rocket mode threshold | 25,000 m |
+| Kármán line | 100,000 m |
+| Max atmospheric speed | 8,000 m/s |
+| Escape speed cap | 11,200 m/s |
