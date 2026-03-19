@@ -38,6 +38,12 @@ namespace SWEF.Core
         /// <summary>The most recently sampled frames-per-second value.</summary>
         public float CurrentFPS { get; private set; }
 
+        /// <summary>Current FPS exposed as a canonical alias for Phase 26 integration.</summary>
+        public float CurrentFps => CurrentFPS;
+
+        /// <summary>The most recent frame time in milliseconds.</summary>
+        public float FrameTimeMs { get; private set; }
+
         private int   _frameCount;
         private float _elapsedSinceLastSample;
         private float _cooldownTimer;
@@ -50,8 +56,13 @@ namespace SWEF.Core
         private void Update()
         {
             _frameCount++;
-            _elapsedSinceLastSample += Time.unscaledDeltaTime;
-            _cooldownTimer           = Mathf.Max(0f, _cooldownTimer - Time.unscaledDeltaTime);
+            float dt = Time.unscaledDeltaTime;
+            FrameTimeMs = dt * 1000f;
+            _elapsedSinceLastSample += dt;
+            _cooldownTimer           = Mathf.Max(0f, _cooldownTimer - dt);
+
+            // Phase 26 — notify PerformanceProfiler
+            SWEF.Performance.PerformanceProfiler.Instance?.RecordFrame(dt);
 
             if (_elapsedSinceLastSample >= fpsSampleInterval)
             {

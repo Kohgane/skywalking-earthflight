@@ -2427,6 +2427,27 @@ StatsDashboard  ──→  GlobalLeaderboardService.FetchPlayerRank()  (every 60
 
 ---
 
+## Phase 26 — Performance Profiling & Memory Optimization 2.0
+
+### New Directory: `Assets/SWEF/Scripts/Performance/`
+
+| Script | Namespace | Purpose |
+|--------|-----------|---------|
+| `Performance/PerformanceProfiler.cs` | `SWEF.Performance` | Advanced frame-time profiler — rolling 60-frame window, 1%/0.1% lows, histogram, CSV export, 5-second snapshots |
+| `Performance/MemoryPoolManager.cs` | `SWEF.Performance` | Generic `ObjectPool<T>` with pre-warm, Get/Return, Shrink; `MemoryPoolManager` singleton for monitoring all pools |
+| `Performance/TextureMemoryOptimizer.cs` | `SWEF.Performance` | Scans all loaded `Texture2D` objects, runtime bilinear downsampling, `UnloadUnusedAssets`, auto-optimize above threshold |
+| `Performance/DrawCallAnalyzer.cs` | `SWEF.Performance` | Draw call and batching stats via `FrameTimingManager`; heaviest-renderer list; batching efficiency ratio |
+| `Performance/GarbageCollectionTracker.cs` | `SWEF.Performance` | 300-frame circular buffer of per-frame GC allocations; spike detection, `ForceCollect()`, high-alloc warning |
+| `Performance/AssetLoadProfiler.cs` | `SWEF.Performance` | Records asset load events (time + memory), FIFO 500-cap, slowest/largest queries, formatted report |
+| `Performance/RuntimeDiagnosticsHUD.cs` | `SWEF.Performance` | On-screen diagnostics overlay (dev builds only): FPS graph, memory bar, GC rate, draw calls, pool stats; F3 toggle |
+| `Performance/SceneLoadProfiler.cs` | `SWEF.Performance` | Hooks `SceneManager` events, measures unload/load/activate phase timing, `LoadHistory`, average load time |
+| `Performance/AdaptiveQualityController.cs` | `SWEF.Performance` | FPS-based dynamic quality adjustment with streak counters, cooldown hysteresis, `QualityAction` enum |
+
+### New Editor Script: `Assets/SWEF/Scripts/Editor/`
+
+| Script | Namespace | Purpose |
+|--------|-----------|---------|
+| `Editor/PerformanceProfilerWindow.cs` | `SWEF.Editor` | **SWEF → Performance Profiler** EditorWindow — live graphs (FPS/memory/GC), pool stats table, texture breakdown, draw-call analysis, Export/ForceGC/Optimize buttons |
 ## Phase 25 — Social Feed & Community (비행 스크린샷/영상 공유)
 
 ### New Scripts: `Assets/SWEF/Scripts/Social/`
@@ -2446,12 +2467,131 @@ StatsDashboard  ──→  GlobalLeaderboardService.FetchPlayerRank()  (every 60
 
 | File | Change |
 |------|--------|
+| `Core/PerformanceManager.cs` | Added `CurrentFps` alias, `FrameTimeMs` property; calls `PerformanceProfiler.Instance?.RecordFrame()` each frame |
+| `Core/MemoryManager.cs` | Added `CurrentUsedMB`, `PeakUsedMB` properties; `OnMemoryWarning` upgraded to `Action<long>` firing at 80% system RAM |
+| `Core/BootManager.cs` | Phase 26 block: finds `PerformanceProfiler` and `AdaptiveQualityController`, sets `AutoAdjustEnabled` from PlayerPrefs |
+| `Settings/SettingsManager.cs` | Added `AdaptiveQuality` (default `true`) and `DiagnosticsHUD` (default `false`) settings with keys `SWEF_AdaptiveQuality`/`SWEF_DiagnosticsHUD`; `ApplyAll()` pushes value to `AdaptiveQualityController` |
+| `Settings/SettingsUI.cs` | Added `adaptiveQualityToggle` and `diagnosticsToggle` `SerializeField`s; wired callbacks; `RefreshUI` syncs toggles |
+
+### Setup Instructions
+
+#### 1. PerformanceProfiler
+1. Add a persistent **Performance** GameObject to the Boot scene.
+2. Attach `PerformanceProfiler` — it calls `DontDestroyOnLoad` automatically.
+3. Optionally attach `PerformanceManager` to the same GameObject so frame data is forwarded.
+
+#### 2. MemoryPoolManager
+1. Attach `MemoryPoolManager` to the same persistent GameObject.
+2. In your runtime code, create pools and register them:
+   ```csharp
+   var pool = new ObjectPool<BulletComponent>(bulletPrefab, initialSize: 20, maxSize: 100, parent: transform);
+   MemoryPoolManager.Instance.RegisterPool("Bullets", pool);
+   ```
+
+#### 3. TextureMemoryOptimizer
+1. Attach `TextureMemoryOptimizer` to a scene GameObject (World scene recommended).
+2. Set `autoOptimizeThresholdMB` (default 512 MB) and `defaultMaxResolution` (default 1024) in the Inspector.
+3. Call `OptimizeTextures(maxRes)` manually or let the auto-threshold trigger it.
+
+#### 4. DrawCallAnalyzer
+1. Attach `DrawCallAnalyzer` to any persistent GameObject.
+2. Subscribe to `OnStatsUpdated` or poll `GetCurrentStats()` from HUD code.
+
+#### 5. GarbageCollectionTracker
+1. Attach `GarbageCollectionTracker` to any persistent GameObject.
+2. Subscribe to `OnAllocationSpike` to react to large per-frame allocations.
+
+#### 6. AssetLoadProfiler
+1. Attach `AssetLoadProfiler` to a persistent GameObject.
+2. After each asset load, call:
+   ```csharp
+   AssetLoadProfiler.Instance?.RecordLoad(assetName, "Texture2D", elapsedMs, sizeBytes);
+   ```
+
+#### 7. RuntimeDiagnosticsHUD
+> **Requirement:** Only compiles in `DEVELOPMENT_BUILD` or `UNITY_EDITOR`.
+
+1. Create a Canvas in World scene for diagnostics.
+2. Add `RuntimeDiagnosticsHUD` to the Canvas root.
+3. Wire all `[SerializeField]` Text / RawImage / Slider / Button fields in the Inspector.
+4. Press **F3** at runtime to toggle (or set the default state via `SWEF_DiagnosticsEnabled` PlayerPrefs).
+
+#### 8. SceneLoadProfiler
+1. Attach `SceneLoadProfiler` to a persistent GameObject.
+2. Before loading a new scene, call `SceneLoadProfiler.Instance?.BeginSceneLoad(sceneName)`.
+3. Subscribe to `OnSceneLoadComplete` to receive `SceneLoadEvent` records.
+
+#### 9. AdaptiveQualityController
+1. Attach `AdaptiveQualityController` to any persistent GameObject in the World scene.
+2. Ensure `QualityPresetManager` is also present.
+3. Enable/disable via `AutoAdjustEnabled` (persisted through `SWEF_AdaptiveQuality` in PlayerPrefs and Settings UI).
+
+#### 10. PerformanceProfilerWindow (Editor)
+1. Open via **SWEF → Performance Profiler** menu.
+2. Enter Play mode to see live data.
+3. Use **Export CSV Report** to save all snapshots to `persistentDataPath/Performance/`.
+
+### DEVELOPMENT_BUILD Requirement for RuntimeDiagnosticsHUD
+
+The `RuntimeDiagnosticsHUD` script is wrapped in `#if DEVELOPMENT_BUILD || UNITY_EDITOR`. To use it in a device build:
+
+1. In **Build Settings**, check **Development Build**.
+2. The script compiles and the canvas becomes active/toggleable.
+3. In production (non-development) builds the entire overlay is stripped.
 | `Screenshot/ScreenshotController.cs` | Added `LastScreenshotPath` property; added `OnScreenshotSaved` event; both are set/fired alongside existing `OnScreenshotCaptured` after every successful capture |
 | `Screenshot/ScreenshotUI.cs` | Added `shareAfterCaptureButton` (revealed after capture) and `postComposer` reference; tapping Share opens `PostComposerUI` or falls back to `SocialShareController.ShareImage()` |
 
 ### Architecture
 
 ```
+PerformanceManager.Update()
+    └── PerformanceProfiler.RecordFrame()
+            ├── Rolling frame-time window (60 frames)
+            ├── Histogram (16 buckets, 2 ms wide)
+            └── PerformanceSnapshot (every 5 s) → History (60 max)
+                        └── OnSnapshotTaken → AdaptiveQualityController
+
+MemoryManager.CheckMemory()
+    └── OnMemoryWarning (Action<long>) at 80% system RAM
+
+MemoryPoolManager
+    └── ObjectPool<T> instances (registered by name)
+
+TextureMemoryOptimizer ──→ Resources.FindObjectsOfTypeAll<Texture2D>()
+
+GarbageCollectionTracker ──→ GC.GetTotalMemory() differential per frame
+
+SceneLoadProfiler ──→ SceneManager.sceneLoaded / sceneUnloaded events
+
+AdaptiveQualityController ──→ PerformanceProfiler.OnSnapshotTaken
+                                    └── QualityPresetManager.SetQuality()
+
+RuntimeDiagnosticsHUD (dev only) ──→ polls all Performance singletons every 0.5 s
+
+Editor: PerformanceProfilerWindow ──→ EditorApplication.update (0.5 s)
+```
+
+### Performance Tuning Guide
+
+#### Low-end devices (≤ 2 GB RAM, single/dual core GPU)
+| Setting | Recommended value |
+|---------|-------------------|
+| `QualityPresetManager` default | `Low` |
+| `AdaptiveQualityController.targetFps` | 30 |
+| `AdaptiveQualityController.lowerSampleCount` | 2 (react faster) |
+| `TextureMemoryOptimizer.defaultMaxResolution` | 512 |
+| `TextureMemoryOptimizer.autoOptimizeThresholdMB` | 256 |
+| `MemoryManager.memoryWarningThresholdMB` | 512 |
+
+#### High-end devices (≥ 6 GB RAM, high-tier GPU)
+| Setting | Recommended value |
+|---------|-------------------|
+| `QualityPresetManager` default | `Ultra` |
+| `AdaptiveQualityController.targetFps` | 60 |
+| `AdaptiveQualityController.raiseSampleCount` | 10 (raise conservatively) |
+| `TextureMemoryOptimizer.defaultMaxResolution` | 2048 |
+| `TextureMemoryOptimizer.autoOptimizeThresholdMB` | 1024 |
+| `MemoryManager.memoryWarningThresholdMB` | 2048 |
 ScreenshotController.CaptureScreenshot()
     └── OnScreenshotSaved / OnScreenshotCaptured  →  ScreenshotUI (shows Share button)
                                                    →  SocialFeedManager (optional auto-post)
@@ -2497,6 +2637,9 @@ SocialPostCard
 
 | Key | Type | Purpose |
 |-----|------|---------|
+| `SWEF_AdaptiveQuality` | int (0/1) | Whether adaptive quality is enabled |
+| `SWEF_DiagnosticsHUD` | int (0/1) | Whether diagnostics HUD is shown by default |
+| `SWEF_DiagnosticsEnabled` | int (0/1) | HUD visibility state persisted between sessions |
 | `SWEF_Profile_Json` | string (JSON) | Serialised `CommunityProfileManager.PlayerProfile` |
 
 ### Feed Storage

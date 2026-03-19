@@ -128,6 +128,18 @@ namespace SWEF.Core
             if (playerProfile == null)
                 Debug.Log("[SWEF] BootManager: PlayerProfileManager not found — add it to a persistent GameObject for global leaderboard support.");
 
+            // Phase 26 — Performance Profiling initialization
+            var profiler = FindFirstObjectByType<SWEF.Performance.PerformanceProfiler>();
+            if (profiler != null)
+                Debug.Log("[SWEF] Performance Profiler initialized");
+
+            var adaptiveQuality = FindFirstObjectByType<SWEF.Performance.AdaptiveQualityController>();
+            if (adaptiveQuality != null)
+            {
+                adaptiveQuality.AutoAdjustEnabled = PlayerPrefs.GetInt("SWEF_AdaptiveQuality", 1) == 1;
+                Debug.Log($"[SWEF] Adaptive quality: {(adaptiveQuality.AutoAdjustEnabled ? "ON" : "OFF")}");
+            }
+
             SceneManager.LoadScene(worldSceneName);
             Debug.Log($"[SWEF] Scene load requested: {worldSceneName}");
 
