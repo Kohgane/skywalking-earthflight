@@ -50,6 +50,19 @@ namespace SWEF.Settings
         /// <summary>Raised when the haptic intensity setting changes.</summary>
         public static event Action<float> OnHapticIntensityChanged;
 
+        // ── Phase 26 — Performance settings ─────────────────────────────────────
+        public const bool DefaultAdaptiveQuality = true;
+        public const bool DefaultDiagnosticsHUD  = false;
+
+        private const string KeyAdaptiveQuality = "SWEF_AdaptiveQuality";
+        private const string KeyDiagnosticsHUD  = "SWEF_DiagnosticsHUD";
+
+        /// <summary>Whether adaptive quality adjustment is enabled.</summary>
+        public bool AdaptiveQuality { get; private set; } = DefaultAdaptiveQuality;
+
+        /// <summary>Whether the runtime diagnostics HUD is enabled.</summary>
+        public bool DiagnosticsHUD  { get; private set; } = DefaultDiagnosticsHUD;
+
         // ── References (optional — auto-found via FindFirstObjectByType if not set) ──
         [Header("Refs")]
         [SerializeField] private FlightController    flightController;
@@ -97,6 +110,8 @@ namespace SWEF.Settings
                 DefaultNotificationsEnabled ? 1 : 0) == 1;
             HapticsEnabled       = PlayerPrefs.GetInt(KeyHapticsEnabled,  DefaultHapticsEnabled  ? 1 : 0) == 1;
             HapticIntensity      = PlayerPrefs.GetFloat(KeyHapticIntensity, DefaultHapticIntensity);
+            AdaptiveQuality      = PlayerPrefs.GetInt(KeyAdaptiveQuality, DefaultAdaptiveQuality ? 1 : 0) == 1;
+            DiagnosticsHUD       = PlayerPrefs.GetInt(KeyDiagnosticsHUD,  DefaultDiagnosticsHUD  ? 1 : 0) == 1;
 
             // Phase 10 — override with SaveManager values when present
             if (_saveManager != null && _saveManager.HasSaveFile())
@@ -124,6 +139,8 @@ namespace SWEF.Settings
             PlayerPrefs.SetInt(KeyNotificationsEnabled, NotificationsEnabled ? 1 : 0);
             PlayerPrefs.SetInt(KeyHapticsEnabled,     HapticsEnabled  ? 1 : 0);
             PlayerPrefs.SetFloat(KeyHapticIntensity,  HapticIntensity);
+            PlayerPrefs.SetInt(KeyAdaptiveQuality,    AdaptiveQuality ? 1 : 0);
+            PlayerPrefs.SetInt(KeyDiagnosticsHUD,     DiagnosticsHUD  ? 1 : 0);
             PlayerPrefs.Save();
 
             // Phase 10 — mirror to SaveManager
@@ -153,6 +170,8 @@ namespace SWEF.Settings
             NotificationsEnabled = DefaultNotificationsEnabled;
             HapticsEnabled       = DefaultHapticsEnabled;
             HapticIntensity      = DefaultHapticIntensity;
+            AdaptiveQuality      = DefaultAdaptiveQuality;
+            DiagnosticsHUD       = DefaultDiagnosticsHUD;
             Save();
         }
 
@@ -184,6 +203,14 @@ namespace SWEF.Settings
             OnHapticIntensityChanged?.Invoke(HapticIntensity);
         }
 
+        // ── Phase 26 setters ─────────────────────────────────────────────────────
+
+        /// <summary>Sets whether adaptive quality is enabled.</summary>
+        public void SetAdaptiveQuality(bool b) { AdaptiveQuality = b; }
+
+        /// <summary>Sets whether the diagnostics HUD is enabled.</summary>
+        public void SetDiagnosticsHUD(bool b) { DiagnosticsHUD = b; }
+
         // ── Internal ─────────────────────────────────────────────────────────
         private void ApplyAll()
         {
@@ -194,6 +221,11 @@ namespace SWEF.Settings
             }
             if (touchInputRouter != null)
                 touchInputRouter.SetSensitivity(TouchSensitivity);
+
+            // Phase 26 — push adaptive quality to controller
+            var aq = FindFirstObjectByType<SWEF.Performance.AdaptiveQualityController>();
+            if (aq != null)
+                aq.AutoAdjustEnabled = AdaptiveQuality;
         }
     }
 }

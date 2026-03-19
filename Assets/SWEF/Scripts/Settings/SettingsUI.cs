@@ -61,6 +61,10 @@ namespace SWEF.Settings
         [SerializeField] private QualityPresetManager qualityManager;
         [SerializeField] private Dropdown             qualityDropdown;
 
+        [Header("Phase 26 — Performance")]
+        [SerializeField] private Toggle adaptiveQualityToggle;
+        [SerializeField] private Toggle diagnosticsToggle;
+
         [Header("Ref")]
         [SerializeField] private SettingsManager settings;
 
@@ -165,6 +169,12 @@ namespace SWEF.Settings
                 exportDataButton.onClick.AddListener(OnExportDataClicked);
             if (deleteDataButton != null)
                 deleteDataButton.onClick.AddListener(OnDeleteDataClicked);
+
+            // Phase 26 — Performance settings
+            if (adaptiveQualityToggle != null)
+                adaptiveQualityToggle.onValueChanged.AddListener(OnAdaptiveQualityToggleChanged);
+            if (diagnosticsToggle != null)
+                diagnosticsToggle.onValueChanged.AddListener(OnDiagnosticsToggleChanged);
         }
 
         private void OnEnable()
@@ -220,6 +230,8 @@ namespace SWEF.Settings
             if (sensitivitySlider  != null) sensitivitySlider.value  = settings.TouchSensitivity;
             if (speedSlider        != null) speedSlider.value        = settings.MaxSpeed;
             if (notificationsToggle != null) notificationsToggle.isOn = settings.NotificationsEnabled;
+            if (adaptiveQualityToggle != null) adaptiveQualityToggle.isOn = settings.AdaptiveQuality;
+            if (diagnosticsToggle     != null) diagnosticsToggle.isOn     = settings.DiagnosticsHUD;
             _ignoreCallbacks = false;
         }
 
@@ -382,6 +394,27 @@ namespace SWEF.Settings
         {
             var pcm = SWEF.Analytics.PrivacyConsentManager.Instance;
             pcm?.RequestDataDeletion();
+        }
+
+        // ── Phase 26 — Performance Callbacks ────────────────────────────────────
+
+        private void OnAdaptiveQualityToggleChanged(bool value)
+        {
+            if (_ignoreCallbacks || settings == null) return;
+            settings.SetAdaptiveQuality(value);
+            settings.Save();
+        }
+
+        private void OnDiagnosticsToggleChanged(bool value)
+        {
+            if (_ignoreCallbacks || settings == null) return;
+            settings.SetDiagnosticsHUD(value);
+            settings.Save();
+
+#if DEVELOPMENT_BUILD || UNITY_EDITOR
+            var hud = FindFirstObjectByType<SWEF.Performance.RuntimeDiagnosticsHUD>();
+            hud?.ToggleVisibility();
+#endif
         }
     }
 }
