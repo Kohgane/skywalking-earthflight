@@ -2647,3 +2647,128 @@ SocialPostCard
 Each post is stored as a single JSON file: `persistentDataPath/SocialFeed/<postId>.json`.  
 The feed is capped at **200 posts**; oldest posts are deleted from disk automatically when the cap is exceeded.  
 Images are referenced by file path only — actual image files (screenshots) remain in `persistentDataPath/Screenshots/`.
+
+---
+
+## Phase 27 — Procedural Terrain & LOD System
+
+### New Scripts
+
+| Script | Namespace | Role |
+|--------|-----------|------|
+| `Terrain/ProceduralTerrainGenerator.cs` | `SWEF.Terrain` | Singleton; multi-octave Perlin noise heightmap generation (async) + 5×5 chunk grid |
+| `Terrain/TerrainChunk.cs` | `SWEF.Terrain` | Per-chunk MonoBehaviour — holds 4 LOD meshes, MeshFilter/Renderer/Collider |
+| `Terrain/TerrainChunkPool.cs` | `SWEF.Terrain` | Object pool (default 50 chunks); `Get()` / `Return()` API |
+| `Terrain/TerrainBiomeMapper.cs` | `SWEF.Terrain` | Static biome mapper — altitude + latitude + moisture → `BiomeType` + `Color` |
+| `Terrain/CesiumTerrainBridge.cs` | `SWEF.Terrain` | Hides procedural terrain when Cesium tiles are loaded; shows fallback on network loss |
+| `Terrain/TerrainTextureManager.cs` | `SWEF.Terrain` | Shared material/texture per biome; integrates with `TextureMemoryOptimizer` |
+| `LOD/LODManager.cs` | `SWEF.LOD` | Singleton; altitude-aware LOD decisions every N frames; integrates with `AdaptiveQualityController` |
+| `LOD/LODTransitionBlender.cs` | `SWEF.LOD` | Coroutine cross-fade between LOD levels to prevent popping |
+| `LOD/OcclusionCullingHelper.cs` | `SWEF.LOD` | Frustum + distance + altitude culling via `GeometryUtility.TestPlanesAABB` |
+| `Editor/TerrainDebugWindow.cs` | `SWEF.Editor` | **SWEF → Terrain Debug** EditorWindow — live stats, chunk grid, LOD sliders |
+
+### Setup Instructions
+
+#### 1. ProceduralTerrainGenerator
+Add a persistent GameObject with `ProceduralTerrainGenerator` + `TerrainChunkPool`.
+- Wire `playerTransform` to your camera/aircraft transform or leave null for `Camera.main` auto-detect.
+- Tune `gridRadius` (default 2 → 5×5 grid), `heightScale`, `chunkSize`, and noise parameters.
+- Subscribe to `OnChunkGenerated` if you need post-generation hooks.
+
+#### 2. TerrainChunkPool
+Add `TerrainChunkPool` to the same GameObject as `ProceduralTerrainGenerator`.
+- Default `poolSize` is 50. Increase for larger grid radii.
+- Set `chunkLayerName` to match your project's terrain layer (optional).
+
+#### 3. LODManager
+Add `LODManager` to a persistent GameObject.
+- Default thresholds: Full < 500 m, Half < 2 000 m, Quarter < 8 000 m, Minimal < 20 000 m, Culled beyond.
+- `updateIntervalFrames` (default 10) prevents per-frame LOD checks.
+- Automatically scales thresholds with player altitude via `altitudeLODScaleBase`.
+
+#### 4. LODTransitionBlender
+Add `LODTransitionBlender` to any persistent GameObject.
+- Call `StartTransition(chunk, from, to)` from your LOD change handler to cross-fade between levels.
+
+#### 5. OcclusionCullingHelper
+Add `OcclusionCullingHelper` to any persistent GameObject.
+- Automatically used by `LODManager` if present in the scene.
+- Call `ResetStats()` each frame if you need accurate per-frame culling counters.
+
+#### 6. CesiumTerrainBridge
+Add `CesiumTerrainBridge` to a persistent GameObject.
+- Wire `terrainGenerator` to the `ProceduralTerrainGenerator` instance.
+- Set `forceProceduralFallback = true` in the Inspector to test without Cesium.
+- Call `OnNetworkLost()` / `OnNetworkRestored()` from your connectivity manager.
+
+#### 7. TerrainTextureManager
+Add `TerrainTextureManager` to any persistent GameObject.
+- Uses 128×128 procedural gradient textures (one per biome).
+- Wire `memBudgetMB` to control texture memory budget (default 32 MB).
+
+#### 8. TerrainDebugWindow (Editor)
+Open via **SWEF → Terrain Debug** from the Unity menu bar.
+- Shows live chunk counts, LOD stats, and memory estimates.
+- Provides LOD threshold sliders (apply at runtime in Play Mode).
+- Toggle procedural terrain on/off without stopping Play Mode.
+
+### Architecture Diagram
+
+```
+ProceduralTerrainGenerator  ──→  TerrainChunkPool (Queue<TerrainChunk>)
+      │  async Task.Run()              └── TerrainChunk (MeshFilter + 4 LOD Meshes)
+      │  GenerateHeightmap()
+      │  BuildMesh() × 4 LODs
+      └──→ fires OnChunkGenerated
+
+LODManager  (every 10 frames)
+      ├── OcclusionCullingHelper.IsVisible()  (frustum + distance + altitude)
+      ├── GetLODLevel(distance, altitude)      (scaled thresholds)
+      ├── TerrainChunk.UpdateLOD()
+      └── fires OnLODChanged  →  LODTransitionBlender.StartTransition()
+
+CesiumTerrainBridge
+      ├── #if CESIUM_FOR_UNITY → IsCesiumRuntimeAvailable()
+      ├── Cesium present → terrainGenerator.SetActive(false)
+      └── Cesium absent  → terrainGenerator.SetActive(true)
+
+TerrainBiomeMapper  (static)
+      └── GetBiome(altitude, latitude, moisture)  →  BiomeType
+          GetBiomeColor(biome)
+          GetBiomeGradient(altitude)  →  vertex Color per mesh vertex
+
+TerrainTextureManager
+      └── GetTerrainMaterial(biome)  →  shared Material (instancing enabled)
+          integrates with TextureMemoryOptimizer
+```
+
+### Terrain System Configuration Guide
+
+#### Mobile-conservative defaults
+
+| Parameter | Default | Notes |
+|-----------|---------|-------|
+| `chunkSize` | 256 | Vertex count per side |
+| `gridRadius` | 2 | 5×5 = 25 chunks max |
+| `poolSize` | 50 | Pre-warmed at startup |
+| `heightScale` | 1000 m | Max terrain height |
+| `noiseScale` | 0.002 | Zoom level of noise |
+| `octaves` | 6 | Detail layers |
+| `LOD thresholds` | 500/2 000/8 000/20 000 m | Distance breakpoints |
+
+#### PC/high-end tuning suggestions
+
+| Parameter | Suggested value |
+|-----------|-----------------|
+| `chunkSize` | 512 |
+| `gridRadius` | 3 (7×7 grid) |
+| `poolSize` | 100 |
+| `LOD thresholds` | 1 000 / 5 000 / 15 000 / 40 000 m |
+
+### PlayerPrefs Keys (Phase 27)
+
+| Key | Type | Default | Purpose |
+|-----|------|---------|---------|
+| `SWEF_TerrainEnabled` | int (0/1) | 1 | Whether procedural terrain is on |
+| `SWEF_TerrainLODQuality` | int (0–3) | 1 | LOD quality preset |
+| `SWEF_TerrainRenderDistance` | float | 20 000 | Max render distance in metres |

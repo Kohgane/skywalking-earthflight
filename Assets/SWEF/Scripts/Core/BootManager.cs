@@ -140,6 +140,11 @@ namespace SWEF.Core
                 Debug.Log($"[SWEF] Adaptive quality: {(adaptiveQuality.AutoAdjustEnabled ? "ON" : "OFF")}");
             }
 
+            // Phase 27 — Procedural Terrain & LOD
+            var terrainGen = FindFirstObjectByType<SWEF.Terrain.ProceduralTerrainGenerator>();
+            if (terrainGen != null)
+                Debug.Log("[SWEF] ProceduralTerrainGenerator found — terrain system active");
+
             SceneManager.LoadScene(worldSceneName);
             Debug.Log($"[SWEF] Scene load requested: {worldSceneName}");
 
