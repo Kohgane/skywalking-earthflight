@@ -54,6 +54,12 @@ namespace SWEF.Core
             _sessionStartTime = Time.realtimeSinceStartup;
         }
 
+        private void Start()
+        {
+            // Phase 21 — fire session_start telemetry (deferred to Start so dispatcher exists)
+            FireSessionStartTelemetry();
+        }
+
         private void Update()
         {
             SessionDurationSeconds = Time.realtimeSinceStartup - _sessionStartTime;
@@ -137,6 +143,44 @@ namespace SWEF.Core
                       $"{DistanceTraveledThisSession / 1000f:0.1} km, " +
                       $"max alt {MaxAltitudeThisSession:0} m, " +
                       $"max speed {MaxSpeedThisSession:0} m/s");
+
+            // Phase 21 — fire session_end telemetry
+            FireSessionEndTelemetry();
+        }
+
+        // ── Phase 21 — Telemetry helpers ─────────────────────────────────────────
+
+        private void FireSessionStartTelemetry()
+        {
+            var dispatcher = SWEF.Analytics.TelemetryDispatcher.Instance;
+            var pcm        = SWEF.Analytics.PrivacyConsentManager.Instance;
+            if (dispatcher == null) return;
+            if (pcm != null && !pcm.HasConsent(SWEF.Analytics.PrivacyConsentManager.ConsentLevel.Analytics)) return;
+
+            var evt = SWEF.Analytics.TelemetryEventBuilder.Create(SWEF.Analytics.AnalyticsEvents.SessionStart)
+                .WithCategory("performance")
+                .WithProperty("deviceModel", SystemInfo.deviceModel)
+                .WithProperty("appVersion",  Application.version)
+                .Build();
+            dispatcher.EnqueueEvent(evt);
+        }
+
+        private void FireSessionEndTelemetry()
+        {
+            var dispatcher = SWEF.Analytics.TelemetryDispatcher.Instance;
+            var pcm        = SWEF.Analytics.PrivacyConsentManager.Instance;
+            if (dispatcher == null) return;
+            if (pcm != null && !pcm.HasConsent(SWEF.Analytics.PrivacyConsentManager.ConsentLevel.Analytics)) return;
+
+            var evt = SWEF.Analytics.TelemetryEventBuilder.Create(SWEF.Analytics.AnalyticsEvents.SessionEnd)
+                .WithCategory("performance")
+                .WithProperty("durationSeconds",  SessionDurationSeconds)
+                .WithProperty("teleports",        TeleportsThisSession)
+                .WithProperty("screenshots",      ScreenshotsThisSession)
+                .WithProperty("maxAltitudeM",     MaxAltitudeThisSession)
+                .WithProperty("maxSpeedMps",      MaxSpeedThisSession)
+                .Build();
+            dispatcher.EnqueueEvent(evt);
         }
     }
 

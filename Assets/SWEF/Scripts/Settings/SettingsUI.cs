@@ -51,6 +51,12 @@ namespace SWEF.Settings
         [SerializeField] private Slider     voiceVolumeSlider;
 
 
+        [Header("Phase 21 — Analytics")]
+        [SerializeField] private Toggle telemetryToggle;
+        [SerializeField] private Dropdown consentLevelDropdown;
+        [SerializeField] private Button   exportDataButton;
+        [SerializeField] private Button   deleteDataButton;
+
         [Header("Quality Preset (Phase 8)")]
         [SerializeField] private QualityPresetManager qualityManager;
         [SerializeField] private Dropdown             qualityDropdown;
@@ -145,6 +151,20 @@ namespace SWEF.Settings
                 voiceVolumeSlider.maxValue = 1f;
                 voiceVolumeSlider.onValueChanged.AddListener(OnVoiceVolumeChanged);
             }
+
+            // Phase 21 — Analytics settings
+            if (telemetryToggle != null)
+                telemetryToggle.onValueChanged.AddListener(OnTelemetryToggleChanged);
+            if (consentLevelDropdown != null)
+            {
+                consentLevelDropdown.ClearOptions();
+                consentLevelDropdown.AddOptions(new List<string> { "None", "Essential", "Analytics", "Full" });
+                consentLevelDropdown.onValueChanged.AddListener(OnConsentLevelChanged);
+            }
+            if (exportDataButton != null)
+                exportDataButton.onClick.AddListener(OnExportDataClicked);
+            if (deleteDataButton != null)
+                deleteDataButton.onClick.AddListener(OnDeleteDataClicked);
         }
 
         private void OnEnable()
@@ -327,6 +347,41 @@ namespace SWEF.Settings
             if (mp == null) return;
             mp.SetVoiceChatVolume(value);
             mp.ApplySettings();
+        }
+
+        // ── Phase 21 — Analytics Callbacks ──────────────────────────────────────
+
+        private void OnTelemetryToggleChanged(bool value)
+        {
+            if (_ignoreCallbacks) return;
+            var analyticsSettings = SWEF.Settings.AnalyticsSettings.Instance;
+            if (analyticsSettings == null) return;
+            analyticsSettings.SetTelemetryEnabled(value);
+            analyticsSettings.ApplyToSubSystems();
+        }
+
+        private void OnConsentLevelChanged(int index)
+        {
+            if (_ignoreCallbacks) return;
+            var analyticsSettings = SWEF.Settings.AnalyticsSettings.Instance;
+            if (analyticsSettings == null) return;
+            analyticsSettings.SetConsentLevel(index);
+            analyticsSettings.ApplyToSubSystems();
+        }
+
+        private void OnExportDataClicked()
+        {
+            var pcm = SWEF.Analytics.PrivacyConsentManager.Instance;
+            if (pcm == null) return;
+            string json = pcm.ExportUserData();
+            Debug.Log($"[SWEF] User data export:\n{json}");
+            // In production this would share the file; for now it logs.
+        }
+
+        private void OnDeleteDataClicked()
+        {
+            var pcm = SWEF.Analytics.PrivacyConsentManager.Instance;
+            pcm?.RequestDataDeletion();
         }
     }
 }

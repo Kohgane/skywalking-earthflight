@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using SWEF.Flight;
 
@@ -45,6 +46,9 @@ namespace SWEF.Core
         private float _sessionFlightTime;
         private float _sessionMaxAltitude;
 
+        // Phase 21 — TelemetryDispatcher reference
+        private SWEF.Analytics.TelemetryDispatcher _dispatcher;
+
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -72,6 +76,8 @@ namespace SWEF.Core
             // Run after all Awake() calls so FindFirstObjectByType is reliable
             if (altitudeSource == null)
                 altitudeSource = FindFirstObjectByType<AltitudeController>();
+
+            InitializeTelemetryPipeline();
 
             // Phase 19 — subscribe to weather transitions
             if (SWEF.Weather.WeatherDataService.Instance != null)
@@ -129,6 +135,49 @@ namespace SWEF.Core
                 if (alt > _sessionMaxAltitude)
                     _sessionMaxAltitude = alt;
             }
+        }
+
+        // ── Phase 21 — Telemetry Pipeline ────────────────────────────────────────
+
+        /// <summary>Finds or creates the TelemetryDispatcher and wires it up.</summary>
+        private void InitializeTelemetryPipeline()
+        {
+            _dispatcher = SWEF.Analytics.TelemetryDispatcher.Instance != null
+                ? SWEF.Analytics.TelemetryDispatcher.Instance
+                : FindFirstObjectByType<SWEF.Analytics.TelemetryDispatcher>();
+        }
+
+        /// <summary>
+        /// Log a flight-specific telemetry event with additional properties.
+        /// </summary>
+        public void LogFlightEvent(string eventName, Dictionary<string, object> props)
+        {
+            LogEvent(eventName);
+            if (_dispatcher == null) return;
+            var evt = SWEF.Analytics.TelemetryEventBuilder.Create(eventName)
+                .WithCategory("flight")
+                .WithProperties(props)
+                .Build();
+            _dispatcher.EnqueueEvent(evt);
+        }
+
+        /// <summary>
+        /// Log a purchase telemetry event. Critical path — flushed immediately.
+        /// </summary>
+        public void LogPurchaseEvent(string productId, bool success, float price)
+        {
+            string eventName = success
+                ? SWEF.Analytics.AnalyticsEvents.IapCompleted
+                : SWEF.Analytics.AnalyticsEvents.IapFailed;
+            LogEvent(eventName, productId);
+            if (_dispatcher == null) return;
+            var evt = SWEF.Analytics.TelemetryEventBuilder.Create(eventName)
+                .WithCategory("purchase")
+                .WithProperty("productId", productId)
+                .WithProperty("price",     price)
+                .WithProperty("success",   success)
+                .Build();
+            _dispatcher.EnqueueCriticalEvent(evt);
         }
 
         /// <summary>Records a single teleport event and persists the updated count.</summary>

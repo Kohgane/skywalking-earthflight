@@ -25,6 +25,11 @@ namespace SWEF.UI
         [SerializeField] private GameObject dashboardPanel;
         [SerializeField] private Button toggleButton;
 
+        [Header("Phase 21 — Enriched Stats")]
+        [SerializeField] private Text dailyStreakText;
+        [SerializeField] private Text totalFlightsText;
+        [SerializeField] private Text avgFlightDurationText;
+
         // ── Tracking state ────────────────────────────────────────────────────────
         private float _flightTime;
         private float _maxAltitude;
@@ -122,6 +127,18 @@ namespace SWEF.UI
                     achievementsText.text = $"{achMgr.UnlockedCount}/{achMgr.TotalCount} 🏆";
                 else
                     achievementsText.text = "—";
+            }
+
+            // Phase 21 — enriched lifetime stats from AnalyticsDashboardData
+            var dash = Analytics.AnalyticsDashboardData.Instance;
+            if (dash != null)
+            {
+                if (dailyStreakText != null)
+                    dailyStreakText.text = $"{dash.DailyActiveStreak} {(dash.DailyActiveStreak == 1 ? "day" : "days")} streak 🔥";
+                if (totalFlightsText != null)
+                    totalFlightsText.text = $"{dash.TotalFlights} total flights";
+                if (avgFlightDurationText != null)
+                    avgFlightDurationText.text = $"Avg: {Mathf.FloorToInt(dash.AverageFlightDuration / 60f)}m {(int)(dash.AverageFlightDuration % 60f)}s";
             }
         }
 

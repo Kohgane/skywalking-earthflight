@@ -131,6 +131,7 @@ namespace SWEF.IAP
             if (product != null && product.availableToPurchase)
             {
                 Debug.Log($"[SWEF] IAPManager: initiating purchase of '{productId}'.");
+                FireIapEvent(SWEF.Analytics.AnalyticsEvents.IapInitiated, productId, 0f);
                 _storeController.InitiatePurchase(product);
             }
             else
@@ -141,6 +142,7 @@ namespace SWEF.IAP
             }
 #else
             Debug.Log($"[SWEF] IAPManager (stub): BuyProduct called for '{productId}'.");
+            FireIapEvent(SWEF.Analytics.AnalyticsEvents.IapInitiated, productId, 0f);
             // In stub mode simulate a successful consumable purchase so the UI can be tested.
             DeliverProduct(productId);
 #endif
@@ -209,6 +211,7 @@ namespace SWEF.IAP
 
             Debug.Log($"[SWEF] IAPManager: purchase delivered for '{productId}'.");
             AnalyticsLogger.LogEvent("iap_purchase", productId);
+            FireIapEvent(SWEF.Analytics.AnalyticsEvents.IapCompleted, productId, 0f);
             OnPurchaseCompleted?.Invoke(productId);
         }
 
@@ -255,6 +258,7 @@ namespace SWEF.IAP
             string id     = product.definition.id;
             string reason = failureReason.ToString();
             Debug.LogWarning($"[SWEF] IAPManager: purchase of '{id}' failed — {reason}.");
+            FireIapEvent(SWEF.Analytics.AnalyticsEvents.IapFailed, id, 0f, reason);
             OnPurchaseFailed?.Invoke(id, reason);
         }
 
@@ -264,10 +268,29 @@ namespace SWEF.IAP
             string id     = product.definition.id;
             string reason = failureDescription?.message ?? failureDescription?.reason.ToString() ?? "unknown";
             Debug.LogWarning($"[SWEF] IAPManager: purchase of '{id}' failed — {reason}.");
+            FireIapEvent(SWEF.Analytics.AnalyticsEvents.IapFailed, id, 0f, reason);
             OnPurchaseFailed?.Invoke(id, reason);
         }
 
 #endif
+
+        #endregion
+
+        #region Phase 21 — Telemetry helpers
+
+        private static void FireIapEvent(string eventName, string productId, float price, string reason = null)
+        {
+            var dispatcher = SWEF.Analytics.TelemetryDispatcher.Instance;
+            if (dispatcher == null) return;
+
+            var builder = SWEF.Analytics.TelemetryEventBuilder.Create(eventName)
+                .WithCategory("purchase")
+                .WithProperty("productId", productId)
+                .WithProperty("price",     price);
+            if (reason != null) builder.WithProperty("reason", reason);
+
+            dispatcher.EnqueueCriticalEvent(builder.Build());
+        }
 
         #endregion
     }
