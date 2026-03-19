@@ -2448,6 +2448,20 @@ StatsDashboard  ──→  GlobalLeaderboardService.FetchPlayerRank()  (every 60
 | Script | Namespace | Purpose |
 |--------|-----------|---------|
 | `Editor/PerformanceProfilerWindow.cs` | `SWEF.Editor` | **SWEF → Performance Profiler** EditorWindow — live graphs (FPS/memory/GC), pool stats table, texture breakdown, draw-call analysis, Export/ForceGC/Optimize buttons |
+## Phase 25 — Social Feed & Community (비행 스크린샷/영상 공유)
+
+### New Scripts: `Assets/SWEF/Scripts/Social/`
+
+| Script | Namespace | Purpose |
+|--------|-----------|---------|
+| `SocialPost.cs` | `SWEF.Social` | Serializable data class — `postId`, `authorName`, `imagePath`, `thumbnailPath`, `caption`, GPS coords, `timestamp` (ISO 8601), `likeCount`, `isLikedByMe`, `flightDataId`, `weatherCondition`, `tags`; `ToJson()` / `FromJson()`, `GetFormattedTimestamp()`, `GetLocationString()` |
+| `SocialFeedManager.cs` | `SWEF.Social` | Singleton (DontDestroyOnLoad) — manages up to 200 local `SocialPost` entries; JSON files in `persistentDataPath/SocialFeed/`; `CreatePost()`, `DeletePost()`, `RefreshFeed()`, `ToggleLike()`, `GetPostsByAuthor()`; events `OnPostCreated`, `OnPostDeleted`, `OnFeedRefreshed` |
+| `SocialFeedUI.cs` | `SWEF.Social` | ScrollRect feed viewer — spawns `SocialPostCard` prefabs, pull-to-refresh, scroll-to-bottom pagination (20 per page), `Open()` / `Close()` fade animations |
+| `SocialPostCard.cs` | `SWEF.Social` | Single post card — loads thumbnail from file, like button with scale-punch animation, share button calls `SocialShareController`, delete button (own posts only), view-on-map teleport |
+| `SocialShareController.cs` | `SWEF.Social` | Static utility — iOS `UIActivityViewController` stub, Android `Intent.ACTION_SEND` stub, Editor clipboard fallback; `ShareImage()`, `ShareFlightReplay()`, `CopyToClipboard()`; `OnShareCompleted` event |
+| `CommunityProfileManager.cs` | `SWEF.Social` | Singleton (DontDestroyOnLoad) — local player profile (`displayName`, `avatarId`, stats) persisted in `PlayerPrefs` under `SWEF_Profile_Json`; `GetProfile()`, `UpdateProfile()`, `GetDisplayName()`, `IncrementStat()` |
+| `PostComposerUI.cs` | `SWEF.Social` | Post creation dialog — screenshot preview, 280-char caption with live counter, auto-populated GPS location, optional FlightRecorder attachment via `includeFlightDataToggle`; `Open(screenshotPath)` |
+| `SocialNotificationHandler.cs` | `SWEF.Social` | In-app toast notifications — slide-in animation, sequential queue for multiple alerts; subscribes to `SocialFeedManager.OnPostCreated`; `ShowNewPostToast(post)` |
 
 ### Modified Files
 
@@ -2524,6 +2538,8 @@ The `RuntimeDiagnosticsHUD` script is wrapped in `#if DEVELOPMENT_BUILD || UNITY
 1. In **Build Settings**, check **Development Build**.
 2. The script compiles and the canvas becomes active/toggleable.
 3. In production (non-development) builds the entire overlay is stripped.
+| `Screenshot/ScreenshotController.cs` | Added `LastScreenshotPath` property; added `OnScreenshotSaved` event; both are set/fired alongside existing `OnScreenshotCaptured` after every successful capture |
+| `Screenshot/ScreenshotUI.cs` | Added `shareAfterCaptureButton` (revealed after capture) and `postComposer` reference; tapping Share opens `PostComposerUI` or falls back to `SocialShareController.ShareImage()` |
 
 ### Architecture
 
@@ -2576,6 +2592,46 @@ Editor: PerformanceProfilerWindow ──→ EditorApplication.update (0.5 s)
 | `TextureMemoryOptimizer.defaultMaxResolution` | 2048 |
 | `TextureMemoryOptimizer.autoOptimizeThresholdMB` | 1024 |
 | `MemoryManager.memoryWarningThresholdMB` | 2048 |
+ScreenshotController.CaptureScreenshot()
+    └── OnScreenshotSaved / OnScreenshotCaptured  →  ScreenshotUI (shows Share button)
+                                                   →  SocialFeedManager (optional auto-post)
+
+ScreenshotUI [Share button]
+    └── PostComposerUI.Open(path)
+            └── SocialFeedManager.CreatePost(path, caption)
+                    ├── saves  persistentDataPath/SocialFeed/<postId>.json
+                    ├── fires  OnPostCreated  →  SocialNotificationHandler (toast)
+                    └── fires  OnFeedRefreshed  →  SocialFeedUI (rebuilds cards)
+
+SocialPostCard
+    ├── Like   → SocialFeedManager.ToggleLike()
+    ├── Share  → SocialShareController.ShareImage()
+    ├── Delete → SocialFeedManager.DeletePost()
+    └── Map    → TeleportController.TeleportTo(lat, lon)
+```
+
+### Setup in World Scene
+
+1. **SocialFeedManager** — add a persistent GameObject with `SocialFeedManager` and `CommunityProfileManager` components. These are `DontDestroyOnLoad` singletons.
+
+2. **SocialNotificationHandler** — add to your HUD Canvas; wire `toastPanel`, `toastText`, and `toastCanvasGroup` in the Inspector.
+
+3. **SocialFeedUI** — add to a Canvas and wire:
+   - `feedScrollRect`, `postPrefab` (prefab with `SocialPostCard`), `contentParent`
+   - `refreshButton`, `createPostButton`, `closeFeedButton`
+   - `feedPanel`, `feedCanvasGroup`, `emptyFeedText`
+
+4. **PostComposerUI** — add to a Canvas; wire `composerPanel`, `composerCanvasGroup`, `previewImage`, `captionInput`, `locationLabel`, `altitudeLabel`, `characterCountText`, `postButton`, `cancelButton`, `includeFlightDataToggle`.
+
+5. **ScreenshotUI** — wire the new `shareAfterCaptureButton` to a Button in the capture overlay, and optionally wire `postComposer` to the `PostComposerUI` instance.
+
+### Native Sharing Plugins
+
+`SocialShareController` includes stubs for iOS (`UIActivityViewController`) and Android (`Intent.ACTION_SEND`). To use real native sharing:
+
+- **iOS**: Implement the `ShareViaIOSNative` block using a native plugin (e.g., UniShare, NativeShare from the Asset Store).
+- **Android**: Implement the `ShareViaAndroidNative` block using `AndroidJavaObject` to construct an `Intent.ACTION_SEND`.
+- **Editor/PC**: The clipboard fallback is active automatically — no changes needed.
 
 ### PlayerPrefs Keys
 
@@ -2584,3 +2640,10 @@ Editor: PerformanceProfilerWindow ──→ EditorApplication.update (0.5 s)
 | `SWEF_AdaptiveQuality` | int (0/1) | Whether adaptive quality is enabled |
 | `SWEF_DiagnosticsHUD` | int (0/1) | Whether diagnostics HUD is shown by default |
 | `SWEF_DiagnosticsEnabled` | int (0/1) | HUD visibility state persisted between sessions |
+| `SWEF_Profile_Json` | string (JSON) | Serialised `CommunityProfileManager.PlayerProfile` |
+
+### Feed Storage
+
+Each post is stored as a single JSON file: `persistentDataPath/SocialFeed/<postId>.json`.  
+The feed is capped at **200 posts**; oldest posts are deleted from disk automatically when the cap is exceeded.  
+Images are referenced by file path only — actual image files (screenshots) remain in `persistentDataPath/Screenshots/`.
