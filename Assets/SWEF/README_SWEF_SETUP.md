@@ -2204,3 +2204,65 @@ Analytics Layer (Phase 22)
 | Cloud save | Immediate | Deferred via `OfflineFallbackController` queue |
 | HUD indicator | Hidden | Visible — shows connection type + cache usage |
 | Tile prefetch | WiFi only, auto | N/A (prefetch disabled while offline) |
+
+---
+
+## Phase 23 — Onboarding Revamp & Interactive Tutorial 2.0
+
+### New Scripts (`Assets/SWEF/Scripts/Tutorial/`)
+
+| Script | Purpose |
+|--------|---------|
+| `TutorialStepData.cs` | Data class for tutorial step definitions with localization support |
+| `TutorialHighlight.cs` | Full-screen spotlight/highlight overlay with cutout effect and pulse animation |
+| `TutorialTooltip.cs` | Anchored tooltip with directional arrow for step instructions |
+| `TutorialActionDetector.cs` | Detects player actions to auto-advance interactive tutorial steps |
+| `InteractiveTutorialManager.cs` | Main tutorial controller — replaces legacy TutorialManager |
+| `TutorialReplayButton.cs` | Settings panel button to replay the tutorial |
+
+### Setup in World Scene
+
+1. Create a full-screen Canvas (sort order above HUD) for the tutorial overlay
+2. Add `TutorialHighlight` component with a dark overlay `Image` (semi-transparent black) and a `spotlightRect` child
+3. Add `TutorialTooltip` component with instruction `Text`, arrow `Image`, prompt `Text`, and a `CanvasGroup`
+4. Create `InteractiveTutorialManager` GameObject, attach script
+5. Wire `TutorialHighlight`, `TutorialTooltip`, and `TutorialActionDetector` references in Inspector
+6. Optionally assign the `hudRoot` Transform to limit spotlight searches to the HUD Canvas
+7. Default tutorial steps (11 steps) are pre-configured in the script — customize in Inspector if needed
+8. The tutorial auto-starts on first World scene load (respects legacy `SWEF_TutorialCompleted` key)
+
+### Settings Integration
+
+1. In the Settings panel, add a **"Replay Tutorial"** button
+2. Attach `TutorialReplayButton` component, wire the button reference in Inspector
+3. On click it calls `InteractiveTutorialManager.RestartTutorial()` from step 0
+
+### Legacy Compatibility
+
+- The old `TutorialManager.cs` is kept for reference; the new `InteractiveTutorialManager` takes priority
+- On completion, both `"SWEF_Tutorial2_Completed"` and `"SWEF_TutorialCompleted"` PlayerPrefs keys are set
+- If the legacy key is already set (returning player), the new tutorial won't auto-start unless replayed from Settings
+
+### PlayerPrefs Keys
+
+| Key | Type | Purpose |
+|-----|------|---------|
+| `SWEF_Tutorial2_Progress` | int | Last completed step index (for resume on re-launch) |
+| `SWEF_Tutorial2_Completed` | int (0/1) | Set to 1 when tutorial finishes |
+| `SWEF_TutorialCompleted` | int (0/1) | Legacy key — also set on completion for backward compatibility |
+
+### Localization Keys (add to `Resources/Localization/*.json`)
+
+| Key | Default English Text |
+|-----|----------------------|
+| `tutorial_welcome` | Welcome to Skywalking: Earth Flight! 🚀 |
+| `tutorial_look_around` | Drag the screen to look around. |
+| `tutorial_throttle` | Use the throttle slider to fly forward. |
+| `tutorial_altitude` | Adjust the altitude slider to climb higher. |
+| `tutorial_roll` | Tap the roll buttons to bank left and right. |
+| `tutorial_comfort` | Toggle Comfort Mode for a smoother flight. |
+| `tutorial_settings` | Open Settings to customize your experience. |
+| `tutorial_screenshot` | Capture stunning views with the screenshot button. |
+| `tutorial_teleport` | Tap Teleport to search for any place on Earth. |
+| `tutorial_achievements` | Check your Achievements to discover goals. |
+| `tutorial_complete` | You're ready! Enjoy exploring Earth from above. |
