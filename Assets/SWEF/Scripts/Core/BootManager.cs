@@ -123,6 +123,11 @@ namespace SWEF.Core
                 Debug.Log("[SWEF] Accessibility settings applied");
             }
 
+            // Phase 25 — Player profile initialization
+            var playerProfile = FindFirstObjectByType<SWEF.Social.PlayerProfileManager>();
+            if (playerProfile == null)
+                Debug.Log("[SWEF] BootManager: PlayerProfileManager not found — add it to a persistent GameObject for global leaderboard support.");
+
             SceneManager.LoadScene(worldSceneName);
             Debug.Log($"[SWEF] Scene load requested: {worldSceneName}");
 

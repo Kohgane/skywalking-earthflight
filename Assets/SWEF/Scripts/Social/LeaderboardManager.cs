@@ -121,6 +121,9 @@ namespace SWEF.Social
 
             SaveData();
             Debug.Log($"[SWEF] LeaderboardManager: session submitted — score {score:N0}");
+
+            // Phase 25 — 글로벌 리더보드에도 점수 제출
+            SubmitToGlobalLeaderboard(entry);
         }
 
         /// <summary>Returns the full leaderboard data.</summary>
@@ -167,6 +170,34 @@ namespace SWEF.Social
             {
                 _data = new LeaderboardData();
             }
+        }
+
+        // ── Phase 25 — Global leaderboard integration ─────────────────────────────
+
+        private void SubmitToGlobalLeaderboard(LeaderboardEntry localEntry)
+        {
+            var service = SWEF.Leaderboard.GlobalLeaderboardService.Instance;
+            if (service == null) return;
+
+            var profile = SWEF.Social.PlayerProfileManager.Instance;
+
+            var globalEntry = new SWEF.Leaderboard.GlobalLeaderboardEntry
+            {
+                playerId       = profile?.PlayerId ?? "local",
+                displayName    = profile?.DisplayName ?? "Pilot",
+                avatarUrl      = profile?.AvatarUrl ?? string.Empty,
+                maxAltitude    = localEntry.maxAltitude,
+                maxSpeed       = localEntry.maxSpeed,
+                flightDuration = localEntry.duration,
+                score          = SWEF.Leaderboard.GlobalLeaderboardEntry.CalculateScore(
+                                     localEntry.maxAltitude, localEntry.maxSpeed, localEntry.duration),
+                region         = profile?.Region ?? string.Empty,
+                date           = System.DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ")
+            };
+
+            service.SubmitScore(globalEntry,
+                result => Debug.Log($"[SWEF] LeaderboardManager: global submit OK — rank #{result.newRank}, PB={result.isPersonalBest}"),
+                err    => Debug.LogWarning($"[SWEF] LeaderboardManager: global submit queued/failed — {err}"));
         }
 
         private void SaveData()
