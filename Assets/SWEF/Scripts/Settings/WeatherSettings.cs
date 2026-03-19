@@ -168,5 +168,23 @@ namespace SWEF.Settings
             if (SWEF.Weather.WeatherFlightModifier.Instance != null)
                 SWEF.Weather.WeatherFlightModifier.Instance.enabled = WeatherPhysicsEnabled;
         }
+
+        // ── Phase 22 — Offline mode toggle ────────────────────────────────────────
+
+        /// <summary>
+        /// Gets or sets the user's forced-offline preference.
+        /// Persisted in PlayerPrefs under key <c>SWEF_ForceOffline</c> and
+        /// immediately applied to <see cref="SWEF.Offline.OfflineManager"/>.
+        /// </summary>
+        public bool ForceOfflineMode
+        {
+            get => PlayerPrefs.GetInt("SWEF_ForceOffline", 0) == 1;
+            set
+            {
+                PlayerPrefs.SetInt("SWEF_ForceOffline", value ? 1 : 0);
+                PlayerPrefs.Save();
+                SWEF.Offline.OfflineManager.Instance?.ForceOfflineMode(value);
+            }
+        }
     }
 }

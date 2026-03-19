@@ -125,6 +125,13 @@ namespace SWEF.Core
 
             SceneManager.LoadScene(worldSceneName);
             Debug.Log($"[SWEF] Scene load requested: {worldSceneName}");
+
+            // Phase 22 — Offline mode initialization
+            var offlineManager = FindFirstObjectByType<SWEF.Offline.OfflineManager>();
+            if (offlineManager != null)
+            {
+                Debug.Log($"[SWEF] Offline mode: {(offlineManager.IsOffline ? "OFFLINE" : "ONLINE")}");
+            }
         }
     }
 }
