@@ -30,6 +30,9 @@ namespace SWEF.UI
         [SerializeField] private Text totalFlightsText;
         [SerializeField] private Text avgFlightDurationText;
 
+        [Header("Phase 25 — Global Rank")]
+        [SerializeField] private Text globalRankText;
+
         // ── Tracking state ────────────────────────────────────────────────────────
         private float _flightTime;
         private float _maxAltitude;
@@ -37,6 +40,10 @@ namespace SWEF.UI
         private float _totalDistance;
         private Vector3 _lastPosition;
         private bool _lastPositionSet;
+
+        // ── Phase 25 — Global rank tracking ──────────────────────────────────────
+        private float _globalRankRefreshTimer;
+        private const float GlobalRankRefreshInterval = 60f; // 60초마다 갱신
 
         // ── Unity lifecycle ───────────────────────────────────────────────────────
         private void Awake()
@@ -92,6 +99,14 @@ namespace SWEF.UI
             }
 
             RefreshDisplay();
+
+            // Phase 25 — 글로벌 순위를 주기적으로 갱신 (60초 간격)
+            _globalRankRefreshTimer += Time.deltaTime;
+            if (_globalRankRefreshTimer >= GlobalRankRefreshInterval)
+            {
+                _globalRankRefreshTimer = 0f;
+                RefreshGlobalRank();
+            }
         }
 
         // ── Internal ─────────────────────────────────────────────────────────────
@@ -140,6 +155,25 @@ namespace SWEF.UI
                 if (avgFlightDurationText != null)
                     avgFlightDurationText.text = $"Avg: {Mathf.FloorToInt(dash.AverageFlightDuration / 60f)}m {(int)(dash.AverageFlightDuration % 60f)}s";
             }
+        }
+
+        // ── Phase 25 ──────────────────────────────────────────────────────────────
+
+        private void RefreshGlobalRank()
+        {
+            var service = Leaderboard.GlobalLeaderboardService.Instance;
+            var profile = Social.PlayerProfileManager.Instance;
+            if (service == null || profile == null) return;
+
+            service.FetchPlayerRank(
+                profile.PlayerId,
+                Leaderboard.LeaderboardCategory.BestOverallScore,
+                info =>
+                {
+                    if (globalRankText != null)
+                        globalRankText.text = $"🏆 글로벌 #{info.globalRank} (상위 {100f - info.percentile:0.0}%)";
+                },
+                _ => { /* 오류 시 이전 값 유지 */ });
         }
 
         private static string FormatAltitude(float meters)

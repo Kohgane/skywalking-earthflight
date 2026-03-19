@@ -2336,3 +2336,91 @@ Set `enableAdvancedPhysics = false` on `FlightPhysicsIntegrator` (or `physicsBle
 | Kármán line | 100,000 m |
 | Max atmospheric speed | 8,000 m/s |
 | Escape speed cap | 11,200 m/s |
+
+---
+
+## Phase 25 — Leaderboard & Global Rankings (비행 기록 순위 시스템)
+
+### New Directory: `Assets/SWEF/Scripts/Leaderboard/`
+
+| Script | Namespace | Purpose |
+|--------|-----------|---------|
+| `GlobalLeaderboardEntry.cs` | `SWEF.Leaderboard` | Serializable data class for global leaderboard entries; `CalculateScore()` static helper |
+| `LeaderboardCategory.cs` | `SWEF.Leaderboard` | Enum: `HighestAltitude`, `FastestSpeed`, `LongestFlight`, `BestOverallScore`, `MostFlights`, `WeeklyChallenge`; `LeaderboardCategoryHelper.GetDisplayName()` |
+| `LeaderboardTimeFilter.cs` | `SWEF.Leaderboard` | Enum: `AllTime`, `Monthly`, `Weekly`, `Daily` |
+| `GlobalLeaderboardService.cs` | `SWEF.Leaderboard` | MonoBehaviour Singleton — REST API layer, offline queue, in-memory cache (60 s TTL), rate limiting (2 s), mock data generation |
+| `LeaderboardUI.cs` | `SWEF.Leaderboard` | Full leaderboard HUD controller — category/time/region filters, pagination (20 per page), loading spinner, error display |
+| `LeaderboardEntryUI.cs` | `SWEF.Leaderboard` | Single row component — gold/silver/bronze top-3 styling, current-player highlight |
+| `WeeklyChallengeManager.cs` | `SWEF.Leaderboard` | MonoBehaviour Singleton — week-number-based mock challenge generation, `OnNewChallengeAvailable` event |
+| `WeeklyChallengeUI.cs` | `SWEF.Leaderboard` | HUD banner — challenge title, description, progress slider, countdown timer, collapse toggle |
+
+### New Social Scripts: `Assets/SWEF/Scripts/Social/`
+
+| Script | Namespace | Purpose |
+|--------|-----------|---------|
+| `RegionHelper.cs` | `SWEF.Social` | Static utility — 39 country code→name map, `DetectRegion()`, `GetFlagEmoji()` |
+| `PlayerProfileManager.cs` | `SWEF.Social` | MonoBehaviour Singleton — UUID generation, display name validation (2–20 chars), region auto-detection, `OnProfileUpdated` event |
+| `PlayerProfileUI.cs` | `SWEF.Social` | Settings panel — name `InputField`, region `Dropdown`, save button with inline validation |
+
+### Modified Files
+
+| File | Change |
+|------|--------|
+| `Social/LeaderboardManager.cs` | `SubmitSession()` now also calls `GlobalLeaderboardService.SubmitScore()` after local save |
+| `Core/BootManager.cs` | Phase 25 block: checks for `PlayerProfileManager` presence and logs a warning if absent |
+| `UI/StatsDashboard.cs` | Added `globalRankText` field; `RefreshGlobalRank()` polls `GlobalLeaderboardService.FetchPlayerRank()` every 60 s |
+
+### Scoring Formula
+
+```
+score = maxAltitude × 1.0 + maxSpeed × 0.5 + flightDuration × 0.3
+```
+
+### Architecture
+
+```
+LeaderboardManager.SubmitSession()
+    ├── [local] PlayerPrefs JSON   (existing)
+    └── GlobalLeaderboardService.SubmitScore()
+            ├── Online  → POST /scores
+            └── Offline → SWEF_PendingScores (PlayerPrefs queue, flushed on reconnect)
+
+LeaderboardUI  ──→  GlobalLeaderboardService.FetchLeaderboard()
+                         ├── Online  → GET /leaderboard
+                         ├── Cache   → 60 s in-memory Dictionary
+                         └── Mock    → GenerateMockPage() when apiBaseUrl empty or unreachable
+
+StatsDashboard  ──→  GlobalLeaderboardService.FetchPlayerRank()  (every 60 s)
+```
+
+### Setup in World Scene
+
+1. Add a persistent **Manager** GameObject with:
+   - `GlobalLeaderboardService` — set `apiBaseUrl` to your REST endpoint (leave empty for mock/dev mode)
+   - `PlayerProfileManager`
+   - `WeeklyChallengeManager`
+
+2. Add `LeaderboardUI` to your HUD Canvas and wire all `[SerializeField]` fields.
+
+3. Add `WeeklyChallengeUI` to HUD Canvas → wire `LeaderboardUI` reference.
+
+4. For each leaderboard row, create a prefab with `LeaderboardEntryUI` and wire `Text`/`Image` fields. Assign to `LeaderboardUI.entryPrefab`.
+
+5. For the player profile settings panel, add `PlayerProfileUI` and wire fields.
+
+6. Add a `globalRankText` (UI Text) to `StatsDashboard` in the Inspector to display the live global rank.
+
+### Mock / Offline Mode
+
+- Set `apiBaseUrl = ""` (empty) on `GlobalLeaderboardService` to run in full mock mode — no network calls are made.
+- When the network is unavailable, submitted scores are queued in `PlayerPrefs` (`SWEF_PendingScores`) and automatically flushed the next time the service successfully connects.
+
+### PlayerPrefs Keys
+
+| Key | Type | Purpose |
+|-----|------|---------|
+| `SWEF_PlayerId` | string | Player UUID (auto-generated) |
+| `SWEF_DisplayName` | string | Player display name |
+| `SWEF_Region` | string | ISO 3166-1 alpha-2 region code |
+| `SWEF_AvatarUrl` | string | Optional avatar URL |
+| `SWEF_PendingScores` | string (JSON) | Offline-queued score submissions |
