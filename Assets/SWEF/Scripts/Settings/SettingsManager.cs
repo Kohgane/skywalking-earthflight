@@ -68,6 +68,29 @@ namespace SWEF.Settings
         /// <summary>Maximum terrain render distance in metres.</summary>
         public float TerrainRenderDistance { get; private set; } = DefaultTerrainRenderDistance;
 
+        // ── Phase 28 — Spatial Audio settings ───────────────────────────────────
+        public const bool DefaultSpatialAudioEnabled = true;
+        public const bool DefaultDopplerEnabled      = true;
+        public const bool DefaultReverbEnabled       = true;
+        public const int  DefaultAudioQuality        = 1; // 0=Low, 1=Medium, 2=High
+
+        private const string KeySpatialAudioEnabled = "SWEF_SpatialAudioEnabled";
+        private const string KeyDopplerEnabled      = "SWEF_DopplerEnabled";
+        private const string KeyReverbEnabled       = "SWEF_ReverbEnabled";
+        private const string KeyAudioQuality        = "SWEF_AudioQuality";
+
+        /// <summary>Whether 3D spatial audio is enabled.</summary>
+        public bool SpatialAudioEnabled { get; private set; } = DefaultSpatialAudioEnabled;
+
+        /// <summary>Whether Doppler effect processing is enabled.</summary>
+        public bool DopplerEnabled      { get; private set; } = DefaultDopplerEnabled;
+
+        /// <summary>Whether environment reverb is enabled.</summary>
+        public bool ReverbEnabled       { get; private set; } = DefaultReverbEnabled;
+
+        /// <summary>Audio quality preset (0 = Low / 8 sources, 1 = Medium / 16, 2 = High / 32).</summary>
+        public int  AudioQuality        { get; private set; } = DefaultAudioQuality;
+
         // ── Phase 26 — Performance settings ─────────────────────────────────────
         public const bool DefaultAdaptiveQuality = true;
         public const bool DefaultDiagnosticsHUD  = false;
@@ -133,6 +156,10 @@ namespace SWEF.Settings
             TerrainEnabled       = PlayerPrefs.GetInt(KeyTerrainEnabled,       DefaultTerrainEnabled       ? 1 : 0) == 1;
             TerrainLODQuality    = PlayerPrefs.GetInt(KeyTerrainLODQuality,    DefaultTerrainLODQuality);
             TerrainRenderDistance = PlayerPrefs.GetFloat(KeyTerrainRenderDistance, DefaultTerrainRenderDistance);
+            SpatialAudioEnabled  = PlayerPrefs.GetInt(KeySpatialAudioEnabled, DefaultSpatialAudioEnabled ? 1 : 0) == 1;
+            DopplerEnabled       = PlayerPrefs.GetInt(KeyDopplerEnabled,      DefaultDopplerEnabled      ? 1 : 0) == 1;
+            ReverbEnabled        = PlayerPrefs.GetInt(KeyReverbEnabled,       DefaultReverbEnabled       ? 1 : 0) == 1;
+            AudioQuality         = PlayerPrefs.GetInt(KeyAudioQuality,        DefaultAudioQuality);
 
             // Phase 10 — override with SaveManager values when present
             if (_saveManager != null && _saveManager.HasSaveFile())
@@ -165,6 +192,10 @@ namespace SWEF.Settings
             PlayerPrefs.SetInt(KeyTerrainEnabled,          TerrainEnabled       ? 1 : 0);
             PlayerPrefs.SetInt(KeyTerrainLODQuality,       TerrainLODQuality);
             PlayerPrefs.SetFloat(KeyTerrainRenderDistance, TerrainRenderDistance);
+            PlayerPrefs.SetInt(KeySpatialAudioEnabled, SpatialAudioEnabled ? 1 : 0);
+            PlayerPrefs.SetInt(KeyDopplerEnabled,      DopplerEnabled      ? 1 : 0);
+            PlayerPrefs.SetInt(KeyReverbEnabled,       ReverbEnabled       ? 1 : 0);
+            PlayerPrefs.SetInt(KeyAudioQuality,        AudioQuality);
             PlayerPrefs.Save();
 
             // Phase 10 — mirror to SaveManager
@@ -199,6 +230,10 @@ namespace SWEF.Settings
             TerrainEnabled       = DefaultTerrainEnabled;
             TerrainLODQuality    = DefaultTerrainLODQuality;
             TerrainRenderDistance = DefaultTerrainRenderDistance;
+            SpatialAudioEnabled  = DefaultSpatialAudioEnabled;
+            DopplerEnabled       = DefaultDopplerEnabled;
+            ReverbEnabled        = DefaultReverbEnabled;
+            AudioQuality         = DefaultAudioQuality;
             Save();
         }
 
@@ -249,6 +284,20 @@ namespace SWEF.Settings
         /// <summary>Sets the maximum terrain render distance in metres.</summary>
         public void SetTerrainRenderDistance(float v) { TerrainRenderDistance = Mathf.Clamp(v, 1000f, 100000f); }
 
+        // ── Phase 28 setters ─────────────────────────────────────────────────────
+
+        /// <summary>Sets whether 3D spatial audio is enabled.</summary>
+        public void SetSpatialAudioEnabled(bool b) { SpatialAudioEnabled = b; }
+
+        /// <summary>Sets whether Doppler effect processing is enabled.</summary>
+        public void SetDopplerEnabled(bool b) { DopplerEnabled = b; }
+
+        /// <summary>Sets whether environment reverb is enabled.</summary>
+        public void SetReverbEnabled(bool b) { ReverbEnabled = b; }
+
+        /// <summary>Sets the audio quality preset (0 = Low, 1 = Medium, 2 = High).</summary>
+        public void SetAudioQuality(int v) { AudioQuality = Mathf.Clamp(v, 0, 2); }
+
         // ── Internal ─────────────────────────────────────────────────────────
         private void ApplyAll()
         {
@@ -269,6 +318,13 @@ namespace SWEF.Settings
             var terrainGen = FindFirstObjectByType<SWEF.Terrain.ProceduralTerrainGenerator>();
             if (terrainGen != null)
                 terrainGen.gameObject.SetActive(TerrainEnabled);
+
+            // Phase 28 — push spatial audio settings
+            var doppler = FindFirstObjectByType<SWEF.Audio.DopplerEffectController>();
+            if (doppler != null) doppler.IsEnabled = DopplerEnabled;
+
+            var reverb = FindFirstObjectByType<SWEF.Audio.EnvironmentReverbController>();
+            if (reverb != null) reverb.SetEnabled(ReverbEnabled);
         }
     }
 }

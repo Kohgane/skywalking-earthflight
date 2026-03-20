@@ -145,6 +145,11 @@ namespace SWEF.Core
             if (terrainGen != null)
                 Debug.Log("[SWEF] ProceduralTerrainGenerator found — terrain system active");
 
+            // Phase 28 — Spatial Audio Engine
+            var spatialAudio = FindFirstObjectByType<SWEF.Audio.SpatialAudioManager>();
+            if (spatialAudio != null)
+                Debug.Log("[SWEF] SpatialAudioManager found — spatial audio engine active");
+
             SceneManager.LoadScene(worldSceneName);
             Debug.Log($"[SWEF] Scene load requested: {worldSceneName}");
 

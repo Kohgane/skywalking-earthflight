@@ -2772,3 +2772,140 @@ TerrainTextureManager
 | `SWEF_TerrainEnabled` | int (0/1) | 1 | Whether procedural terrain is on |
 | `SWEF_TerrainLODQuality` | int (0–3) | 1 | LOD quality preset |
 | `SWEF_TerrainRenderDistance` | float | 20 000 | Max render distance in metres |
+
+---
+
+## Phase 28 — Spatial Audio Engine & 3D Sound System
+
+### New Scripts (12)
+
+| Script | Namespace | Role |
+|--------|-----------|------|
+| `Audio/SpatialAudioManager.cs` | `SWEF.Audio` | Singleton pool of 32 3D AudioSources; priority-aware; integrates with SettingsManager & PerformanceManager |
+| `Audio/AltitudeSoundscapeController.cs` | `SWEF.Audio` | 6-layer altitude-reactive ambient soundscape with ExpSmoothing crossfades |
+| `Audio/DopplerEffectController.cs` | `SWEF.Audio` | Altitude-accurate Doppler pitch shift (speed of sound model); pitch clamped 0.5–2.0 |
+| `Audio/EnvironmentReverbController.cs` | `SWEF.Audio` | AudioReverbFilter preset blending: Ground → MidAir → HighAlt → Space |
+| `Audio/WindAudioGenerator.cs` | `SWEF.Audio` | Procedural wind synthesis — speed-driven lowpass + turbulence, integrates with WeatherStateManager |
+| `Audio/SonicBoomController.cs` | `SWEF.Audio` | Mach 1 detection; one-shot boom + OnSonicBoom event; exposes CurrentMach for HUD |
+| `Audio/AudioOcclusionSystem.cs` | `SWEF.Audio` | Raycast-based occlusion (top-8 sources); lowpass filter + volume reduction when blocked |
+| `Audio/MusicLayerSystem.cs` | `SWEF.Audio` | Dynamic layered music (Base/Tension/Wonder/Triumph/Ambient); altitude-driven crossfades |
+| `Audio/AudioMixerController.cs` | `SWEF.Audio` | Runtime AudioMixer wrapper; linear→dB conversion; snapshot transitions |
+| `Audio/AudioEventTrigger.cs` | `SWEF.Audio` | Event-name → AudioClip mapping with per-event cooldowns; 2D and spatial variants |
+| `Audio/AudioVisualizerData.cs` | `SWEF.Audio` | FFT spectrum + waveform data; bass/mid/treble levels; beat detection |
+| `Editor/SpatialAudioDebugWindow.cs` | `SWEF.Editor` | EditorWindow: SWEF → Spatial Audio Debug; source pool stats, soundscape bars, Mach display, music layer sliders |
+
+### Modified Files
+
+| File | Change |
+|------|--------|
+| `Core/BootManager.cs` | Phase 28 init: finds SpatialAudioManager and logs if active |
+| `Settings/SettingsManager.cs` | Added `SpatialAudioEnabled`, `DopplerEnabled`, `ReverbEnabled`, `AudioQuality` (0–2) settings |
+| `UI/HudBinder.cs` | Added optional `machNumberText` + `SonicBoomController` ref; Update() displays `M {mach:F2}` |
+
+### Setup Instructions
+
+#### SpatialAudioManager
+1. Add **SpatialAudioManager** to a persistent GameObject (e.g. `[AudioSystem]`).
+2. Set `Pool Size` (default 32; use 8–16 for low-end mobile).
+3. No AudioClips required — sources are created at runtime.
+
+#### AltitudeSoundscapeController
+1. Add to any GameObject in the World scene.
+2. Assign one `AudioClip` per layer in the Inspector (6 slots):
+   - 0–500 m: city ambience (traffic / crowds)
+   - 500–5 000 m: light wind loop
+   - 5 000–20 000 m: jet-stream wind
+   - 20 000–80 000 m: thin atmosphere / eerie hum
+   - 80 000–120 000 m: near-space hum
+   - 120 000 m+: near-silence / cosmic background
+3. Tune `maxVolume` and `fadeRange` per layer.
+
+#### DopplerEffectController
+1. Add to any persistent GameObject.
+2. Set `Doppler Intensity` (0 = off, 1 = realistic, 2 = exaggerated).
+3. Disable via **SettingsManager** `DopplerEnabled` or `sonicBoomController.IsEnabled = false`.
+
+#### EnvironmentReverbController
+1. Add to any GameObject with an **AudioListener** in the scene.
+2. A `AudioReverbFilter` is auto-added to the AudioListener's GameObject.
+3. Disable via **SettingsManager** `ReverbEnabled`.
+
+#### WindAudioGenerator
+1. Add to any persistent GameObject.
+2. Assign a **white noise loop** AudioClip to `Wind Noise Clip`.
+3. Tune `Base Wind Volume`, `Speed Multiplier`, `Turbulence Amount`.
+
+#### SonicBoomController
+1. Add to the player/aircraft GameObject.
+2. Assign `Boom Clip` (a short transient boom WAV).
+3. Listen to `OnSonicBoom` event for camera shake integration.
+4. Optionally wire `machNumberText` in **HudBinder** for HUD display.
+
+#### AudioOcclusionSystem
+1. Add to any persistent GameObject.
+2. Set `Occlusion Layers` to `Terrain` + `Default` layers.
+3. Lower `Check Top N` (e.g. 4) on low-end devices.
+
+#### MusicLayerSystem
+1. Add to a persistent GameObject.
+2. Assign one `AudioClip` per layer (Base, Tension, Wonder, Triumph, Ambient).
+3. For teleport stingers assign `Teleport Stinger Clip`.
+
+#### AudioMixerController
+1. Create an **AudioMixer** asset in `Assets/SWEF/Audio/SWEFMixer.mixer`.
+2. Expose parameters: `MasterVolume`, `MusicVolume`, `SFXVolume`, `AmbienceVolume`, `UIVolume`.
+3. Create snapshots: `Default`, `Space`, `Paused`.
+4. Assign the mixer to **AudioMixerController**.
+
+#### AudioEventTrigger
+1. Add to any manager GameObject.
+2. Assign `AudioClip` per built-in event (Takeoff, Landing, SpeedBoost, etc.).
+3. Call `TriggerEvent("Takeoff")` from flight code.
+
+#### AudioVisualizerData
+1. Add to any persistent GameObject.
+2. Subscribe to `OnBeat` event to drive visual effects.
+
+### Architecture Diagram (Phase 28 Audio Subsystem)
+
+```
+FlightController ──────┐
+AltitudeController ────┼──► AltitudeSoundscapeController  (6-layer crossfade)
+WeatherStateManager ───┤
+                       ├──► DopplerEffectController        (Doppler pitch)
+                       ├──► WindAudioGenerator             (procedural wind)
+                       ├──► SonicBoomController            (Mach crossing)
+                       └──► MusicLayerSystem               (layered BGM)
+
+SpatialAudioManager ───────► AudioOcclusionSystem          (raycast occlusion)
+
+AudioMixerController ──────► AudioMixer asset              (global mix/snapshots)
+
+AudioEventTrigger ─────────► SpatialAudioManager           (event → 3D SFX)
+
+AudioVisualizerData ───────► UI / VFX                      (FFT + beat events)
+
+SettingsManager ───────────► DopplerEffectController.IsEnabled
+                             EnvironmentReverbController.SetEnabled()
+                             SpatialAudioManager.MaxActiveSourcesForQuality()
+```
+
+### Performance Tuning (Mobile)
+
+| Setting | Low-end | Mid-range | High-end |
+|---------|---------|-----------|----------|
+| `poolSize` | 8 | 16 | 32 |
+| `AudioQuality` | 0 | 1 | 2 |
+| `DopplerEnabled` | false | true | true |
+| `ReverbEnabled` | false | true | true |
+| `checkTopN` (occlusion) | 4 | 8 | 8 |
+| Soundscape layers | 2–3 active | all | all |
+
+### PlayerPrefs Keys (Phase 28)
+
+| Key | Type | Default | Purpose |
+|-----|------|---------|---------|
+| `SWEF_SpatialAudioEnabled` | int (0/1) | 1 | Master switch for spatial audio |
+| `SWEF_DopplerEnabled` | int (0/1) | 1 | Doppler pitch shift on/off |
+| `SWEF_ReverbEnabled` | int (0/1) | 1 | Environment reverb on/off |
+| `SWEF_AudioQuality` | int (0–2) | 1 | Audio quality (source count cap) |
