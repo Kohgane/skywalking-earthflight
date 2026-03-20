@@ -3077,3 +3077,144 @@ SettingsManager ──► CloudRenderingManager.Enable/DisableCloudRendering()
 | `SWEF_CloudRegion` | string | "auto" | Preferred cloud server region |
 | `SWEF_CloudBestUrl` | string | "" | Cached best server URL (set by ServerDiscoveryService) |
 | `SWEF_CloudBestRegion` | string | "" | Cached best server region name |
+
+---
+
+## Phase 30 — Localization & Multi-Language Support System
+
+### Overview
+
+Phase 30 adds a comprehensive localization system enabling the entire UI, tutorial, notifications, and error messages to be displayed in 8 languages with runtime switching.
+
+**Supported Languages:** English · 한국어 · 日本語 · 简体中文 · Español · Français · Deutsch · Português
+
+---
+
+### New Scripts (9 scripts + 1 editor tool)
+
+| Script | Namespace | Role |
+|--------|-----------|------|
+| `Localization/LocalizationManager.cs` | `SWEF.Localization` | Singleton managing all localization state — language detection, persistence, runtime switching, and `OnLanguageChanged` event |
+| `Localization/LocalizedText.cs` | `SWEF.Localization` | Auto-updates `Text` / `TextMeshProUGUI` on language change; supports `SetFormatArgs` |
+| `Localization/LocalizedImage.cs` | `SWEF.Localization` | Swaps `Image` sprite based on active language; fallback sprite |
+| `Localization/LanguageDatabase.cs` | `SWEF.Localization` | Static JSON loader/cache for language files; `ClearCache()` for memory pressure |
+| `Localization/LocalizationUI.cs` | `SWEF.Localization` | Language selection panel — native names, checkmark, hover preview |
+| `Localization/PluralResolver.cs` | `SWEF.Localization` | Per-language plural form rules (CLDR: one/other for EN/DE/ES/FR/PT, other-only for CJK) |
+| `Localization/RTLTextHandler.cs` | `SWEF.Localization` | RTL infrastructure (ready for Arabic/Hebrew); `ProcessRTL`, `IsRTLLanguage`, `AlignText` |
+| `Localization/FontManager.cs` | `SWEF.Localization` | CJK / Korean / Latin font switching on language change; TMP_FontAsset support |
+| `Editor/LocalizationEditorWindow.cs` | `SWEF.Editor` | `SWEF → Localization Editor` — table view, missing-key highlighting, Add/Remove key, JSON export, CSV import |
+
+### New JSON Language Files (8 files)
+
+All files are located in `Assets/SWEF/Resources/Localization/` (60+ keys each).
+
+| File | Language |
+|------|----------|
+| `lang_en.json` | English (primary / fallback) |
+| `lang_ko.json` | 한국어 (Korean) |
+| `lang_ja.json` | 日本語 (Japanese) |
+| `lang_zh.json` | 简体中文 (Simplified Chinese) |
+| `lang_es.json` | Español (Spanish) |
+| `lang_fr.json` | Français (French) |
+| `lang_de.json` | Deutsch (German) |
+| `lang_pt.json` | Português (Portuguese) |
+
+### Modified Files (4 files)
+
+| File | Change |
+|------|--------|
+| `Core/BootManager.cs` | Phase 30 log message + `LocalizationManager.Initialize()` call after Phase 29 cloud init |
+| `Settings/SettingsManager.cs` | `SelectedLanguage` property (get/set with `LocalizationManager` sync) |
+| `Settings/SettingsUI.cs` | Language selector button + `LocalizationUI` sub-panel integration; live label update on language change |
+| `README_SWEF_SETUP.md` | This section |
+
+---
+
+### Setup Instructions
+
+#### LocalizationManager
+1. Add a persistent `[Localization]` GameObject to your Boot scene.
+2. Attach `LocalizationManager` — it calls `DontDestroyOnLoad` automatically.
+3. BootManager calls `Initialize()` automatically during the boot sequence.
+4. First launch auto-detects `Application.systemLanguage`; subsequent launches restore from PlayerPrefs.
+
+#### LocalizedText Usage
+1. Add the `LocalizedText` component to any `Text` or `TextMeshProUGUI` GameObject.
+2. Set `Localization Key` in the Inspector (e.g. `hud.altitude`).
+3. The text updates automatically on language change and on `Start()`.
+4. For format args (e.g. `"Altitude: {0}m"`), call `localizedText.SetFormatArgs(altitudeValue)` at runtime.
+
+#### LocalizedImage Usage
+1. Add the `LocalizedImage` component alongside a `Image` component.
+2. Assign `Default Sprite` and any per-language overrides in `Language Sprites`.
+
+#### Adding a New Language
+1. Create `Assets/SWEF/Resources/Localization/lang_xx.json` with all keys from `lang_en.json`.
+2. Add the language to `LocalizationManager.SupportedLanguages`.
+3. Add a case to `LanguageDatabase.GetFileName(SystemLanguage)`.
+4. Add a case to `LocalizationManager.GetNativeName(SystemLanguage)`.
+5. Add a plural rule case to `PluralResolver.GetPluralForm(int, SystemLanguage)`.
+
+#### Localization Editor
+Open via **SWEF → Localization Editor** in the Unity menu bar.
+- Table shows all keys as rows and all 8 languages as columns.
+- **Red** cells indicate missing or empty translations.
+- Use **Add** / **✕** to create or remove keys.
+- **Save All** exports all changes to the JSON files.
+- **Import CSV** accepts a CSV with header `key,en,ko,ja,zh,es,fr,de,pt`.
+
+---
+
+### JSON Format
+
+```json
+{
+    "boot.loading": "Loading...",
+    "boot.gps_check": "Checking location services...",
+    "hud.altitude": "Altitude: {0}m",
+    "tutorial.welcome": "Welcome to Skywalking: Earth Flight! 🚀\nYou're about to fly from your current location to the edge of space."
+}
+```
+
+Keys use dot-separated namespaces (e.g. `boot.*`, `hud.*`, `settings.*`, `tutorial.*`, `teleport.*`, `fav.*`, `screenshot.*`, `cloud.*`, `general.*`, `pause.*`).
+For pluralization append `_zero`, `_one`, `_few`, `_many`, or `_other` to the base key (e.g. `fav.page_one`, `fav.page_other`).
+
+---
+
+### Architecture
+
+```
+LocalizationManager (singleton, DontDestroyOnLoad)
+      ├── CurrentLanguage (get/set)
+      │       └── fires OnLanguageChanged(SystemLanguage)
+      ├── GetText(key) / GetText(key, args)
+      │       └── LanguageDatabase.LoadLanguage(lang) → Dictionary<key,value>
+      │                └── Resources.Load<TextAsset>("Localization/lang_xx")
+      └── Initialize() ─── called by BootManager
+
+LocalizedText (per UI element)
+      ├── OnEnable  → subscribe OnLanguageChanged
+      ├── OnDisable → unsubscribe
+      └── Refresh() → sets legacy Text.text or TMPro.text via reflection
+
+LocalizationUI (sub-panel of SettingsUI)
+      ├── Builds language button list from LocalizationManager.SupportedLanguages
+      ├── Checkmark on active language
+      ├── Hover → preview text in that language (tutorial.welcome key)
+      └── Click → LocalizationManager.CurrentLanguage = selected
+
+FontManager
+      └── OnLanguageChanged → push Font / TMP_FontAsset to all registered LocalizedText
+
+PluralResolver
+      └── Resolve(key, count, lang) → key_one / key_other / key_other (CJK)
+
+RTLTextHandler (future-ready)
+      └── IsRTLLanguage(lang) → false for all current languages
+```
+
+### PlayerPrefs Keys (Phase 30)
+
+| Key | Type | Default | Purpose |
+|-----|------|---------|---------|
+| `SWEF_Language` | string | `"English"` | Persisted `SystemLanguage` enum name |
