@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using SWEF.Flight;
 using SWEF.Audio;
+using SWEF.CloudRendering;
 
 namespace SWEF.UI
 {
@@ -27,12 +28,22 @@ namespace SWEF.UI
         [SerializeField] private Text machNumberText;
         [SerializeField] private SonicBoomController sonicBoomController;
 
+        [Header("Phase 29 — Cloud Rendering (optional)")]
+        [SerializeField] private GameObject cloudStatusIndicator;
+        [SerializeField] private Text       cloudLatencyBadge;
+        [SerializeField] private Image      cloudStatusDot;
+
+        private CloudRenderingManager _cloudManager;
+        private StreamingClient       _streamingClient;
+
         private void Awake()
         {
             if (flight == null)   flight   = FindFirstObjectByType<FlightController>();
             if (altitude == null) altitude = FindFirstObjectByType<AltitudeController>();
             if (cameraController == null) cameraController = FindFirstObjectByType<CameraController>();
             if (sonicBoomController == null) sonicBoomController = FindFirstObjectByType<SonicBoomController>();
+            _cloudManager    = FindFirstObjectByType<CloudRenderingManager>();
+            _streamingClient = FindFirstObjectByType<StreamingClient>();
 
             if (throttleSlider != null)
                 throttleSlider.onValueChanged.AddListener(OnThrottle);
@@ -62,6 +73,26 @@ namespace SWEF.UI
 
             if (machNumberText != null && sonicBoomController != null)
                 machNumberText.text = $"M {sonicBoomController.CurrentMach:F2}";
+
+            // Phase 29 — cloud streaming status
+            bool isCloud = _cloudManager != null && _cloudManager.IsCloudMode;
+            cloudStatusIndicator?.SetActive(isCloud);
+            if (isCloud)
+            {
+                if (cloudLatencyBadge != null && _streamingClient != null)
+                    cloudLatencyBadge.text = $"{_streamingClient.LatencyMs:F0} ms";
+
+                if (cloudStatusDot != null)
+                {
+                    cloudStatusDot.color = _cloudManager.CurrentConnectionStatus switch
+                    {
+                        CloudRenderingManager.ConnectionStatus.Streaming  => new Color(0.18f, 0.80f, 0.44f),
+                        CloudRenderingManager.ConnectionStatus.Connected  => new Color(0.95f, 0.77f, 0.06f),
+                        CloudRenderingManager.ConnectionStatus.Connecting => new Color(0.95f, 0.77f, 0.06f),
+                        _                                                  => new Color(0.91f, 0.30f, 0.24f),
+                    };
+                }
+            }
         }
 
         private void OnThrottle(float v)
