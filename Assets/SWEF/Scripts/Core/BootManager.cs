@@ -263,6 +263,42 @@ namespace SWEF.Core
             {
                 Debug.Log($"[SWEF] Offline mode: {(offlineManager.IsOffline ? "OFFLINE" : "ONLINE")}");
             }
+
+            // Phase 36 — Replay Theater initialization
+            var theaterMgr = FindFirstObjectByType<SWEF.ReplayTheater.ReplayTheaterManager>();
+            if (theaterMgr != null)
+                Debug.Log("[SWEF] ReplayTheaterManager found — Replay Theater mode active");
+            else
+                Debug.Log("[SWEF] BootManager: ReplayTheaterManager not found — add it to a persistent GameObject to enable Replay Theater mode.");
+        }
+
+        // ── Phase 36 — Replay Theater Helpers ────────────────────────────────────
+
+        /// <summary>
+        /// Convenience method to enter the Replay Theater from any scene.
+        /// Finds or validates the <see cref="SWEF.ReplayTheater.ReplayTheaterManager"/>
+        /// singleton and delegates to it.
+        /// </summary>
+        /// <param name="data">The replay to load into the theater.</param>
+        public static void EnterReplayTheater(SWEF.Replay.ReplayData data)
+        {
+            var mgr = SWEF.ReplayTheater.ReplayTheaterManager.Instance;
+            if (mgr == null)
+            {
+                Debug.LogWarning("[SWEF] BootManager.EnterReplayTheater: ReplayTheaterManager not found in scene.");
+                return;
+            }
+            mgr.EnterTheater(data);
+        }
+
+        /// <summary>
+        /// Convenience method to exit the Replay Theater from any scene.
+        /// </summary>
+        public static void ExitReplayTheater()
+        {
+            var mgr = SWEF.ReplayTheater.ReplayTheaterManager.Instance;
+            if (mgr == null) return;
+            mgr.ExitTheater();
         }
     }
 }

@@ -187,6 +187,20 @@ namespace SWEF.Cinema
             return waypoints[waypoints.Count - 1].timeAtWaypoint;
         }
 
+        /// <summary>
+        /// Evaluates the camera path at the given timeline time and returns a
+        /// <see cref="(Vector3 position, Quaternion rotation, float fov)"/> tuple.
+        /// This overload is designed for Replay Theater timeline integration; it does
+        /// not move the <see cref="cameraTarget"/> — use <see cref="ApplyAtTime"/> for that.
+        /// </summary>
+        /// <param name="t">Replay time in seconds (will be clamped to [0, total duration]).</param>
+        /// <returns>Interpolated position, rotation, and field of view.</returns>
+        public (Vector3 position, Quaternion rotation, float fov) EvaluateAtTime(float t)
+        {
+            float clamped = Mathf.Clamp(t, 0f, GetTotalDuration());
+            return (SamplePosition(clamped), SampleRotation(clamped), SampleFOV(clamped));
+        }
+
         // ── Serialisation ─────────────────────────────────────────────────────────
         /// <summary>Serialises the path to a JSON string.</summary>
         public string ToJson()
