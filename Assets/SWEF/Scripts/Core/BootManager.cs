@@ -35,7 +35,7 @@ namespace SWEF.Core
 
         private IEnumerator Start()
         {
-            Debug.Log("[SWEF] Boot sequence started — Phase 30: Localization & Multi-Language Support");
+            Debug.Log("[SWEF] Boot sequence started — Phase 31: Achievement System 2.0");
 
             loadingScreen?.Show();
 
@@ -165,6 +165,11 @@ namespace SWEF.Core
                 localization.Initialize();
                 Debug.Log($"[SWEF] Localization initialized — language: {localization.CurrentLanguage}");
             }
+
+            // Phase 31 — Achievement system initialization
+            var achievementMgr = FindFirstObjectByType<SWEF.Achievement.AchievementManager>();
+            if (achievementMgr != null)
+                Debug.Log($"[SWEF] Achievement system loaded: {achievementMgr.GetAllStates().Count} achievements tracked");
 
             SceneManager.LoadScene(worldSceneName);
             Debug.Log($"[SWEF] Scene load requested: {worldSceneName}");
