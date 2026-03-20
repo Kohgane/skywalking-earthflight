@@ -35,7 +35,7 @@ namespace SWEF.Core
 
         private IEnumerator Start()
         {
-            Debug.Log("[SWEF] Boot sequence started — Phase 31: Achievement System 2.0");
+            Debug.Log("[SWEF] Boot sequence started — Phase 32: Weather System & Dynamic Environment");
 
             loadingScreen?.Show();
 
@@ -170,6 +170,17 @@ namespace SWEF.Core
             var achievementMgr = FindFirstObjectByType<SWEF.Achievement.AchievementManager>();
             if (achievementMgr != null)
                 Debug.Log($"[SWEF] Achievement system loaded: {achievementMgr.GetAllStates().Count} achievements tracked");
+
+            // Phase 32 — Weather system initialization
+            var weatherManager = FindFirstObjectByType<SWEF.Weather.WeatherManager>();
+            if (weatherManager != null)
+                Debug.Log("[SWEF] WeatherManager found — Phase 32 weather system active");
+
+            var weatherAPIClient = FindFirstObjectByType<SWEF.Weather.WeatherAPIClient>();
+            if (weatherAPIClient != null)
+                Debug.Log("[SWEF] WeatherAPIClient found — live weather fetch enabled");
+            else
+                Debug.Log("[SWEF] BootManager: WeatherAPIClient not found — add it for live weather data.");
 
             SceneManager.LoadScene(worldSceneName);
             Debug.Log($"[SWEF] Scene load requested: {worldSceneName}");

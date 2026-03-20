@@ -41,6 +41,20 @@ namespace SWEF.Flight
         /// <summary>Pending external acceleration (m/s²) to apply on next Step().</summary>
         private Vector3 _externalAccel;
 
+        // ── Phase 32 — Weather additions ─────────────────────────────────────────
+        /// <summary>
+        /// Pending external position-space force (m/s) applied by weather effects
+        /// each frame.  Consumed and reset in <see cref="Step"/>.
+        /// </summary>
+        private Vector3 _externalForce;
+
+        /// <summary>
+        /// Multiplier applied to the effective max speed by weather systems
+        /// (e.g. 0.5 = half speed in dense fog).  Default 1.0 = no effect.
+        /// Reset to 1.0 when weather clears.
+        /// </summary>
+        public float ExternalDragMultiplier { get; set; } = 1f;
+
         private Vector3 _vel;
 
         // ── Phase 16 — Events ────────────────────────────────────────────────
@@ -92,6 +106,17 @@ namespace SWEF.Flight
         }
 
         /// <summary>
+        /// Queues a world-space force offset (m/s) to be applied as a direct
+        /// position displacement on the next call to <see cref="Step"/>.
+        /// Used by <c>WeatherFlightModifier</c> to apply wind push.
+        /// </summary>
+        /// <param name="force">Force vector in world space (m/s).</param>
+        public void ApplyExternalForce(Vector3 force)
+        {
+            _externalForce += force;
+        }
+
+        /// <summary>
         /// Feeds XR controller input directly into the flight system,
         /// bypassing touch input. Called each frame by <c>XRInputAdapter</c>.
         /// </summary>
@@ -134,7 +159,7 @@ namespace SWEF.Flight
             transform.localEulerAngles = new Vector3(x, e.y, z);
 
             // --- Translation ---
-            Vector3 targetVel = transform.forward * (maxSpeed * Throttle01);
+            Vector3 targetVel = transform.forward * (maxSpeed * ExternalDragMultiplier * Throttle01);
             _vel = ExpSmoothing.ExpLerp(_vel, targetVel, accelSmoothing, dt);
 
             // Phase 24 — integrate any external acceleration (aerodynamics, gravity, etc.)
@@ -142,6 +167,10 @@ namespace SWEF.Flight
             _externalAccel = Vector3.zero;
 
             transform.position += _vel * dt;
+
+            // Phase 32 — apply external wind force as direct position displacement
+            transform.position += _externalForce * dt;
+            _externalForce      = Vector3.zero;
 
             // Phase 16 — stall warning
             bool stalling = CurrentSpeedMps < stallSpeedThreshold && Throttle01 > 0.01f;
