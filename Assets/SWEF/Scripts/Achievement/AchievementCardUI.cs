@@ -93,9 +93,15 @@ namespace SWEF.Achievement
 
             // Unlock date.
             if (unlockDateText != null)
-                unlockDateText.text = state.unlocked && !string.IsNullOrEmpty(state.unlockDateISO)
-                    ? System.DateTime.Parse(state.unlockDateISO).ToString("yyyy-MM-dd")
-                    : "";
+            {
+                string dateStr = "";
+                if (state.unlocked && !string.IsNullOrEmpty(state.unlockDateISO) &&
+                    System.DateTime.TryParse(state.unlockDateISO, out var parsed))
+                {
+                    dateStr = parsed.ToString("yyyy-MM-dd");
+                }
+                unlockDateText.text = dateStr;
+            }
 
             // Progress bar.
             if (progressBar != null)

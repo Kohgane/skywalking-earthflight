@@ -11,6 +11,10 @@ namespace SWEF.Achievement
     /// </summary>
     public class AchievementManager : MonoBehaviour
     {
+        // ── Constants ─────────────────────────────────────────────────────────────
+        /// <summary>Fallback target value used when unlocking a legacy achievement that has no definition.</summary>
+        private const float DefaultTargetValue = 1f;
+
         // ── Singleton ─────────────────────────────────────────────────────────────
         /// <summary>Singleton instance.</summary>
         public static AchievementManager Instance { get; private set; }
@@ -234,7 +238,7 @@ namespace SWEF.Achievement
             state.unlocked      = true;
             state.currentValue  = _definitions.TryGetValue(achievementId, out var defRef)
                 ? defRef.targetValue
-                : 1f;
+                : DefaultTargetValue;
             state.unlockDateISO = System.DateTime.UtcNow.ToString("o");
 
             Debug.Log($"[SWEF] Achievement unlocked: {achievementId}");

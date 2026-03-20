@@ -26,12 +26,15 @@ namespace SWEF.Achievement
 
         // ── Computed ──────────────────────────────────────────────────────────────
 
+        /// <summary>Minimum target value used to prevent division by zero in <see cref="Progress01"/>.</summary>
+        private const float MinTargetValue = 0.0001f;
+
         // Backing reference set by AchievementManager after load.
         [System.NonSerialized]
         private float _targetValue = 1f;
 
         /// <summary>Sets the target value so that <see cref="Progress01"/> can be computed.</summary>
-        public void SetTarget(float target) => _targetValue = Mathf.Max(target, 0.0001f);
+        public void SetTarget(float target) => _targetValue = Mathf.Max(target, MinTargetValue);
 
         /// <summary>Normalised progress in the range [0, 1].</summary>
         public float Progress01 => Mathf.Clamp01(currentValue / _targetValue);

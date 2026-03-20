@@ -101,14 +101,11 @@ namespace SWEF.Achievement
                 var intentObj   = new AndroidJavaObject("android.content.Intent");
 
                 intentObj.Call<AndroidJavaObject>("setAction",  intentClass.GetStatic<string>("ACTION_SEND"));
-                intentObj.Call<AndroidJavaObject>("setType",    "image/png");
+                intentObj.Call<AndroidJavaObject>("setType",    "text/plain");
                 intentObj.Call<AndroidJavaObject>("putExtra",   intentClass.GetStatic<string>("EXTRA_TEXT"), text);
 
-                var uriClass = new AndroidJavaClass("android.net.Uri");
-                var fileObj  = new AndroidJavaObject("java.io.File", imagePath);
-                var uri      = uriClass.CallStatic<AndroidJavaObject>("fromFile", fileObj);
-                intentObj.Call<AndroidJavaObject>("putExtra",   intentClass.GetStatic<string>("EXTRA_STREAM"), uri);
-
+                // Note: sharing image files via URI on Android 7+ requires a FileProvider,
+                // which needs a native plugin. We share text-only to maintain compatibility.
                 var activity = new AndroidJavaClass("com.unity3d.player.UnityPlayer")
                     .GetStatic<AndroidJavaObject>("currentActivity");
                 var chooser  = intentClass.CallStatic<AndroidJavaObject>("createChooser", intentObj, "Share Achievement");

@@ -10,6 +10,10 @@ namespace SWEF.Achievement
     /// </summary>
     public class AchievementTracker : MonoBehaviour
     {
+        // ── Constants ─────────────────────────────────────────────────────────────
+        /// <summary>Minimum speed (m/s) required to count the player as actively flying.</summary>
+        private const float MinimumFlightSpeedThreshold = 0.5f;
+
         // ── Inspector refs ────────────────────────────────────────────────────────
         [Header("References (auto-wired if null)")]
         [SerializeField] private FlightController flightController;
@@ -60,7 +64,7 @@ namespace SWEF.Achievement
             float speed = flightController?.CurrentSpeedMps          ?? 0f;
 
             // ── Flight time ───────────────────────────────────────────────────────
-            if (speed > 0.5f)
+            if (speed > MinimumFlightSpeedThreshold)
             {
                 _totalFlightSeconds += dt;
                 achievementManager.SetProgress("flight_time_1h",   _totalFlightSeconds);
@@ -94,7 +98,7 @@ namespace SWEF.Achievement
                 _firstFrameDone = true;
                 _lastPosition   = transform.position;
             }
-            else if (speed > 0.5f)
+            else if (speed > MinimumFlightSpeedThreshold)
             {
                 float delta = Vector3.Distance(transform.position, _lastPosition);
                 _totalDistanceMeters += delta;

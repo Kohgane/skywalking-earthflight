@@ -26,7 +26,7 @@ namespace SWEF.Achievement
 
         [Header("Requirements")]
         /// <summary>All of these achievement IDs must be unlocked for the milestone to complete.</summary>
-        public string[] requiredAchievementIds = System.Array.Empty<string>();
+        public string[] requiredAchievementIds = new string[0];
 
         [Header("Rewards")]
         /// <summary>Bonus XP awarded on milestone completion (in addition to individual achievement XP).</summary>
