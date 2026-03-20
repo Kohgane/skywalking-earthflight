@@ -35,7 +35,7 @@ namespace SWEF.Core
 
         private IEnumerator Start()
         {
-            Debug.Log("[SWEF] Boot sequence started — Phase 32: Weather System & Dynamic Environment");
+            Debug.Log("[SWEF] Boot sequence started — Phase 34: Accessibility & Adaptive Input System");
 
             loadingScreen?.Show();
 
@@ -181,6 +181,42 @@ namespace SWEF.Core
                 Debug.Log("[SWEF] WeatherAPIClient found — live weather fetch enabled");
             else
                 Debug.Log("[SWEF] BootManager: WeatherAPIClient not found — add it for live weather data.");
+
+            // Phase 34 — Accessibility system initialization
+            var accessibilityMgr = FindFirstObjectByType<SWEF.Accessibility.AccessibilityManager>();
+            if (accessibilityMgr != null)
+            {
+                accessibilityMgr.LoadProfile();
+                Debug.Log($"[SWEF] AccessibilityManager loaded — preset: {accessibilityMgr.Profile.activePreset}");
+            }
+
+            var screenReader = FindFirstObjectByType<SWEF.Accessibility.ScreenReaderBridge>();
+            if (screenReader != null)
+                Debug.Log("[SWEF] ScreenReaderBridge found — TTS system active");
+
+            var colorblindFilter = FindFirstObjectByType<SWEF.Accessibility.ColorblindFilter>();
+            if (colorblindFilter != null)
+                Debug.Log("[SWEF] ColorblindFilter found — colorblind assistance active");
+
+            var subtitleSystem = FindFirstObjectByType<SWEF.Accessibility.SubtitleSystem>();
+            if (subtitleSystem != null)
+                Debug.Log("[SWEF] SubtitleSystem found — subtitles/captions active");
+
+            var uiScaling = FindFirstObjectByType<SWEF.Accessibility.UIScalingSystem>();
+            if (uiScaling != null)
+                Debug.Log($"[SWEF] UIScalingSystem found — scale: {uiScaling.GlobalScale:F2}×");
+
+            var hapticA11y = FindFirstObjectByType<SWEF.Accessibility.HapticAccessibility>();
+            if (hapticA11y != null)
+                Debug.Log("[SWEF] HapticAccessibility found — extended haptic patterns active");
+
+            var adaptiveInput = FindFirstObjectByType<SWEF.Accessibility.AdaptiveInputManager>();
+            if (adaptiveInput != null)
+                Debug.Log($"[SWEF] AdaptiveInputManager found — input mode: {adaptiveInput.CurrentMode}");
+
+            var cogAssist = FindFirstObjectByType<SWEF.Accessibility.CognitiveAssistSystem>();
+            if (cogAssist != null)
+                Debug.Log($"[SWEF] CognitiveAssistSystem found — game speed: {cogAssist.GameSpeed:F2}×");
 
             SceneManager.LoadScene(worldSceneName);
             Debug.Log($"[SWEF] Scene load requested: {worldSceneName}");

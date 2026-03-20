@@ -224,3 +224,118 @@ MultiplayerScoreboard (Singleton)
 | `MultiplayerWeatherSync` | `WeatherManager` + `WeatherDataService` (Phase 32) |
 | `MultiplayerHUD` | `NetworkManager2`, `VoiceChatManager`, `FormationFlyingManager` |
 | `MultiplayerScoreboard` | `FormationFlyingManager.OnSlotScoreUpdated`, `CoopMissionSystem.OnObjectiveCompleted` |
+
+---
+
+## Phase 34 — Accessibility & Adaptive Input System
+
+### New Scripts (8 files — all in `Assets/SWEF/Scripts/Accessibility/`)
+
+| # | Script | Namespace | Purpose |
+|---|--------|-----------|---------|
+| 1 | `Accessibility/AccessibilityManager.cs` | `SWEF.Accessibility` | Central singleton — serialisable `AccessibilityProfile`, JSON persistence via `PlayerPrefs`, 6 preset profiles (`Default`, `LowVision`, `Colorblind`, `MotorImpaired`, `HearingImpaired`, `FullAssist`), string-keyed feature flag dictionary, OS hint auto-detection |
+| 2 | `Accessibility/AdaptiveInputManager.cs` | `SWEF.Accessibility` | Full key/button remapping (`Dictionary<InputAction, KeyCode>`), one-handed left/right layouts, gyroscope steering, sequential scanning mode, hold-vs-toggle per action, per-axis dead-zone + sensitivity curves (Linear/Exponential/S-Curve), turbo auto-repeat |
+| 3 | `Accessibility/ScreenReaderBridge.cs` | `SWEF.Accessibility` | `ITTSEngine` interface + console stub, platform hooks for iOS VoiceOver / Android TalkBack / Windows Narrator, priority queue (`Critical`→`Low`), UI focus tracking, earcon audio cues, configurable WPM speech rate |
+| 4 | `Accessibility/ColorblindFilter.cs` | `SWEF.Accessibility` | 5 colorblind modes (`None`→`Achromatopsia`), scientifically-based 3×3 colour-matrix post-processing, simulate vs. correct toggle, custom palette override, UI element recolouring, high-contrast mode, 0–100% intensity blend |
+| 5 | `Accessibility/SubtitleSystem.cs` | `SWEF.Accessibility` | FIFO subtitle queue, closed-captions sound descriptions, colour-coded speaker names, configurable position/font-size/background opacity, WCAG-aligned reading-speed auto-duration (21 cps), Phase 30 localization integration |
+| 6 | `Accessibility/UIScalingSystem.cs` | `SWEF.Accessibility` | Global 0.5×–3.0× canvas scale, DPI-aware suggestion, 5-level large-text mode (+0–100%), spacing multiplier, pulsing focus highlight (Outline component), reduced-motion propagation to `SWEF.UI.AccessibilityManager`, simplified-UI element hiding |
+| 7 | `Accessibility/HapticAccessibility.cs` | `SWEF.Accessibility` | Visual-to-haptic substitution, 9 built-in patterns (`Waypoint_Near`, `Stall_Warning`, `Altitude_Low`, `Formation_Drift`, `Mission_Complete`, `Collision_Warning`, `Turbulence`, `Landing_Gear`, `Rhythm_Formation`), audio-to-haptic conversion, 0–200% global intensity multiplier |
+| 8 | `Accessibility/CognitiveAssistSystem.cs` | `SWEF.Accessibility` | Simplified-flight auto-management (altitude+speed), 4-step game-speed control (0.25×–1.0×), 3-level HUD density (`Full`/`Reduced`/`Minimal`), cooldown-aware reminder system, force-pause anywhere, auto-difficulty adjustment from death/retry telemetry |
+
+### Key Data Types
+
+| Type | File | Description |
+|------|------|-------------|
+| `AccessibilityProfile` | `AccessibilityManager.cs` | Serialisable container for all accessibility preferences; saved as JSON in `PlayerPrefs` |
+| `AccessibilityPreset` | `AccessibilityManager.cs` | 6-value enum for quick-apply preset profiles |
+| `InputAction` | `AdaptiveInputManager.cs` | Abstract game actions decoupled from physical inputs (Throttle, Pitch, Roll, Yaw, …) |
+| `AxisSettings` | `AdaptiveInputManager.cs` | Per-axis dead-zone, sensitivity, and curve-shape settings |
+| `ITTSEngine` | `ScreenReaderBridge.cs` | `Speak / Stop / IsSpeaking` interface for platform TTS backends |
+| `SpeechPriority` | `ScreenReaderBridge.cs` | 4-level priority queue (`Critical`, `High`, `Medium`, `Low`) |
+| `ColorblindMode` | `ColorblindFilter.cs` | `None` / `Protanopia` / `Deuteranopia` / `Tritanopia` / `Achromatopsia` |
+| `SubtitleEntry` | `SubtitleSystem.cs` | Single subtitle record (text, speaker, colour, duration, localization key) |
+| `HapticStep` / `HapticPattern` | `HapticAccessibility.cs` | `(intensity, duration, pause)` tuple sequence for named haptic patterns |
+| `HUDInfoLevel` | `CognitiveAssistSystem.cs` | `Full` / `Reduced` / `Minimal` information density |
+
+### Architecture
+
+```
+AccessibilityManager (Singleton, DontDestroyOnLoad)
+│   ├── AccessibilityProfile — JSON persistence via PlayerPrefs
+│   ├── ApplyPreset(AccessibilityPreset) — quick-apply 6 presets
+│   ├── SetFeature(key, bool) — runtime feature flag toggle
+│   └── OnProfileChanged / OnFeatureToggled / OnPresetApplied events
+│
+AdaptiveInputManager (Singleton)
+│   ├── GetKey(InputAction) — abstracted key lookup
+│   ├── Remap(action, KeyCode) — runtime remapping + persistence
+│   ├── SetInputMode(InputMode) — Standard / OneHandedLeft / OneHandedRight / Sequential
+│   ├── GetGyroInput() — device-tilt pitch+roll for one-handed play
+│   ├── ProcessPitch/Roll/Yaw(raw) — dead-zone + curve shaping
+│   └── ProcessBoost/Brake(down, held) — hold-vs-toggle logic
+│
+ScreenReaderBridge (Singleton)
+│   ├── Announce(text, SpeechPriority) — priority queue, interrupts lower-priority
+│   ├── ReportFocus(label, type, state) — UI focus tracking + earcon
+│   ├── AnnounceNavigation(screenName) — screen transition announcements
+│   └── Platform stubs: ConsoleTTSEngine / IOSVoiceOverEngine / AndroidTalkBackEngine / WindowsNarratorEngine
+│
+ColorblindFilter (Singleton)
+│   ├── SetMode(ColorblindMode) — updates post-processing shader matrix
+│   ├── SetFilterMode(Simulate|Correct) — testing vs. assistance toggle
+│   ├── SetIntensity(0–1) — blend between original and corrected colours
+│   ├── ResolveColor(name, original) — custom palette + default swap rules
+│   └── RecolourUI(root) — recolours all Graphic components under a transform
+│
+SubtitleSystem (Singleton)
+│   ├── ShowSubtitle(entry) — FIFO queue with auto-duration calculation
+│   ├── ShowSoundDescription(text) — closed-caption ambient descriptions
+│   ├── SetPosition(Top|Center|Bottom) — repositions panel anchors
+│   └── Localization integration via SWEF.Localization.LocalizationManager
+│
+UIScalingSystem (Singleton)
+│   ├── SetGlobalScale(0.5–3.0) — applies to all CanvasScaler instances
+│   ├── SuggestScaleForDPI() — DPI-aware recommendation
+│   ├── SetTextSizeLevel(0–4) — +0/25/50/75/100% text enlargement
+│   ├── SetFocus(target) — pulsing Outline focus highlight
+│   └── SetReducedMotion → propagates to SWEF.UI.AccessibilityManager
+│
+HapticAccessibility (Singleton)
+│   ├── Play(patternName) — plays registered pattern by name
+│   ├── RegisterPattern(HapticPattern) — custom pattern registration
+│   ├── OnAudioEvent(name, amplitude) — audio-to-haptic conversion
+│   └── 9 built-in patterns in pattern library
+│
+CognitiveAssistSystem (Singleton)
+│   ├── UpdateSimplifiedFlight(altitude, speed) → (throttleDelta, pitchDelta)
+│   ├── SetGameSpeed(0.25–1.0) — snaps to allowed values, sets Time.timeScale
+│   ├── SetInfoLevel(Full|Reduced|Minimal) — shows/hides HUD element groups
+│   ├── TriggerReminder(key, message) — cooldown-gated reminders via ScreenReaderBridge
+│   ├── TryForcePause() / ForceResume() — pause-anywhere support
+│   └── RecordDeath/Retry → EvaluateAutoDifficulty → OnDifficultyAdjusted
+```
+
+### Integration Points
+
+| Phase 34 Script | Integrates With |
+|----------------|----------------|
+| `AccessibilityManager` | All 7 other Accessibility scripts — broadcasts `OnProfileChanged` |
+| `AdaptiveInputManager` | `Flight/FlightController.cs` — wraps flight input |
+| `ScreenReaderBridge` | `Audio/` spatial audio (Phase 28); `UI/` canvas elements |
+| `ColorblindFilter` | Camera post-processing pipeline; `UI/` Graphic components |
+| `SubtitleSystem` | `Localization/LocalizationManager` (Phase 30) — localised subtitle text |
+| `UIScalingSystem` | `UI/AccessibilityManager` (Phase 16) — reduced-motion propagation; all `CanvasScaler` instances |
+| `HapticAccessibility` | `Haptic/HapticManager` (Phase 18) — extends existing haptic system |
+| `CognitiveAssistSystem` | `ScreenReaderBridge` — reminder announcements; `Flight/` flight controller |
+
+### WCAG 2.1 AA Alignment
+
+| Feature | WCAG Criterion |
+|---------|----------------|
+| Subtitle auto-duration (21 cps) | 1.2.2 Captions (Prerecorded) |
+| Background opacity ≥ 60% | 1.4.3 Contrast (Minimum) |
+| Focus highlight (thick outline + pulse) | 2.4.7 Focus Visible |
+| Reduced motion mode | 2.3.3 Animation from Interactions |
+| Large text mode (+25–100%) | 1.4.4 Resize Text |
+| Minimum touch target 88 px | 2.5.5 Target Size |
+| DPI-aware UI scaling | 1.4.10 Reflow |
