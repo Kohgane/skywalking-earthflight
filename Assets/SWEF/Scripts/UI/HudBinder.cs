@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using SWEF.Flight;
+using SWEF.Audio;
 
 namespace SWEF.UI
 {
@@ -22,11 +23,16 @@ namespace SWEF.UI
         [SerializeField] private Text altitudeText;       // Switch to TMP_Text if using TextMeshPro
         [SerializeField] private Button cameraCycleButton;
 
+        [Header("Phase 28 — Spatial Audio (optional)")]
+        [SerializeField] private Text machNumberText;
+        [SerializeField] private SonicBoomController sonicBoomController;
+
         private void Awake()
         {
             if (flight == null)   flight   = FindFirstObjectByType<FlightController>();
             if (altitude == null) altitude = FindFirstObjectByType<AltitudeController>();
             if (cameraController == null) cameraController = FindFirstObjectByType<CameraController>();
+            if (sonicBoomController == null) sonicBoomController = FindFirstObjectByType<SonicBoomController>();
 
             if (throttleSlider != null)
                 throttleSlider.onValueChanged.AddListener(OnThrottle);
@@ -53,6 +59,9 @@ namespace SWEF.UI
         {
             if (altitudeText != null && altitude != null)
                 altitudeText.text = $"ALT {altitude.CurrentAltitudeMeters:0} m";
+
+            if (machNumberText != null && sonicBoomController != null)
+                machNumberText.text = $"M {sonicBoomController.CurrentMach:F2}";
         }
 
         private void OnThrottle(float v)
