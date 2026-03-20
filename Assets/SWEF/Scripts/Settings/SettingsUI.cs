@@ -65,6 +65,11 @@ namespace SWEF.Settings
         [SerializeField] private Toggle adaptiveQualityToggle;
         [SerializeField] private Toggle diagnosticsToggle;
 
+        [Header("Phase 30 — Localization")]
+        [SerializeField] private Button     languageButton;
+        [SerializeField] private Text       languageButtonLabel;
+        [SerializeField] private GameObject localizationPanel;
+
         [Header("Ref")]
         [SerializeField] private SettingsManager settings;
 
@@ -175,6 +180,12 @@ namespace SWEF.Settings
                 adaptiveQualityToggle.onValueChanged.AddListener(OnAdaptiveQualityToggleChanged);
             if (diagnosticsToggle != null)
                 diagnosticsToggle.onValueChanged.AddListener(OnDiagnosticsToggleChanged);
+
+            // Phase 30 — Localization
+            if (languageButton != null)
+                languageButton.onClick.AddListener(OpenLocalizationPanel);
+            if (localizationPanel != null)
+                localizationPanel.SetActive(false);
         }
 
         private void OnEnable()
@@ -182,12 +193,14 @@ namespace SWEF.Settings
             if (settings != null)
                 settings.OnSettingsChanged += RefreshUI;
             UpdateXRVisibility();
+            SWEF.Localization.LocalizationManager.OnLanguageChanged += OnLanguageChanged;
         }
 
         private void OnDisable()
         {
             if (settings != null)
                 settings.OnSettingsChanged -= RefreshUI;
+            SWEF.Localization.LocalizationManager.OnLanguageChanged -= OnLanguageChanged;
         }
 
         private void Start()
@@ -233,6 +246,9 @@ namespace SWEF.Settings
             if (adaptiveQualityToggle != null) adaptiveQualityToggle.isOn = settings.AdaptiveQuality;
             if (diagnosticsToggle     != null) diagnosticsToggle.isOn     = settings.DiagnosticsHUD;
             _ignoreCallbacks = false;
+
+            // Phase 30 — update language button label
+            RefreshLanguageLabel();
         }
 
         // ── Callbacks ────────────────────────────────────────────────────────────
@@ -415,6 +431,28 @@ namespace SWEF.Settings
             var hud = FindFirstObjectByType<SWEF.Performance.RuntimeDiagnosticsHUD>();
             hud?.ToggleVisibility();
 #endif
+        }
+
+        // ── Phase 30 — Localization Callbacks ───────────────────────────────────
+
+        private void OpenLocalizationPanel()
+        {
+            if (localizationPanel != null)
+            {
+                localizationPanel.SetActive(true);
+                var locUI = localizationPanel.GetComponent<SWEF.Localization.LocalizationUI>();
+                locUI?.OpenPanel();
+            }
+        }
+
+        private void OnLanguageChanged(SystemLanguage _) => RefreshLanguageLabel();
+
+        private void RefreshLanguageLabel()
+        {
+            if (languageButtonLabel == null) return;
+            var mgr = SWEF.Localization.LocalizationManager.Instance;
+            SystemLanguage lang = mgr != null ? mgr.CurrentLanguage : SystemLanguage.English;
+            languageButtonLabel.text = SWEF.Localization.LocalizationManager.GetNativeName(lang);
         }
     }
 }

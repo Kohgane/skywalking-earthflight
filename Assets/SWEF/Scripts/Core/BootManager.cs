@@ -35,7 +35,7 @@ namespace SWEF.Core
 
         private IEnumerator Start()
         {
-            Debug.Log("[SWEF] Boot sequence started — Phase 29: Cloud Rendering & Remote Streaming");
+            Debug.Log("[SWEF] Boot sequence started — Phase 30: Localization & Multi-Language Support");
 
             loadingScreen?.Show();
 
@@ -156,6 +156,14 @@ namespace SWEF.Core
             {
                 cloudRendering.Initialize();
                 Debug.Log("[SWEF] Cloud rendering system initialized");
+            }
+
+            // Phase 30 — Localization initialization
+            var localization = FindFirstObjectByType<SWEF.Localization.LocalizationManager>();
+            if (localization != null)
+            {
+                localization.Initialize();
+                Debug.Log($"[SWEF] Localization initialized — language: {localization.CurrentLanguage}");
             }
 
             SceneManager.LoadScene(worldSceneName);

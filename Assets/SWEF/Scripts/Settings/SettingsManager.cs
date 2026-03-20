@@ -109,6 +109,31 @@ namespace SWEF.Settings
         /// <summary>Preferred cloud server region (e.g. "auto", "US-East").</summary>
         public string CloudServerRegion     { get; private set; } = DefaultCloudServerRegion;
 
+        // ── Phase 30 — Localization settings ────────────────────────────────────
+        private const string KeySelectedLanguage = "SWEF_Language";
+
+        /// <summary>
+        /// Selected UI language. Getting returns the value persisted in PlayerPrefs.
+        /// Setting also switches <see cref="SWEF.Localization.LocalizationManager.CurrentLanguage"/>.
+        /// </summary>
+        public SystemLanguage SelectedLanguage
+        {
+            get
+            {
+                string saved = PlayerPrefs.GetString(KeySelectedLanguage, SystemLanguage.English.ToString());
+                return System.Enum.TryParse(saved, out SystemLanguage parsed) ? parsed : SystemLanguage.English;
+            }
+            set
+            {
+                PlayerPrefs.SetString(KeySelectedLanguage, value.ToString());
+                PlayerPrefs.Save();
+                var locMgr = SWEF.Localization.LocalizationManager.Instance
+                             ?? UnityEngine.Object.FindFirstObjectByType<SWEF.Localization.LocalizationManager>();
+                if (locMgr != null) locMgr.CurrentLanguage = value;
+                OnSettingsChanged?.Invoke();
+            }
+        }
+
         // ── Phase 26 — Performance settings ─────────────────────────────────────
         public const bool DefaultAdaptiveQuality = true;
         public const bool DefaultDiagnosticsHUD  = false;
