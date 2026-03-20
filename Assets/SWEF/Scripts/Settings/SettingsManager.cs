@@ -50,6 +50,24 @@ namespace SWEF.Settings
         /// <summary>Raised when the haptic intensity setting changes.</summary>
         public static event Action<float> OnHapticIntensityChanged;
 
+        // ── Phase 27 — Terrain settings ──────────────────────────────────────────
+        public const bool  DefaultTerrainEnabled       = true;
+        public const int   DefaultTerrainLODQuality    = 1;
+        public const float DefaultTerrainRenderDistance = 20000f;
+
+        private const string KeyTerrainEnabled         = "SWEF_TerrainEnabled";
+        private const string KeyTerrainLODQuality      = "SWEF_TerrainLODQuality";
+        private const string KeyTerrainRenderDistance  = "SWEF_TerrainRenderDistance";
+
+        /// <summary>Whether procedural terrain generation is enabled.</summary>
+        public bool  TerrainEnabled        { get; private set; } = DefaultTerrainEnabled;
+
+        /// <summary>Terrain LOD quality preset (0 = lowest … 3 = highest).</summary>
+        public int   TerrainLODQuality     { get; private set; } = DefaultTerrainLODQuality;
+
+        /// <summary>Maximum terrain render distance in metres.</summary>
+        public float TerrainRenderDistance { get; private set; } = DefaultTerrainRenderDistance;
+
         // ── Phase 26 — Performance settings ─────────────────────────────────────
         public const bool DefaultAdaptiveQuality = true;
         public const bool DefaultDiagnosticsHUD  = false;
@@ -112,6 +130,9 @@ namespace SWEF.Settings
             HapticIntensity      = PlayerPrefs.GetFloat(KeyHapticIntensity, DefaultHapticIntensity);
             AdaptiveQuality      = PlayerPrefs.GetInt(KeyAdaptiveQuality, DefaultAdaptiveQuality ? 1 : 0) == 1;
             DiagnosticsHUD       = PlayerPrefs.GetInt(KeyDiagnosticsHUD,  DefaultDiagnosticsHUD  ? 1 : 0) == 1;
+            TerrainEnabled       = PlayerPrefs.GetInt(KeyTerrainEnabled,       DefaultTerrainEnabled       ? 1 : 0) == 1;
+            TerrainLODQuality    = PlayerPrefs.GetInt(KeyTerrainLODQuality,    DefaultTerrainLODQuality);
+            TerrainRenderDistance = PlayerPrefs.GetFloat(KeyTerrainRenderDistance, DefaultTerrainRenderDistance);
 
             // Phase 10 — override with SaveManager values when present
             if (_saveManager != null && _saveManager.HasSaveFile())
@@ -141,6 +162,9 @@ namespace SWEF.Settings
             PlayerPrefs.SetFloat(KeyHapticIntensity,  HapticIntensity);
             PlayerPrefs.SetInt(KeyAdaptiveQuality,    AdaptiveQuality ? 1 : 0);
             PlayerPrefs.SetInt(KeyDiagnosticsHUD,     DiagnosticsHUD  ? 1 : 0);
+            PlayerPrefs.SetInt(KeyTerrainEnabled,          TerrainEnabled       ? 1 : 0);
+            PlayerPrefs.SetInt(KeyTerrainLODQuality,       TerrainLODQuality);
+            PlayerPrefs.SetFloat(KeyTerrainRenderDistance, TerrainRenderDistance);
             PlayerPrefs.Save();
 
             // Phase 10 — mirror to SaveManager
@@ -172,6 +196,9 @@ namespace SWEF.Settings
             HapticIntensity      = DefaultHapticIntensity;
             AdaptiveQuality      = DefaultAdaptiveQuality;
             DiagnosticsHUD       = DefaultDiagnosticsHUD;
+            TerrainEnabled       = DefaultTerrainEnabled;
+            TerrainLODQuality    = DefaultTerrainLODQuality;
+            TerrainRenderDistance = DefaultTerrainRenderDistance;
             Save();
         }
 
@@ -211,6 +238,17 @@ namespace SWEF.Settings
         /// <summary>Sets whether the diagnostics HUD is enabled.</summary>
         public void SetDiagnosticsHUD(bool b) { DiagnosticsHUD = b; }
 
+        // ── Phase 27 setters ─────────────────────────────────────────────────────
+
+        /// <summary>Sets whether procedural terrain generation is enabled.</summary>
+        public void SetTerrainEnabled(bool b) { TerrainEnabled = b; }
+
+        /// <summary>Sets the terrain LOD quality preset (0–3).</summary>
+        public void SetTerrainLODQuality(int v) { TerrainLODQuality = Mathf.Clamp(v, 0, 3); }
+
+        /// <summary>Sets the maximum terrain render distance in metres.</summary>
+        public void SetTerrainRenderDistance(float v) { TerrainRenderDistance = Mathf.Clamp(v, 1000f, 100000f); }
+
         // ── Internal ─────────────────────────────────────────────────────────
         private void ApplyAll()
         {
@@ -226,6 +264,11 @@ namespace SWEF.Settings
             var aq = FindFirstObjectByType<SWEF.Performance.AdaptiveQualityController>();
             if (aq != null)
                 aq.AutoAdjustEnabled = AdaptiveQuality;
+
+            // Phase 27 — push terrain settings
+            var terrainGen = FindFirstObjectByType<SWEF.Terrain.ProceduralTerrainGenerator>();
+            if (terrainGen != null)
+                terrainGen.gameObject.SetActive(TerrainEnabled);
         }
     }
 }
