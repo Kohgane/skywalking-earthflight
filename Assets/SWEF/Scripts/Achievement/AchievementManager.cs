@@ -1,103 +1,39 @@
+using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
-using SWEF.Flight;
 
 namespace SWEF.Achievement
 {
     /// <summary>
-    /// Tracks and awards achievements based on flight milestones.
-    /// Persists unlocked achievements in PlayerPrefs.
+    /// Central achievement manager for Phase 31.
+    /// Replaces the earlier PlayerPrefs-based implementation with a JSON-persisted,
+    /// ScriptableObject-driven system.
     /// </summary>
     public class AchievementManager : MonoBehaviour
     {
-        // ── Singleton ────────────────────────────────────────────────────────────
+        // ── Singleton ─────────────────────────────────────────────────────────────
+        /// <summary>Singleton instance.</summary>
         public static AchievementManager Instance { get; private set; }
 
-        // ── Achievement definition ────────────────────────────────────────────────
-        /// <summary>Metadata for a single achievement.</summary>
+        // ── Events ────────────────────────────────────────────────────────────────
+        /// <summary>Fired whenever a new achievement is unlocked.</summary>
+        public System.Action<AchievementDefinition> OnAchievementUnlocked;
+
+        // ── Internal state ────────────────────────────────────────────────────────
+        private Dictionary<string, AchievementDefinition> _definitions =
+            new Dictionary<string, AchievementDefinition>();
+
+        private Dictionary<string, AchievementState> _states =
+            new Dictionary<string, AchievementState>();
+
+        private static readonly string SaveFileName = "achievements.json";
+
+        // ── Serialization wrapper ─────────────────────────────────────────────────
         [System.Serializable]
-        public struct AchievementDef
+        private class SaveData
         {
-            public string id;
-            public string title;
-            public string description;
-            public string emoji;
+            public List<AchievementState> states = new List<AchievementState>();
         }
-
-        /// <summary>All achievable milestones in the game.</summary>
-        public static readonly AchievementDef[] Definitions = new AchievementDef[]
-        {
-            new AchievementDef { id = "first_flight",     title = "First Flight ✈️",        description = "Complete your first flight",              emoji = "✈️" },
-            new AchievementDef { id = "reach_10km",       title = "Sky High 🌤️",            description = "Reach 10,000 meters altitude",            emoji = "🌤️" },
-            new AchievementDef { id = "reach_karman",     title = "Edge of Space 🌍",        description = "Cross the Kármán line at 100km",          emoji = "🌍" },
-            new AchievementDef { id = "reach_120km",      title = "Space Pioneer 🚀",        description = "Reach 120,000 meters",                    emoji = "🚀" },
-            new AchievementDef { id = "mach1",            title = "Sound Barrier 💥",        description = "Break the sound barrier (Mach 1)",        emoji = "💥" },
-            new AchievementDef { id = "orbital_speed",    title = "Orbital Velocity ⚡",     description = "Reach orbital speed (7,900 m/s)",         emoji = "⚡" },
-            new AchievementDef { id = "first_teleport",   title = "World Traveler 🗺️",      description = "Teleport to a new location",              emoji = "🗺️" },
-            new AchievementDef { id = "first_screenshot", title = "Photographer 📸",         description = "Take your first screenshot",              emoji = "📸" },
-            // Phase 17 — Replay achievements
-            new AchievementDef { id = "first_ghost_race", title = "Ghost Hunter 👻",         description = "Complete your first ghost race",          emoji = "👻" },
-            new AchievementDef { id = "replay_shared",    title = "Flight Broadcaster 📡",   description = "Share a replay with another player",      emoji = "📡" },
-            // Phase 18 — Cinema achievements
-            new AchievementDef { id = "first_photo",             title = "Photographer Pro 📷",       description = "Capture your first photo in Photo Mode",         emoji = "📷" },
-            new AchievementDef { id = "golden_hour_photo",       title = "Golden Hour ✨",             description = "Capture a photo during golden hour",             emoji = "✨" },
-            new AchievementDef { id = "cinematic_path_created",  title = "Film Director 🎬",           description = "Create and save your first cinematic camera path", emoji = "🎬" },
-            new AchievementDef { id = "night_flight",            title = "Night Owl 🦉",               description = "Fly for 5+ minutes during night time",           emoji = "🦉" },
-            // Phase 19 — Weather achievements
-            new AchievementDef { id = "storm_chaser",            title = "Storm Chaser ⛈️",            description = "Fly through 10 thunderstorms",                   emoji = "⛈️" },
-            new AchievementDef { id = "snowbird",                title = "Snowbird ❄️",                description = "Fly in snow conditions",                         emoji = "❄️" },
-            new AchievementDef { id = "clear_skies",             title = "Clear Skies ☀️",             description = "Complete a full flight in perfect clear weather", emoji = "☀️" },
-            // Phase 20 — Multiplayer achievements
-            new AchievementDef { id = "first_multiplayer_flight", title = "Social Flyer 🌐",           description = "Join a multiplayer room for the first time",      emoji = "🌐" },
-            new AchievementDef { id = "social_butterfly",         title = "Social Butterfly 🦋",       description = "Fly with 5+ different players across sessions",   emoji = "🦋" },
-            new AchievementDef { id = "race_winner",              title = "Race Winner 🏆",             description = "Win a multiplayer altitude race",                 emoji = "🏆" },
-            new AchievementDef { id = "race_participant_10",      title = "Veteran Racer 🎽",           description = "Participate in 10 multiplayer races",             emoji = "🎽" },
-            new AchievementDef { id = "ping_master",              title = "Ping Master 📡",             description = "Send 50 pings to other players",                  emoji = "📡" },
-        };
-
-        // ── Inspector refs ───────────────────────────────────────────────────────
-        [Header("Refs")]
-        [SerializeField] private AltitudeController altitudeSource;
-        [SerializeField] private FlightController flight;
-
-        [Header("Phase 18 — Cinema")]
-        [SerializeField] private SWEF.Cinema.TimeOfDayController timeOfDayController;
-
-        [Header("Phase 19 — Weather")]
-        [Tooltip("WeatherStateManager reference (auto-resolved if null).")]
-        [SerializeField] private SWEF.Weather.WeatherStateManager weatherStateManager;
-
-        // ── Events ───────────────────────────────────────────────────────────────
-        /// <summary>Fired when a new achievement is unlocked.</summary>
-        public event System.Action<AchievementDef> OnAchievementUnlocked;
-
-        // ── State ────────────────────────────────────────────────────────────────
-        private bool  _firstFrameDone;
-        private float _nightFlightSeconds;
-        private int   _thunderstormCount;
-        private bool  _inThunderstorm;
-        private bool  _clearFlightActive;
-
-        // Phase 20 — Multiplayer counters (persisted via PlayerPrefs)
-        private const string KEY_UNIQUE_PLAYERS = "SWEF_MP_UniquePlayers";
-        private const string KEY_RACE_COUNT     = "SWEF_MP_RaceCount";
-        private const string KEY_PING_COUNT     = "SWEF_MP_PingCount";
-        private int  _raceCount;
-        private int  _pingCount;
-
-        /// <summary>Number of achievements the player has unlocked.</summary>
-        public int UnlockedCount
-        {
-            get
-            {
-                int count = 0;
-                foreach (var def in Definitions)
-                    if (IsUnlocked(def.id)) count++;
-                return count;
-            }
-        }
-
-        /// <summary>Total number of achievements.</summary>
-        public int TotalCount => Definitions.Length;
 
         // ── Unity lifecycle ───────────────────────────────────────────────────────
         private void Awake()
@@ -108,221 +44,220 @@ namespace SWEF.Achievement
                 return;
             }
             Instance = this;
+            DontDestroyOnLoad(gameObject);
 
-            if (altitudeSource == null)
-                altitudeSource = FindFirstObjectByType<AltitudeController>();
-            if (flight == null)
-                flight = FindFirstObjectByType<FlightController>();
-            if (timeOfDayController == null)
-                timeOfDayController = FindFirstObjectByType<SWEF.Cinema.TimeOfDayController>();
-            if (weatherStateManager == null)
-                weatherStateManager = SWEF.Weather.WeatherStateManager.Instance != null
-                    ? SWEF.Weather.WeatherStateManager.Instance
-                    : FindFirstObjectByType<SWEF.Weather.WeatherStateManager>();
-
-            // Phase 20 — Load persisted multiplayer counters
-            _raceCount = PlayerPrefs.GetInt(KEY_RACE_COUNT, 0);
-            _pingCount  = PlayerPrefs.GetInt(KEY_PING_COUNT, 0);
-
-            // Subscribe to multiplayer events
-            var roomManager = SWEF.Multiplayer.RoomManager.Instance != null
-                ? SWEF.Multiplayer.RoomManager.Instance
-                : FindFirstObjectByType<SWEF.Multiplayer.RoomManager>();
-            if (roomManager != null)
-                roomManager.OnRoomJoined += _ => NotifyMultiplayerRoomJoined();
-
-            var race = SWEF.Multiplayer.MultiplayerRace.Instance != null
-                ? SWEF.Multiplayer.MultiplayerRace.Instance
-                : FindFirstObjectByType<SWEF.Multiplayer.MultiplayerRace>();
-            if (race != null)
-            {
-                race.OnRaceStateChanged += state =>
-                {
-                    if (state == SWEF.Multiplayer.RaceState.Racing)
-                        NotifyRaceStarted();
-                };
-                race.OnRaceFinished += results =>
-                {
-                    if (results != null && results.Count > 0)
-                    {
-                        var localId = FindFirstObjectByType<SWEF.Multiplayer.MultiplayerManager>()?.LocalPlayerId ?? "";
-                        if (!string.IsNullOrEmpty(localId) && results[0].playerId == localId)
-                            TryUnlock("race_winner");
-                    }
-                };
-            }
-
-            var chat = SWEF.Multiplayer.ProximityChat.Instance != null
-                ? SWEF.Multiplayer.ProximityChat.Instance
-                : FindFirstObjectByType<SWEF.Multiplayer.ProximityChat>();
-            if (chat != null)
-                chat.OnPingReceived += (_, __) => NotifyPingSent();
+            LoadDefinitions();
+            LoadStates();
         }
 
-        private void Update()
+        private void OnApplicationPause(bool pause)
         {
-            // first_flight: unlock on first Update (if scene is loaded, player is flying)
-            if (!_firstFrameDone)
+            if (pause) SaveStates();
+        }
+
+        private void OnApplicationQuit()
+        {
+            SaveStates();
+        }
+
+        // ── Definition loading ────────────────────────────────────────────────────
+        private void LoadDefinitions()
+        {
+            var defs = Resources.LoadAll<AchievementDefinition>("Achievements");
+            foreach (var def in defs)
             {
-                _firstFrameDone = true;
-                TryUnlock("first_flight");
-            }
-
-            float alt   = altitudeSource != null ? altitudeSource.CurrentAltitudeMeters : 0f;
-            float speed = flight          != null ? flight.CurrentSpeedMps               : 0f;
-
-            if (alt   >= 10000f)  TryUnlock("reach_10km");
-            if (alt   >= 100000f) TryUnlock("reach_karman");
-            if (alt   >= 120000f) TryUnlock("reach_120km");
-            if (speed >= 343f)    TryUnlock("mach1");
-            if (speed >= 7900f)   TryUnlock("orbital_speed");
-
-            // Phase 18 — night_flight: accumulate time flying during night
-            if (timeOfDayController != null && timeOfDayController.IsNight && speed > 0f)
-            {
-                _nightFlightSeconds += Time.deltaTime;
-                if (_nightFlightSeconds >= 300f) // 5 minutes
-                    TryUnlock("night_flight");
-            }
-
-            // Phase 19 — Weather achievements
-            if (weatherStateManager != null && speed > 0f)
-            {
-                var cond = weatherStateManager.ActiveWeather?.condition ?? SWEF.Weather.WeatherCondition.Clear;
-
-                // Storm Chaser: fly through thunderstorms
-                if (cond == SWEF.Weather.WeatherCondition.Thunderstorm)
+                if (string.IsNullOrEmpty(def.id))
                 {
-                    if (!_inThunderstorm)
+                    Debug.LogWarning($"[SWEF] AchievementManager: Definition '{def.name}' has no id — skipped.");
+                    continue;
+                }
+                _definitions[def.id] = def;
+            }
+            Debug.Log($"[SWEF] AchievementManager: {_definitions.Count} achievement definitions loaded.");
+        }
+
+        // ── Persistence ───────────────────────────────────────────────────────────
+        private string SavePath => Path.Combine(Application.persistentDataPath, SaveFileName);
+
+        private void LoadStates()
+        {
+            if (File.Exists(SavePath))
+            {
+                try
+                {
+                    string json = File.ReadAllText(SavePath);
+                    var saveData = JsonUtility.FromJson<SaveData>(json);
+                    if (saveData?.states != null)
                     {
-                        _inThunderstorm = true;
-                        _thunderstormCount++;
-                        if (_thunderstormCount >= 10)
-                            TryUnlock("storm_chaser");
+                        foreach (var state in saveData.states)
+                            _states[state.achievementId] = state;
                     }
                 }
-                else
+                catch (System.Exception ex)
                 {
-                    _inThunderstorm = false;
+                    Debug.LogWarning($"[SWEF] AchievementManager: Failed to load save data — {ex.Message}");
                 }
+            }
 
-                // Snowbird: fly in any snow condition
-                if (cond == SWEF.Weather.WeatherCondition.Snow ||
-                    cond == SWEF.Weather.WeatherCondition.HeavySnow)
-                    TryUnlock("snowbird");
+            // Ensure every definition has a matching state entry.
+            foreach (var kvp in _definitions)
+            {
+                if (!_states.ContainsKey(kvp.Key))
+                    _states[kvp.Key] = new AchievementState { achievementId = kvp.Key };
 
-                // Clear Skies: start tracking a clear flight
-                if (cond == SWEF.Weather.WeatherCondition.Clear)
-                    _clearFlightActive = true;
-                else
-                    _clearFlightActive = false;
+                _states[kvp.Key].SetTarget(kvp.Value.targetValue);
+            }
+        }
+
+        private void SaveStates()
+        {
+            try
+            {
+                var saveData = new SaveData();
+                foreach (var state in _states.Values)
+                    saveData.states.Add(state);
+
+                string json = JsonUtility.ToJson(saveData, prettyPrint: true);
+                File.WriteAllText(SavePath, json);
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning($"[SWEF] AchievementManager: Failed to save data — {ex.Message}");
             }
         }
 
         // ── Public API ────────────────────────────────────────────────────────────
-        /// <summary>
-        /// Call when a flight session ends in clear weather to award the "Clear Skies" achievement.
-        /// Invoked by <see cref="SWEF.Core.FlightJournal"/> on session end.
-        /// </summary>
-        public void NotifyFlightEndedInClearSkies()
-        {
-            if (_clearFlightActive)
-                TryUnlock("clear_skies");
-        }
-
-        /// <summary>Returns true if the achievement with the given id has been unlocked.</summary>
-        public bool IsUnlocked(string id) =>
-            PlayerPrefs.GetInt($"SWEF_ACH_{id}", 0) == 1;
-
-        // ── Phase 20 — Multiplayer Achievement Notifiers ──────────────────────────
 
         /// <summary>
-        /// Call when the local player joins a multiplayer room for the first time.
-        /// Awards <c>first_multiplayer_flight</c>.
+        /// Reports incremental progress for an achievement.
+        /// Adds <paramref name="value"/> to the current accumulated value.
         /// </summary>
-        public void NotifyMultiplayerRoomJoined()
+        public void ReportProgress(string achievementId, float value)
         {
-            TryUnlock("first_multiplayer_flight");
+            if (!_states.TryGetValue(achievementId, out var state)) return;
+            if (state.unlocked) return;
 
-            // Track unique player sessions for social_butterfly
-            int sessions = PlayerPrefs.GetInt(KEY_UNIQUE_PLAYERS, 0) + 1;
-            PlayerPrefs.SetInt(KEY_UNIQUE_PLAYERS, sessions);
-            PlayerPrefs.Save();
-            if (sessions >= 5)
-                TryUnlock("social_butterfly");
+            state.currentValue += value;
+            CheckUnlock(achievementId, state);
         }
 
         /// <summary>
-        /// Call when the local player participates in a multiplayer race start.
-        /// Awards <c>race_participant_10</c> after 10 races.
+        /// Sets the absolute progress value for an achievement.
+        /// Only increases — will not decrease an already higher value.
         /// </summary>
-        public void NotifyRaceStarted()
+        public void SetProgress(string achievementId, float absoluteValue)
         {
-            _raceCount++;
-            PlayerPrefs.SetInt(KEY_RACE_COUNT, _raceCount);
-            PlayerPrefs.Save();
-            if (_raceCount >= 10)
-                TryUnlock("race_participant_10");
+            if (!_states.TryGetValue(achievementId, out var state)) return;
+            if (state.unlocked) return;
+
+            state.currentValue = Mathf.Max(state.currentValue, absoluteValue);
+            CheckUnlock(achievementId, state);
         }
 
-        /// <summary>
-        /// Call when the local player sends a ping to another player.
-        /// Awards <c>ping_master</c> after 50 pings.
-        /// </summary>
-        public void NotifyPingSent()
+        /// <summary>Returns whether the achievement with the given id has been unlocked.</summary>
+        public bool IsUnlocked(string achievementId)
         {
-            _pingCount++;
-            PlayerPrefs.SetInt(KEY_PING_COUNT, _pingCount);
-            PlayerPrefs.Save();
-            if (_pingCount >= 50)
-                TryUnlock("ping_master");
+            return _states.TryGetValue(achievementId, out var state) && state.unlocked;
         }
 
-
-
-        /// <summary>
-        /// Attempts to unlock the achievement. Returns true if it was newly unlocked,
-        /// false if it was already unlocked or the id is not found.
-        /// </summary>
-        public bool TryUnlock(string id)
+        /// <summary>Returns normalised progress [0, 1] for the given achievement.</summary>
+        public float GetProgress01(string achievementId)
         {
-            if (IsUnlocked(id)) return false;
+            return _states.TryGetValue(achievementId, out var state) ? state.Progress01 : 0f;
+        }
 
-            // Find definition
-            AchievementDef? found = null;
-            foreach (var def in Definitions)
+        /// <summary>Returns the <see cref="AchievementDefinition"/> for a given id, or null.</summary>
+        public AchievementDefinition GetDefinition(string achievementId)
+        {
+            return _definitions.TryGetValue(achievementId, out var def) ? def : null;
+        }
+
+        /// <summary>Returns a snapshot list of all achievement states.</summary>
+        public List<AchievementState> GetAllStates()
+        {
+            return new List<AchievementState>(_states.Values);
+        }
+
+        /// <summary>Returns the total XP earned from unlocked achievements.</summary>
+        public int GetTotalXP()
+        {
+            int xp = 0;
+            foreach (var kvp in _states)
             {
-                if (def.id == id)
-                {
-                    found = def;
-                    break;
-                }
+                if (kvp.Value.unlocked && _definitions.TryGetValue(kvp.Key, out var def))
+                    xp += def.xpReward;
+            }
+            return xp;
+        }
+
+        /// <summary>
+        /// Resets all achievement progress. Intended for debug/development use only.
+        /// </summary>
+        public void ResetAll()
+        {
+            _states.Clear();
+            foreach (var kvp in _definitions)
+            {
+                var state = new AchievementState { achievementId = kvp.Key };
+                state.SetTarget(kvp.Value.targetValue);
+                _states[kvp.Key] = state;
+            }
+            SaveStates();
+            Debug.Log("[SWEF] AchievementManager: All achievement progress reset.");
+        }
+
+        /// <summary>
+        /// Legacy unlock helper retained for backward compatibility with other systems.
+        /// Prefer <see cref="SetProgress"/> or <see cref="ReportProgress"/> for new code.
+        /// </summary>
+        public bool TryUnlock(string id) => TryUnlockInternal(id);
+
+        // ── Internal helpers ──────────────────────────────────────────────────────
+        private void CheckUnlock(string achievementId, AchievementState state)
+        {
+            if (!_definitions.TryGetValue(achievementId, out var def)) return;
+            if (state.currentValue >= def.targetValue)
+                TryUnlockInternal(achievementId);
+        }
+
+        private bool TryUnlockInternal(string achievementId)
+        {
+            if (IsUnlocked(achievementId)) return false;
+
+            if (!_states.TryGetValue(achievementId, out var state))
+            {
+                // Create on-the-fly for IDs not in definitions (legacy).
+                state = new AchievementState { achievementId = achievementId };
+                _states[achievementId] = state;
             }
 
-            if (found == null)
+            state.unlocked      = true;
+            state.currentValue  = _definitions.TryGetValue(achievementId, out var defRef)
+                ? defRef.targetValue
+                : 1f;
+            state.unlockDateISO = System.DateTime.UtcNow.ToString("o");
+
+            Debug.Log($"[SWEF] Achievement unlocked: {achievementId}");
+
+            if (defRef != null)
             {
-                Debug.LogWarning($"[SWEF] AchievementManager: Unknown achievement id '{id}'.");
-                return false;
+                OnAchievementUnlocked?.Invoke(defRef);
+                SWEF.Audio.AudioManager.Instance?.PlaySFX("AchievementUnlock");
             }
 
-            PlayerPrefs.SetInt($"SWEF_ACH_{id}", 1);
-            PlayerPrefs.Save();
-
-            Debug.Log($"[SWEF] Achievement unlocked: {found.Value.title}");
-            OnAchievementUnlocked?.Invoke(found.Value);
-
-            // Phase 21 — fire achievement_unlocked telemetry
+            // Phase 21 — telemetry
             var dispatcher = SWEF.Analytics.TelemetryDispatcher.Instance;
             if (dispatcher != null)
             {
-                var evt = SWEF.Analytics.TelemetryEventBuilder.Create(SWEF.Analytics.AnalyticsEvents.AchievementUnlocked)
-                    .WithCategory("social")
-                    .WithProperty("achievementId",   id)
-                    .WithProperty("achievementTitle", found.Value.title)
+                var evt = SWEF.Analytics.TelemetryEventBuilder
+                    .Create(SWEF.Analytics.AnalyticsEvents.AchievementUnlocked)
+                    .WithCategory("achievement")
+                    .WithProperty("achievementId", achievementId)
                     .Build();
                 dispatcher.EnqueueEvent(evt);
             }
 
+            SaveStates();
             return true;
         }
     }
