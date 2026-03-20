@@ -2909,3 +2909,171 @@ SettingsManager ───────────► DopplerEffectController.IsE
 | `SWEF_DopplerEnabled` | int (0/1) | 1 | Doppler pitch shift on/off |
 | `SWEF_ReverbEnabled` | int (0/1) | 1 | Environment reverb on/off |
 | `SWEF_AudioQuality` | int (0–2) | 1 | Audio quality (source count cap) |
+
+---
+
+## Phase 29 — Cloud Rendering & Remote Streaming System
+
+### New Scripts (12)
+
+| Script | Namespace | Role |
+|--------|-----------|------|
+| `CloudRendering/CloudRenderingManager.cs` | `SWEF.CloudRendering` | Singleton pipeline manager; toggles local ↔ cloud mode; auto-detects low FPS and suggests cloud mode; exposes `ConnectionStatus` enum |
+| `CloudRendering/StreamingClient.cs` | `SWEF.CloudRendering` | WebSocket client (System.Net.WebSockets); ring-buffer frame queue (3–10 frames); exponential-backoff reconnect (max 5 retries); latency measurement |
+| `CloudRendering/InputStreamEncoder.cs` | `SWEF.CloudRendering` | Captures touch/gyro/button input at 60 Hz; serialises to compact binary; client-side prediction via `InputSnapshot` struct |
+| `CloudRendering/FrameDecoder.cs` | `SWEF.CloudRendering` | Decodes raw/JPEG/PNG frame bytes into RenderTexture; CPU frame interpolation; color-space aware (linear/gamma) |
+| `CloudRendering/LatencyCompensator.cs` | `SWEF.CloudRendering` | Rolling 60-sample latency average; client-side prediction; server-state reconciliation; jitter buffer sizing |
+| `CloudRendering/AdaptiveBitrateController.cs` | `SWEF.CloudRendering` | 5-level quality (Minimum 480p … Ultra 4K); bandwidth estimation from frame arrivals; packet-loss-triggered degradation; 10 s hysteresis upgrade |
+| `CloudRendering/CloudSessionManager.cs` | `SWEF.CloudRendering` | Session lifecycle: create, heartbeat (5 s), end; auth-token management; 30 min idle auto-disconnect; `CloudSessionConfig` inner class |
+| `CloudRendering/HybridRenderingController.cs` | `SWEF.CloudRendering` | `RenderMode` enum (Local/Cloud/Hybrid); 1 s crossfade coroutine; disables world camera when streaming; fallback on disconnect |
+| `CloudRendering/NetworkQualityMonitor.cs` | `SWEF.CloudRendering` | Composite score 0–100 (ping 40 pts + loss 40 pts + BW 20 pts); `NetworkQuality` enum (Good/Fair/Poor/Critical); 1 s update interval |
+| `CloudRendering/CloudRenderingUI.cs` | `SWEF.CloudRendering` | Status dot (green/yellow/red); latency text; bandwidth display; quality dropdown; toggle button; latency warning toast (>100 ms) |
+| `CloudRendering/ServerDiscoveryService.cs` | `SWEF.CloudRendering` | Pings 6 regional HTTP endpoints; selects lowest latency; caches in PlayerPrefs; `CloudServer` struct |
+| `Editor/CloudRenderingDebugWindow.cs` | `SWEF.Editor` | EditorWindow: SWEF → Cloud Rendering Debug; real-time metric bars; network condition simulator; forced quality override |
+
+### Modified Files
+
+| File | Change |
+|------|--------|
+| `Core/BootManager.cs` | Boot log updated to Phase 29; adds `CloudRenderingManager.Initialize()` call before scene load |
+| `Settings/SettingsManager.cs` | Added `CloudRenderingEnabled` (key `SWEF_CloudRendering`), `CloudQualityLevel` (key `SWEF_CloudQuality`), `CloudServerRegion` (key `SWEF_CloudRegion`) with Load/Save/Reset/Apply support |
+| `UI/HudBinder.cs` | Added optional `cloudStatusIndicator`, `cloudLatencyBadge`, `cloudStatusDot` refs; `Update()` shows/hides cloud status and live latency badge based on current render mode |
+
+### Setup Instructions
+
+#### CloudRenderingManager
+1. Create empty GameObject `[CloudRendering]` (Boot scene or persistent).
+2. Attach `CloudRenderingManager` — `DontDestroyOnLoad` handled automatically.
+3. Optionally enable **Enable On Start** in Inspector to activate cloud mode immediately.
+4. Set **Auto Switch FPS Threshold** (default 25 FPS) — the manager logs a suggestion to switch when FPS drops below this value.
+5. Wire `PerformanceManager`, `StreamingClient`, `CloudSessionManager` in Inspector or leave null for auto-find.
+
+#### StreamingClient
+1. Add `StreamingClient` to the `[CloudRendering]` GameObject.
+2. Set **Frame Buffer Size** (3–10, default 5).
+3. Set **Max Retries** (default 5) and **Initial Retry Delay Sec** (default 1 s; doubles each attempt up to 30 s).
+4. `Connect(url)` is called automatically by `CloudSessionManager.CreateSession()`.
+
+#### InputStreamEncoder
+1. Add `InputStreamEncoder` to any persistent GameObject.
+2. Adjust **Send Rate Hz** (default 60). Reduce to 30 on low-end devices.
+3. Input is automatically forwarded to the cloud when `CloudRenderingManager.IsCloudMode` is true.
+
+#### FrameDecoder
+1. Add `FrameDecoder` to any persistent GameObject.
+2. Assign a full-screen `RawImage` to **Display Image** in the Inspector.
+3. Set **Texture Width / Height** to match your target streaming resolution.
+4. Subscribe to `StreamingClient.OnFrameReceived` and call `FrameDecoder.DecodeFrame(data)`.
+
+#### CloudSessionManager
+1. Add `CloudSessionManager` to the `[CloudRendering]` GameObject.
+2. Configure `CloudSessionConfig` in Inspector:
+   - **Server URL** — WebSocket endpoint (e.g. `ws://render-us-east.swef.example.com/ws`).
+   - **Region** — set to `"auto"` to use `ServerDiscoveryService`.
+   - **Max Session Minutes** — idle timeout (default 30 min).
+   - **Auth Token** — leave empty for unauthenticated dev servers.
+
+#### HybridRenderingController
+1. Add `HybridRenderingController` to any persistent GameObject.
+2. Assign **World Camera** (your main scene camera) and **HUD Camera**.
+3. Assign a `CanvasGroup` to **Crossfade Overlay** for the 1-second fade transition.
+4. Assign the `RawImage` used by `FrameDecoder` to **Cloud Frame Display**.
+
+#### ServerDiscoveryService
+1. Add `ServerDiscoveryService` to the `[CloudRendering]` GameObject.
+2. Override the default ping URLs in Inspector to point to your actual endpoints.
+3. `DiscoverServers()` is called automatically when session region is `"auto"`.
+
+#### CloudRenderingUI
+1. Add `CloudRenderingUI` to your HUD Canvas.
+2. Wire UI elements in the Inspector:
+   - **Status Dot** — `Image` component coloured green/yellow/red.
+   - **Status Text** — connection state label.
+   - **Latency Text** — live ping display.
+   - **Bandwidth Text** — estimated Mbps.
+   - **Quality Dropdown** — Auto / Ultra / High / Medium / Low.
+   - **Cloud Toggle Button** — enables/disables cloud mode.
+   - **Latency Warning Toast** — shown when ping > 100 ms.
+
+#### HudBinder — Cloud Status
+1. Assign optional fields in Inspector:
+   - **Cloud Status Indicator** — GameObject shown only in cloud mode.
+   - **Cloud Latency Badge** — `Text` displaying live ping.
+   - **Cloud Status Dot** — `Image` coloured by connection state.
+
+### Architecture Diagram
+
+```
+CloudRenderingManager (singleton, DontDestroyOnLoad)
+      ├── IsCloudMode toggle
+      ├── OnCloudModeChanged  ──►  HybridRenderingController
+      │                            ├── world camera on/off
+      │                            └── 1 s crossfade coroutine
+      ├── OnConnectionStatusChanged ──► CloudRenderingUI (status dot)
+      │                                 └── HudBinder (cloud badge)
+      └── Auto-switch: PerformanceManager.CurrentFps < threshold
+
+CloudSessionManager
+      ├── CreateSession()  ──► StreamingClient.Connect(url)
+      ├── Heartbeat coroutine (every 5 s)
+      └── Idle timeout (30 min) ──► EndSession()
+
+ServerDiscoveryService
+      ├── Ping 6 regional HTTP endpoints (async)
+      ├── Select lowest-latency available server
+      └── Cache in PlayerPrefs + push to CloudSessionManager.Config
+
+StreamingClient (WebSocket)
+      ├── Ring buffer (3–10 frames)
+      ├── OnFrameReceived  ──► FrameDecoder.DecodeFrame()
+      │                         └── Upload to RenderTexture ──► RawImage fullscreen
+      ├── OnLatencyUpdated ──► LatencyCompensator.RecordLatencySample()
+      │                         └── NetworkQualityMonitor.OnLatencyUpdated()
+      └── Reconnect: exponential backoff (max 5 retries)
+
+InputStreamEncoder  (60 Hz)
+      ├── CaptureCurrentInput()  (touch, gyro, buttons, throttle, altitude)
+      └── Encode()  ──► binary packet ──► server
+
+LatencyCompensator
+      ├── Rolling average (60 samples)
+      ├── Client-side prediction
+      └── Jitter buffer sizing (1 frame per 30 ms avg latency)
+
+AdaptiveBitrateController
+      ├── Bandwidth estimation from frame arrival intervals
+      ├── Packet loss  > 2 %  → immediate quality decrease
+      └── 10 s stability  → quality increase attempt
+
+NetworkQualityMonitor (1 s update)
+      ├── Score = ping(40) + loss(40) + bandwidth(20)
+      └── OnNetworkQualityChanged  ──► CloudRenderingUI (status dot)
+
+SettingsManager ──► CloudRenderingManager.Enable/DisableCloudRendering()
+                    CloudSessionManager.Config.region
+```
+
+### Network Requirements
+
+| Quality | Resolution | Min Bandwidth | Recommended Bandwidth |
+|---------|------------|---------------|-----------------------|
+| Minimum | 480p       | 1.5 Mbps      | 2 Mbps                |
+| Low     | 720p       | 3 Mbps        | 5 Mbps                |
+| Medium  | 1080p      | 6 Mbps        | 10 Mbps               |
+| High    | 1440p      | 12 Mbps       | 20 Mbps               |
+| Ultra   | 4K         | 25 Mbps       | 40+ Mbps              |
+
+- Latency below 50 ms: optimal experience
+- Latency 50–100 ms: good; jitter buffer compensates
+- Latency 100–200 ms: fair; warning toast shown in HUD
+- Latency > 200 ms: poor; consider switching to local rendering
+
+### PlayerPrefs Keys (Phase 29)
+
+| Key | Type | Default | Purpose |
+|-----|------|---------|---------|
+| `SWEF_CloudRendering` | int (0/1) | 0 | Whether cloud rendering is enabled |
+| `SWEF_CloudQuality` | int (0–4) | 0 | Quality preset (0=Auto, 1=Ultra … 4=Low) |
+| `SWEF_CloudRegion` | string | "auto" | Preferred cloud server region |
+| `SWEF_CloudBestUrl` | string | "" | Cached best server URL (set by ServerDiscoveryService) |
+| `SWEF_CloudBestRegion` | string | "" | Cached best server region name |

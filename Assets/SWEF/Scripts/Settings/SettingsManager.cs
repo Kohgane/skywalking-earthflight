@@ -91,6 +91,24 @@ namespace SWEF.Settings
         /// <summary>Audio quality preset (0 = Low / 8 sources, 1 = Medium / 16, 2 = High / 32).</summary>
         public int  AudioQuality        { get; private set; } = DefaultAudioQuality;
 
+        // ── Phase 29 — Cloud Rendering settings ─────────────────────────────────
+        public const bool   DefaultCloudRenderingEnabled = false;
+        public const int    DefaultCloudQualityLevel     = 0; // 0=Auto
+        public const string DefaultCloudServerRegion     = "auto";
+
+        private const string KeyCloudRenderingEnabled = "SWEF_CloudRendering";
+        private const string KeyCloudQualityLevel     = "SWEF_CloudQuality";
+        private const string KeyCloudServerRegion     = "SWEF_CloudRegion";
+
+        /// <summary>Whether cloud rendering / remote streaming is enabled.</summary>
+        public bool   CloudRenderingEnabled { get; private set; } = DefaultCloudRenderingEnabled;
+
+        /// <summary>Cloud streaming quality preset (0=Auto, 1=Ultra, 2=High, 3=Medium, 4=Low).</summary>
+        public int    CloudQualityLevel     { get; private set; } = DefaultCloudQualityLevel;
+
+        /// <summary>Preferred cloud server region (e.g. "auto", "US-East").</summary>
+        public string CloudServerRegion     { get; private set; } = DefaultCloudServerRegion;
+
         // ── Phase 26 — Performance settings ─────────────────────────────────────
         public const bool DefaultAdaptiveQuality = true;
         public const bool DefaultDiagnosticsHUD  = false;
@@ -160,6 +178,9 @@ namespace SWEF.Settings
             DopplerEnabled       = PlayerPrefs.GetInt(KeyDopplerEnabled,      DefaultDopplerEnabled      ? 1 : 0) == 1;
             ReverbEnabled        = PlayerPrefs.GetInt(KeyReverbEnabled,       DefaultReverbEnabled       ? 1 : 0) == 1;
             AudioQuality         = PlayerPrefs.GetInt(KeyAudioQuality,        DefaultAudioQuality);
+            CloudRenderingEnabled = PlayerPrefs.GetInt(KeyCloudRenderingEnabled, DefaultCloudRenderingEnabled ? 1 : 0) == 1;
+            CloudQualityLevel    = PlayerPrefs.GetInt(KeyCloudQualityLevel,   DefaultCloudQualityLevel);
+            CloudServerRegion    = PlayerPrefs.GetString(KeyCloudServerRegion, DefaultCloudServerRegion);
 
             // Phase 10 — override with SaveManager values when present
             if (_saveManager != null && _saveManager.HasSaveFile())
@@ -196,6 +217,9 @@ namespace SWEF.Settings
             PlayerPrefs.SetInt(KeyDopplerEnabled,      DopplerEnabled      ? 1 : 0);
             PlayerPrefs.SetInt(KeyReverbEnabled,       ReverbEnabled       ? 1 : 0);
             PlayerPrefs.SetInt(KeyAudioQuality,        AudioQuality);
+            PlayerPrefs.SetInt(KeyCloudRenderingEnabled, CloudRenderingEnabled ? 1 : 0);
+            PlayerPrefs.SetInt(KeyCloudQualityLevel,   CloudQualityLevel);
+            PlayerPrefs.SetString(KeyCloudServerRegion, CloudServerRegion);
             PlayerPrefs.Save();
 
             // Phase 10 — mirror to SaveManager
@@ -234,6 +258,9 @@ namespace SWEF.Settings
             DopplerEnabled       = DefaultDopplerEnabled;
             ReverbEnabled        = DefaultReverbEnabled;
             AudioQuality         = DefaultAudioQuality;
+            CloudRenderingEnabled = DefaultCloudRenderingEnabled;
+            CloudQualityLevel    = DefaultCloudQualityLevel;
+            CloudServerRegion    = DefaultCloudServerRegion;
             Save();
         }
 
@@ -298,6 +325,17 @@ namespace SWEF.Settings
         /// <summary>Sets the audio quality preset (0 = Low, 1 = Medium, 2 = High).</summary>
         public void SetAudioQuality(int v) { AudioQuality = Mathf.Clamp(v, 0, 2); }
 
+        // ── Phase 29 setters ─────────────────────────────────────────────────────
+
+        /// <summary>Sets whether cloud rendering / remote streaming is enabled.</summary>
+        public void SetCloudRenderingEnabled(bool b) { CloudRenderingEnabled = b; }
+
+        /// <summary>Sets the cloud streaming quality preset (0=Auto, 1=Ultra … 4=Low).</summary>
+        public void SetCloudQualityLevel(int v) { CloudQualityLevel = Mathf.Clamp(v, 0, 4); }
+
+        /// <summary>Sets the preferred cloud server region.</summary>
+        public void SetCloudServerRegion(string region) { CloudServerRegion = region ?? DefaultCloudServerRegion; }
+
         // ── Internal ─────────────────────────────────────────────────────────
         private void ApplyAll()
         {
@@ -325,6 +363,20 @@ namespace SWEF.Settings
 
             var reverb = FindFirstObjectByType<SWEF.Audio.EnvironmentReverbController>();
             if (reverb != null) reverb.SetEnabled(ReverbEnabled);
+
+            // Phase 29 — push cloud rendering settings
+            var cloudMgr = FindFirstObjectByType<SWEF.CloudRendering.CloudRenderingManager>();
+            if (cloudMgr != null)
+            {
+                if (CloudRenderingEnabled && !cloudMgr.IsCloudMode)
+                    cloudMgr.EnableCloudRendering();
+                else if (!CloudRenderingEnabled && cloudMgr.IsCloudMode)
+                    cloudMgr.DisableCloudRendering();
+            }
+
+            var sessionMgr = FindFirstObjectByType<SWEF.CloudRendering.CloudSessionManager>();
+            if (sessionMgr != null)
+                sessionMgr.Config.region = CloudServerRegion;
         }
     }
 }

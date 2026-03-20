@@ -35,7 +35,7 @@ namespace SWEF.Core
 
         private IEnumerator Start()
         {
-            Debug.Log("[SWEF] Boot sequence started — Phase 13: Notifications, Rate Prompt & App Lifecycle");
+            Debug.Log("[SWEF] Boot sequence started — Phase 29: Cloud Rendering & Remote Streaming");
 
             loadingScreen?.Show();
 
@@ -149,6 +149,14 @@ namespace SWEF.Core
             var spatialAudio = FindFirstObjectByType<SWEF.Audio.SpatialAudioManager>();
             if (spatialAudio != null)
                 Debug.Log("[SWEF] SpatialAudioManager found — spatial audio engine active");
+
+            // Phase 29 — Cloud rendering initialization
+            var cloudRendering = FindFirstObjectByType<SWEF.CloudRendering.CloudRenderingManager>();
+            if (cloudRendering != null)
+            {
+                cloudRendering.Initialize();
+                Debug.Log("[SWEF] Cloud rendering system initialized");
+            }
 
             SceneManager.LoadScene(worldSceneName);
             Debug.Log($"[SWEF] Scene load requested: {worldSceneName}");
