@@ -339,3 +339,100 @@ CognitiveAssistSystem (Singleton)
 | Large text mode (+25–100%) | 1.4.4 Resize Text |
 | Minimum touch target 88 px | 2.5.5 Target Size |
 | DPI-aware UI scaling | 1.4.10 Reflow |
+
+---
+
+## Phase 35 — Save System & Cloud Sync (세이브 시스템 & 클라우드 동기화)
+
+### New Scripts
+
+| # | File | Namespace | Summary |
+|---|------|-----------|---------|
+| 1 | `SaveSystem/SaveData.cs` | `SWEF.SaveSystem` | Core data types: `ISaveable` interface, `CloudSyncStatus` enum, `SaveSlotInfo`, `SaveFileHeader`, `SavePayload`, `PlayerProgressData`, `SaveFile`, `SaveSystemConstants` |
+| 2 | `SaveSystem/SaveManager.cs` | `SWEF.SaveSystem` | Central singleton manager: 5 save slots (0–2 manual, 3 auto-save, 4 quicksave), ISaveable auto-discovery, GZip compression, AES-256 encryption, SHA-256 checksum, 5-minute auto-save, scene-transition auto-save, full save/load pipeline with pre/post hooks |
+| 3 | `SaveSystem/SaveIntegrityChecker.cs` | `SWEF.SaveSystem` | SHA-256 checksum generation & verification, full-scan of all slots, per-slot corruption quarantine, health-report generator |
+| 4 | `SaveSystem/SaveMigrationSystem.cs` | `SWEF.SaveSystem` | Version-based save-format migration: step registry, chained forward-only upgrades, built-in v1→v2 step, custom step registration API |
+| 5 | `SaveSystem/CloudSyncManager.cs` | `SWEF.SaveSystem` | REST-API cloud sync: per-slot upload/download, all-slots SyncAll, auto-upload on save, auto-check on start, conflict detection via `SaveConflictResolver`, cloud metadata polling |
+| 6 | `SaveSystem/SaveConflictResolver.cs` | `SWEF.SaveSystem` | Conflict detection (timestamp + sync-status), three resolution policies (`UseLocal`, `UseCloud`, `Merge`), pending-blob storage, best-effort merge of divergent payloads |
+| 7 | `SaveSystem/SaveExportImport.cs` | `SWEF.SaveSystem` | Portable export envelope (Base64 + SHA-256 checksum, no device encryption), pre-import validation, slot import with metadata rebuild |
+| 8 | `SaveSystem/SaveSystemUI.cs` | `SWEF.SaveSystem` | Save-slot panel controller + `SaveSlotCard` helper: slot selection, Save/Load/Delete/Export/Import buttons, conflict-resolution prompt, status messages |
+
+### Key Data Types
+
+| Type | File | Description |
+|------|------|-------------|
+| `ISaveable` | `SaveData.cs` | `SaveKey / CaptureState() / RestoreState()` — any MonoBehaviour implements this to join the save pipeline |
+| `SaveSlotInfo` | `SaveData.cs` | Per-slot sidecar metadata: index, display name, ISO-8601 timestamp, play time, thumbnail path, format version, SHA-256 checksum, creation ticks, `CloudSyncStatus`, `isEmpty` flag |
+| `SaveFileHeader` | `SaveData.cs` | `"SWEF"` magic, format version, creation & last-modified ticks, play time, game version, platform |
+| `SavePayload` | `SaveData.cs` | Parallel-list key→JSON map (JsonUtility-compatible); `Set / Get / Contains / Count` |
+| `PlayerProgressData` | `SaveData.cs` | Flights, flight time, distance, altitude, regions, aircraft, locations, missions, routes, currency, prestige, last position & dates |
+| `SaveFile` | `SaveData.cs` | Root serialisable container: `SaveFileHeader` + `SavePayload` + `PlayerProgressData` |
+| `CloudSyncStatus` | `SaveData.cs` | `NotConfigured / Synced / LocalAhead / CloudAhead / Conflict / Syncing / Error` |
+| `ConflictResolution` | `SaveConflictResolver.cs` | `None / UseLocal / UseCloud / Merge` |
+
+### Architecture
+
+```
+SaveManager (Singleton, DontDestroyOnLoad)
+│   ├── 5 slots — ISaveable auto-discovery on SceneLoaded
+│   ├── Save(slot) / Load(slot) / Delete(slot) / QuickSave() / QuickLoad()
+│   ├── Auto-save timer (default 300 s) + OnApplicationPause/Quit
+│   ├── SuspendAutoSave() / ResumeAutoSave() — disable during cutscenes
+│   ├── Save pipeline: Gather ISaveables → GatherSubsystems → Build SaveFile
+│   │   → JsonUtility.ToJson → GZip compress → AES-256 encrypt → Write
+│   ├── Load pipeline: Read → SHA-256 verify → AES decrypt → GZip decompress
+│   │   → JsonUtility.FromJson → Migrate → DistributeISaveables → DistributeSubsystems
+│   └── Events: OnSaveStarted / OnSaveCompleted / OnLoadStarted / OnLoadCompleted
+│              OnAutoSaveTriggered / OnSlotDeleted
+│
+SaveIntegrityChecker (Singleton)
+│   ├── ComputeChecksum(byte[]) — SHA-256 static utility
+│   ├── VerifySlot(index, info) — compare stored vs actual checksum
+│   ├── ScanAllSlots() — fires OnCorruptionDetected per bad slot
+│   ├── QuarantineIfCorrupted(index) — deletes corrupt save blob
+│   └── GetHealthReport() — human-readable integrity summary
+│
+SaveMigrationSystem (Singleton)
+│   ├── Migrate(SaveFile, from, to) — chains registered steps
+│   ├── RegisterStep(fromVersion, Action<SaveFile>) — custom step API
+│   └── Built-in: MigrateV1ToV2 — ensures PlayerProgressData exists
+│
+CloudSyncManager (Singleton)
+│   ├── UploadSlot(index) / DownloadSlot(index) / SyncAll()
+│   ├── CheckSlot(index) — polls cloud metadata, updates CloudSyncStatus
+│   ├── AutoUploadOnSave / AutoCheckOnStart flags
+│   └── Events: OnSyncStarted / OnSyncCompleted / OnSyncError / OnConflictDetected
+│
+SaveConflictResolver (Singleton)
+│   ├── DetectConflict(index, cloudBlob) — timestamp + status comparison
+│   ├── StoreCloudBlob(index, bytes) — holds pending cloud data
+│   ├── ResolveUseLocal / ResolveUseCloud / ResolveMerge
+│   └── Events: OnConflictDetected / OnConflictResolved
+│
+SaveExportImport (Singleton)
+│   ├── ExportSlot(index, path?) — writes .swefsave envelope (Base64 + checksum)
+│   ├── ValidateExportFile(path) — magic + checksum validation, returns error string
+│   ├── ImportToSlot(path, targetSlot) — validates then writes to slot
+│   └── Events: OnExportCompleted / OnImportCompleted / OnExportImportError
+│
+SaveSystemUI (Singleton)
+│   ├── OpenSaveMode() / OpenLoadMode() / Toggle() / Close()
+│   ├── SelectSlot(index) — highlights card, enables action buttons
+│   ├── Save / Load / Delete / Export / Import button handlers
+│   ├── Conflict-resolution panel (Use Local / Use Cloud / Merge)
+│   └── SaveSlotCard — per-slot display: name, timestamp, play time, sync status
+```
+
+### Integration Points
+
+| Phase 35 Script | Integrates With |
+|----------------|----------------|
+| `SaveManager` | `Achievement/AchievementManager` — captures/restores achievement states |
+| `SaveManager` | `Settings/SettingsManager` — persists master/SFX volume |
+| `SaveManager` | `Accessibility/AccessibilityManager` — captures/restores full profile |
+| `SaveManager` | `Localization/LocalizationManager` — persists active language |
+| `SaveManager` | `IAP/IAPManager` — records premium status |
+| `SaveManager` | `Core/SaveManager` — syncs flight stats to PlayerProgressData |
+| `CloudSyncManager` | `SaveConflictResolver` — delegates conflict detection on download |
+| `SaveSystemUI` | `SaveConflictResolver` — shows resolution prompt on `OnConflictDetected` |
+| `SaveIntegrityChecker` | `BootManager` — auto-scan on boot, quarantine corrupted slots |

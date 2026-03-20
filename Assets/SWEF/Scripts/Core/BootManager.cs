@@ -35,7 +35,7 @@ namespace SWEF.Core
 
         private IEnumerator Start()
         {
-            Debug.Log("[SWEF] Boot sequence started — Phase 34: Accessibility & Adaptive Input System");
+            Debug.Log("[SWEF] Boot sequence started — Phase 35: Save System & Cloud Sync");
 
             loadingScreen?.Show();
 
@@ -217,6 +217,42 @@ namespace SWEF.Core
             var cogAssist = FindFirstObjectByType<SWEF.Accessibility.CognitiveAssistSystem>();
             if (cogAssist != null)
                 Debug.Log($"[SWEF] CognitiveAssistSystem found — game speed: {cogAssist.GameSpeed:F2}×");
+
+            // Phase 35 — Save system initialization
+            var saveSystemMgr = FindFirstObjectByType<SWEF.SaveSystem.SaveManager>();
+            if (saveSystemMgr != null)
+            {
+                saveSystemMgr.DiscoverSaveables();
+                Debug.Log("[SWEF] SaveSystem.SaveManager found — multi-slot save system active");
+            }
+            else
+            {
+                Debug.Log("[SWEF] BootManager: SaveSystem.SaveManager not found — add it to a persistent GameObject for full save system support.");
+            }
+
+            var saveMigration = FindFirstObjectByType<SWEF.SaveSystem.SaveMigrationSystem>();
+            if (saveMigration != null)
+                Debug.Log("[SWEF] SaveMigrationSystem found — save format migration active");
+
+            var saveIntegrity = FindFirstObjectByType<SWEF.SaveSystem.SaveIntegrityChecker>();
+            if (saveIntegrity != null)
+            {
+                bool hasCorruption = saveIntegrity.ScanAllSlots();
+                if (hasCorruption)
+                    Debug.LogWarning("[SWEF] SaveIntegrityChecker: one or more save slots are corrupted.");
+            }
+
+            var cloudSync = FindFirstObjectByType<SWEF.SaveSystem.CloudSyncManager>();
+            if (cloudSync != null)
+                Debug.Log($"[SWEF] CloudSyncManager found — cloud sync {(cloudSync.IsConfigured ? "configured" : "not configured")}");
+
+            var conflictResolver = FindFirstObjectByType<SWEF.SaveSystem.SaveConflictResolver>();
+            if (conflictResolver != null)
+                Debug.Log("[SWEF] SaveConflictResolver found — conflict resolution active");
+
+            var exportImport = FindFirstObjectByType<SWEF.SaveSystem.SaveExportImport>();
+            if (exportImport != null)
+                Debug.Log("[SWEF] SaveExportImport found — export/import feature active");
 
             SceneManager.LoadScene(worldSceneName);
             Debug.Log($"[SWEF] Scene load requested: {worldSceneName}");
