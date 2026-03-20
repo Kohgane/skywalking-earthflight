@@ -3218,3 +3218,171 @@ RTLTextHandler (future-ready)
 | Key | Type | Default | Purpose |
 |-----|------|---------|---------|
 | `SWEF_Language` | string | `"English"` | Persisted `SystemLanguage` enum name |
+
+
+---
+
+## Phase 32 — Weather System & Dynamic Environment
+
+### Overview
+
+Phase 32 adds a complete real-time weather system with dynamic environment effects. It integrates with the existing flight simulation via **OpenWeatherMap API**, provides particle-based precipitation, environmental fog/wind systems, and weather-dependent flight physics modifiers.
+
+**Key Features:**
+- Live weather data from OpenWeatherMap (free tier) — no API key required for offline/procedural mode
+- 15 weather types: Clear → Cloudy → Rain → Thunderstorm → Snow → Fog → Sandstorm → Hail, and more
+- Smooth weather transitions (configurable blend duration)
+- Particle-based rain, snow, and hail that follow the player camera
+- Altitude-aware precipitation (stops above 15 km)
+- Dynamic fog blended with the existing `AtmosphereController`
+- Sun intensity and colour temperature adjusts to cloud cover
+- Lightning flash coroutine during Thunderstorm
+- Perlin-noise wind with jet-stream altitude model
+- Icing warning event when temperature < 0 °C, humidity > 80 %, altitude 2–8 km
+- HUD overlay with weather icon, temperature, wind, and visibility
+- Ambient rain/wind/thunder audio (user-provided AudioClips)
+
+---
+
+### New Scripts (10 scripts)
+
+| Script | Namespace | Role |
+|--------|-----------|------|
+| `Weather/WeatherData.cs` | `SWEF.Weather` | Data structs: `WeatherConditionData`, `WindData`, `WeatherForecast`, `WeatherType` enum |
+| `Weather/WeatherAPIClient.cs` | `SWEF.Weather` | OpenWeatherMap fetch — singleton, polling, JSON parsing, fallback |
+| `Weather/WeatherManager.cs` | `SWEF.Weather` | Central orchestrator — smooth transition, `ForceWeather`, `ResetToLive` |
+| `Weather/PrecipitationSystem.cs` | `SWEF.Weather` | Particle-based rain / snow / hail, follows camera, altitude fade |
+| `Weather/WindSystem.cs` | `SWEF.Weather` | Perlin-noise wind model, jet-stream altitude curve, `GetWindAtAltitude` |
+| `Weather/WeatherFogController.cs` | `SWEF.Weather` | Dynamic fog: visibility → fog density, integrates with `AtmosphereController` |
+| `Weather/WeatherLightingController.cs` | `SWEF.Weather` | Sun intensity / colour ramp, ambient, lightning flash coroutine |
+| `Weather/WeatherUI.cs` | `SWEF.Weather` | HUD panel: weather icon, temperature, wind, visibility, icing warning flash |
+| `Weather/WeatherSoundController.cs` | `SWEF.Weather` | Ambient rain / wind loops + thunder one-shots, altitude fade, SFX volume |
+
+### Updated Script
+
+| Script | Namespace | Change |
+|--------|-----------|--------|
+| `Weather/WeatherFlightModifier.cs` | `SWEF.Weather` | Phase 32 additions: `WeatherManager`/`WindSystem` integration, `OnIcingWarning` event, turbulence shake, visibility drag, `windForceMultiplier`, `turbulenceShakeStrength`, `reduceSpeedInLowVisibility` |
+
+### Modified Scripts
+
+| Script | Change |
+|--------|--------|
+| `Flight/FlightController.cs` | Added `ApplyExternalForce(Vector3)` (wind displacement) and `ExternalDragMultiplier` (visibility speed reduction) |
+| `Atmosphere/AtmosphereController.cs` | Added `BaseFogDensity`, `BaseFogColor` properties and `SetWeatherOverride(float, Color)` / `ClearWeatherOverride()` methods |
+| `Core/BootManager.cs` | Phase 32 init block — finds `WeatherManager` and `WeatherAPIClient`, logs status |
+| `README_SWEF_SETUP.md` | This section |
+
+---
+
+### Setup Instructions
+
+#### 1. WeatherManager GameObject
+1. Create an empty GameObject named `[WeatherManager]` in the World scene (or persistent Boot scene).
+2. Attach `WeatherManager`, `WeatherAPIClient`, `WeatherFlightModifier`.
+3. In `WeatherAPIClient` Inspector: set your **OpenWeatherMap API key** (or leave blank for fallback).
+   - ⚠️ **Never commit a real API key to source control.** Use Unity Cloud Config or a `.gitignored` config file.
+4. In `WeatherManager` Inspector: assign references to `PrecipitationSystem`, `WindSystem`, `WeatherFogController`, `WeatherLightingController` (or leave null to auto-find).
+
+#### 2. PrecipitationSystem GameObject
+1. Create a GameObject named `[PrecipitationSystem]` and attach `PrecipitationSystem`.
+2. Add three child GameObjects with a `ParticleSystem` component each:
+   - `RainParticles` — set Shape to Box/Hemisphere, Simulation Space = World, gravity -9.8.
+   - `SnowParticles` — slower fall speed, lateral drift, soft white particles.
+   - `HailParticles` — larger spheres, fast fall, metallic grey colour.
+3. Drag each child into the matching Inspector slot on `PrecipitationSystem`.
+4. Set `Follow Target` to your main camera (or leave null for auto-find via `Camera.main`).
+
+#### 3. WindSystem GameObject
+1. Create an empty GameObject named `[WindSystem]` and attach `WindSystem`.
+2. The `Altitude Wind Multiplier` curve is pre-configured; customise in Inspector if needed.
+
+#### 4. WeatherFogController GameObject
+1. Create an empty GameObject named `[WeatherFogController]` and attach `WeatherFogController`.
+2. Assign `AtmosphereController` reference (or leave null to auto-find).
+
+#### 5. WeatherLightingController GameObject
+1. Create an empty GameObject named `[WeatherLightingController]` and attach `WeatherLightingController`.
+2. Assign the scene's directional sun `Light` in the Inspector.
+3. Customise `Clear To Overcast Gradient` in the Inspector.
+
+#### 6. WeatherSoundController GameObject
+1. Create an empty GameObject named `[WeatherSoundController]` and attach `WeatherSoundController`.
+2. Add three child GameObjects each with an `AudioSource` component:
+   - `RainAudio` — set to 3D off, loop, volume 0 (managed at runtime).
+   - `WindAudio` — same as above.
+   - `ThunderAudio` — no clip assigned (one-shots at runtime).
+3. Assign your rain loop, wind loop, and thunder SFX clips in the Inspector.
+   - **Note:** AudioClips are user-provided assets not included in this repository.
+
+#### 7. WeatherUI (HUD Canvas)
+1. Under your existing **HUD Canvas**, create a `Weather Panel` UI GameObject.
+2. Add child Text/Image elements for weather name, wind, visibility, weather icon, and icing warning panel.
+3. Attach `WeatherUI` to the panel and wire up the Inspector fields.
+4. Add a `Sprite[]` array for `Weather Icons` — 15 entries indexed by `WeatherType` enum (0 = Clear, …, 14 = Mist).
+
+#### 8. Testing
+- Use the **Context Menu** on `WeatherManager` in Inspector (right-click → Force Rain/Snow/Thunderstorm/Clear).
+- Call `WeatherManager.Instance.ForceWeather(WeatherType.Thunderstorm, 0.9f)` in code.
+- Call `WeatherManager.Instance.ResetToLive()` to resume API-driven weather.
+
+---
+
+### Architecture (Phase 32)
+
+```
+World Scene (Phase 32)
+  ├── (all existing GameObjects)
+  ├── [WeatherManager]                    ← WeatherManager (orchestrator)
+  │   ├── WeatherAPIClient               ← OpenWeatherMap fetch, fallback
+  │   └── WeatherFlightModifier          ← physics: wind push, turbulence, icing
+  ├── [PrecipitationSystem]              ← particle rain / snow / hail
+  │   ├── RainParticles  (ParticleSystem)
+  │   ├── SnowParticles  (ParticleSystem)
+  │   └── HailParticles  (ParticleSystem)
+  ├── [WindSystem]                       ← Perlin-noise wind, jet-stream model
+  ├── [WeatherFogController]             ← fog density / colour → AtmosphereController
+  ├── [WeatherLightingController]        ← sun intensity, ambient, lightning
+  ├── [WeatherSoundController]           ← rain / wind loops + thunder one-shots
+  └── HUD Canvas
+      ├── (existing UI)
+      └── Weather Panel (WeatherUI)      ← weather icon, temp, wind, visibility, icing
+
+Data Flow:
+  WeatherAPIClient ──OnWeatherUpdated──► WeatherManager
+         │                                      │
+  (fallback Clear)                    smooth Lerp each frame
+                                               │
+              ┌────────────────┬──────────────────┬────────────────┐
+              │                │                  │                │
+     PrecipitationSystem  WeatherFogController  WeatherLightingController  WeatherFlightModifier
+              │                │                  │                │
+     (particles)       AtmosphereController  (sun/lightning)   FlightController
+                               │                                   │
+                        RenderSettings.fog                ApplyExternalForce
+                                                          ExternalDragMultiplier
+```
+
+---
+
+### OpenWeatherMap API Key
+
+| Item | Details |
+|------|---------|
+| Provider | [OpenWeatherMap](https://openweathermap.org/api) |
+| Plan | Free tier (Current Weather API) |
+| Rate limit | 60 calls/minute, 1,000,000 calls/month |
+| Default poll interval | 300 s (5 minutes) — configurable in `WeatherAPIClient` |
+| Fallback | If key is blank or request fails, `Clear` weather is emitted automatically |
+| Key location | `WeatherAPIClient` → `apiKey` field in Inspector (never commit to git) |
+
+### PlayerPrefs Keys (Phase 32)
+
+_Phase 32 does not add new PlayerPrefs keys._ Weather state is ephemeral (re-fetched on session start).
+
+### Notes
+
+- **ParticleSystem prefabs** are user-provided. The `PrecipitationSystem` script expects three `ParticleSystem` references assigned in the Inspector.
+- **AudioClips** (rain, wind, thunder) are user-provided. Assign them in `WeatherSoundController` Inspector.
+- **Weather icons** (sprites indexed by `WeatherType`) are user-provided.
+- Phase 9's `WeatherController`, `WindController`, and `WeatherStateManager` continue to function alongside Phase 32 systems. `WeatherFlightModifier` uses Phase 32 references when available and falls back to Phase 9 automatically.

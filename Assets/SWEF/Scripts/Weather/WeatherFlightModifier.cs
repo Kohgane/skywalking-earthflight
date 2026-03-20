@@ -1,18 +1,21 @@
 using System;
 using System.Collections;
 using UnityEngine;
+using SWEF.Flight;
 
 namespace SWEF.Weather
 {
     /// <summary>
     /// Modifies flight behaviour based on current weather conditions.
     ///
-    /// <para>Integrates with <see cref="SWEF.Flight.FlightController"/> by applying
-    /// external force vectors and control-responsiveness multipliers rather than
-    /// overriding the controller's core logic.</para>
+    /// <para>Phase 32 additions: integrates with <see cref="WeatherManager"/> and
+    /// <see cref="WindSystem"/> for wind push, turbulence shake, visibility-based speed
+    /// reduction, and icing warnings.  Also retains Phase 9 compatibility with
+    /// <see cref="WeatherStateManager"/> when the Phase 32 managers are absent.</para>
     ///
-    /// <para>Listens to <see cref="WeatherStateManager.OnWeatherStateUpdated"/> to keep
-    /// its internal state up to date.</para>
+    /// <para>Integrates with <see cref="SWEF.Flight.FlightController"/> via
+    /// <see cref="FlightController.ApplyExternalForce"/> and
+    /// <see cref="FlightController.ExternalDragMultiplier"/>.</para>
     /// </summary>
     public class WeatherFlightModifier : MonoBehaviour
     {
@@ -20,25 +23,58 @@ namespace SWEF.Weather
         /// <summary>Global singleton instance.</summary>
         public static WeatherFlightModifier Instance { get; private set; }
 
-        // ── Inspector ─────────────────────────────────────────────────────────────
-        [Header("Wind")]
-        [Tooltip("Scale factor applied to the raw wind vector before adding to player velocity.")]
+        // ── Inspector — Phase 32 ──────────────────────────────────────────────────
+        [Header("Phase 32 — References")]
+        [Tooltip("WeatherManager (Phase 32). Auto-found if null.")]
+        [SerializeField] private WeatherManager weatherManager;
+
+        [Tooltip("WindSystem (Phase 32). Auto-found if null.")]
+        [SerializeField] private WindSystem windSystem;
+
+        [Tooltip("FlightController reference. Auto-found if null.")]
+        [SerializeField] private FlightController flightController;
+
+        [Header("Phase 32 — Wind")]
+        [Tooltip("Multiplier applied to WindSystem.CurrentWindForce before passing to FlightController.")]
+        [SerializeField] private float windForceMultiplier = 1f;
+
+        [Header("Phase 32 — Turbulence")]
+        [Tooltip("Camera shake strength at full turbulence intensity (degrees rotation jitter).")]
+        [SerializeField] private float turbulenceShakeStrength = 2f;
+
+        [Header("Phase 32 — Visibility")]
+        [Tooltip("When enabled, reduces FlightController max speed proportionally in low visibility.")]
+        [SerializeField] private bool reduceSpeedInLowVisibility = true;
+
+        [Tooltip("Minimum speed multiplier at zero visibility (e.g. 0.5 = half max speed in dense fog).")]
+        [SerializeField] private float minSpeedMultiplierInFog = 0.5f;
+
+        [Header("Phase 32 — Icing")]
+        [Tooltip("Altitude above which icing can form (metres). Phase 32 spec: 2–8 km.")]
+        [SerializeField] private float icingAltitudeMin = 2000f;
+
+        [Tooltip("Altitude above which icing no longer forms (metres).")]
+        [SerializeField] private float icingAltitudeMax = 8000f;
+
+        [Tooltip("Temperature threshold below which icing is possible (°C).")]
+        [SerializeField] private float icingTemperatureThreshold = 0f;
+
+        [Tooltip("Minimum humidity for icing to occur.")]
+        [SerializeField, Range(0f, 1f)] private float icingHumidityThreshold = 0.8f;
+
+        // ── Inspector — Phase 9 compat ────────────────────────────────────────────
+        [Header("Phase 9 Compat — Wind")]
+        [Tooltip("Scale factor applied to the raw wind vector (Phase 9 path when WindSystem absent).")]
         [SerializeField] private float windForceScale = 0.3f;
 
-        [Header("Turbulence")]
+        [Header("Phase 9 Compat — Turbulence")]
         [Tooltip("Maximum positional shake offset (metres) at full turbulence intensity.")]
         [SerializeField] private float turbulenceMaxOffset = 2.5f;
 
         [Tooltip("Frequency of turbulence noise (higher = faster shake).")]
         [SerializeField] private float turbulenceFrequency = 3f;
 
-        [Header("Icing")]
-        [Tooltip("Altitude above which icing can form (metres).")]
-        [SerializeField] private float icingAltitudeMin = 3000f;
-
-        [Tooltip("Temperature threshold below which icing accumulates (°C).")]
-        [SerializeField] private float icingTemperatureThreshold = -5f;
-
+        [Header("Phase 9 Compat — Icing Detail")]
         [Tooltip("Rate at which icing builds up (fraction per second).")]
         [SerializeField] private float icingAccumulationRate = 0.03f;
 
@@ -48,7 +84,7 @@ namespace SWEF.Weather
         [Tooltip("Minimum control-responsiveness while fully iced (0 = uncontrollable, 1 = no effect).")]
         [SerializeField] private float icingMinResponsiveness = 0.4f;
 
-        [Header("Thermals")]
+        [Header("Phase 9 Compat — Thermals")]
         [Tooltip("Maximum upward force from thermals (m/s²).")]
         [SerializeField] private float thermalMaxForce = 3f;
 
@@ -62,6 +98,13 @@ namespace SWEF.Weather
         /// Subscribe from <c>HapticFeedbackController</c> or audio triggers.
         /// </summary>
         public event Action<float> OnTurbulenceEvent;
+
+        /// <summary>
+        /// Raised when icing conditions are detected (temperature &lt; threshold,
+        /// humidity &gt; threshold, altitude within icing band).
+        /// Subscribe from UI or warning systems.
+        /// </summary>
+        public event Action OnIcingWarning;
 
         // ── Properties ────────────────────────────────────────────────────────────
         /// <summary>Wind force vector in world-space (m/s), ready to be added to player velocity.</summary>
@@ -77,10 +120,17 @@ namespace SWEF.Weather
         public float ControlResponsiveness { get; private set; } = 1f;
 
         // ── Internal ──────────────────────────────────────────────────────────────
-        private WeatherData _currentData;
-        private float       _icingLevel;          // 0–1
+        private WeatherData _currentData;           // Phase 9 legacy data
+        private WeatherConditionData _p32Weather;   // Phase 32 weather data
+        private float       _icingLevel;            // 0–1
         private float       _turbulenceTimer;
         private bool        _turbulenceEventFired;
+        private bool        _icingWarningFired;
+
+        // Turbulence shake restore — avoids accumulating rotation jitter
+        private Quaternion  _pendingRotationRestore;
+        private bool        _hasPendingRotationRestore;
+
         private const float TurbulenceEventThreshold = 0.5f;
         private const float MaxVisibility             = 10000f;
 
@@ -100,24 +150,89 @@ namespace SWEF.Weather
             Instance = this;
 
             _currentData = WeatherData.CreateClear();
+            _p32Weather  = WeatherConditionData.CreateClear();
         }
 
         private void Start()
         {
+            // Phase 32 references
+            if (weatherManager  == null) weatherManager  = FindFirstObjectByType<WeatherManager>();
+            if (windSystem      == null) windSystem      = FindFirstObjectByType<WindSystem>();
+            if (flightController == null) flightController = FindFirstObjectByType<FlightController>();
+
+            if (weatherManager != null)
+                weatherManager.OnWeatherChanged += HandleP32WeatherChange;
+
+            // Phase 9 compat
             if (WeatherStateManager.Instance != null)
                 WeatherStateManager.Instance.OnWeatherStateUpdated += UpdateFromWeather;
         }
 
         private void OnDestroy()
         {
+            if (weatherManager != null)
+                weatherManager.OnWeatherChanged -= HandleP32WeatherChange;
+
             if (WeatherStateManager.Instance != null)
                 WeatherStateManager.Instance.OnWeatherStateUpdated -= UpdateFromWeather;
         }
 
         private void Update()
         {
+            // Restore rotation from previous turbulence shake before computing new frame
+            if (_hasPendingRotationRestore && flightController != null)
+            {
+                flightController.transform.rotation = _pendingRotationRestore;
+                _hasPendingRotationRestore = false;
+            }
+
+            // Phase 32: apply wind force via FlightController.ApplyExternalForce
+            if (flightController != null && windSystem != null)
+            {
+                Vector3 windForce = windSystem.CurrentWindForce * windForceMultiplier;
+                flightController.ApplyExternalForce(windForce);
+
+                // Turbulence shake: apply a temporary rotation offset and immediately
+                // restore the original rotation so the jitter does not accumulate.
+                float turb = windSystem.CurrentTurbulence;
+                TurbulenceIntensity = turb;
+
+                if (turb > 0.05f)
+                {
+                    float jitter = turb * turbulenceShakeStrength;
+                    float nx = (Mathf.PerlinNoise(Time.time * turbulenceFrequency,       0f) - 0.5f) * jitter;
+                    float nz = (Mathf.PerlinNoise(Time.time * turbulenceFrequency + 20f, 0f) - 0.5f) * jitter;
+
+                    // Save and restore so shake doesn't accumulate into the flight rotation.
+                    Quaternion originalRot = flightController.transform.rotation;
+                    flightController.transform.Rotate(nx, 0f, nz, Space.Self);
+                    // The visual offset is seen for this frame; next frame restores base rotation.
+                    // Store restored rotation to be applied at start of next frame.
+                    _pendingRotationRestore = originalRot;
+                    _hasPendingRotationRestore = true;
+                }
+                else if (_hasPendingRotationRestore)
+                {
+                    flightController.transform.rotation = _pendingRotationRestore;
+                    _hasPendingRotationRestore = false;
+                }
+
+                // Visibility-based drag
+                if (reduceSpeedInLowVisibility)
+                {
+                    float vis = _p32Weather.visibility;
+                    float speedMult = Mathf.Lerp(minSpeedMultiplierInFog, 1f,
+                        Mathf.InverseLerp(100f, 10000f, vis));
+                    flightController.ExternalDragMultiplier = speedMult;
+                }
+            }
+            else
+            {
+                // Phase 9 fallback
+                UpdateTurbulence();
+            }
+
             UpdateIcing();
-            UpdateTurbulence();
         }
 
         // ── Public API ────────────────────────────────────────────────────────────
@@ -163,11 +278,17 @@ namespace SWEF.Weather
 
         // ── Internal ──────────────────────────────────────────────────────────────
 
+        private void HandleP32WeatherChange(WeatherConditionData condition)
+        {
+            _p32Weather = condition;
+            VisibilityMultiplier = Mathf.Clamp01(condition.visibility / MaxVisibility);
+        }
+
         private void UpdateFromWeather(WeatherData data)
         {
             _currentData = data;
 
-            // Wind force
+            // Wind force (Phase 9 path)
             WindForce = data.WindVector * windForceScale;
 
             // Visibility
@@ -181,21 +302,42 @@ namespace SWEF.Weather
 
         private void UpdateIcing()
         {
-            float alt = WeatherStateManager.Instance != null
-                ? WeatherStateManager.Instance.AltitudeMeters : 0f;
+            float alt = (float)SWEF.Core.SWEFSession.Alt;
 
-            bool icingConditions = alt > icingAltitudeMin &&
-                                   _currentData.temperatureCelsius < icingTemperatureThreshold &&
-                                   (_currentData.condition == WeatherCondition.Rain     ||
-                                    _currentData.condition == WeatherCondition.HeavyRain ||
-                                    _currentData.condition == WeatherCondition.Snow      ||
-                                    _currentData.condition == WeatherCondition.HeavySnow ||
-                                    _currentData.condition == WeatherCondition.Thunderstorm);
+            // Phase 32 icing logic (uses WeatherManager data when available)
+            bool p32Icing = weatherManager != null &&
+                            alt >= icingAltitudeMin && alt <= icingAltitudeMax &&
+                            _p32Weather.temperature < icingTemperatureThreshold &&
+                            _p32Weather.humidity    > icingHumidityThreshold;
+
+            // Phase 9 icing logic (fallback)
+            bool p9Icing = weatherManager == null &&
+                           WeatherStateManager.Instance != null &&
+                           alt > icingAltitudeMin &&
+                           _currentData.temperatureCelsius < icingTemperatureThreshold &&
+                           (_currentData.condition == WeatherCondition.Rain     ||
+                            _currentData.condition == WeatherCondition.HeavyRain ||
+                            _currentData.condition == WeatherCondition.Snow      ||
+                            _currentData.condition == WeatherCondition.HeavySnow ||
+                            _currentData.condition == WeatherCondition.Thunderstorm);
+
+            bool icingConditions = p32Icing || p9Icing;
 
             if (icingConditions)
+            {
                 _icingLevel = Mathf.Clamp01(_icingLevel + icingAccumulationRate * Time.deltaTime);
+
+                if (!_icingWarningFired)
+                {
+                    _icingWarningFired = true;
+                    OnIcingWarning?.Invoke();
+                }
+            }
             else
-                _icingLevel = Mathf.Clamp01(_icingLevel - icingMeltRate * Time.deltaTime);
+            {
+                _icingLevel        = Mathf.Clamp01(_icingLevel - icingMeltRate * Time.deltaTime);
+                _icingWarningFired = false;
+            }
 
             ControlResponsiveness = Mathf.Lerp(1f, icingMinResponsiveness, _icingLevel);
         }

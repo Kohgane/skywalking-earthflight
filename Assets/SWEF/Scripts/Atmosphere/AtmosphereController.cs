@@ -55,6 +55,17 @@ namespace SWEF.Atmosphere
         private float _currentBlend;
         private float _currentSun;
 
+        // ── Phase 32 — Weather override ───────────────────────────────────────────
+        private bool  _weatherFogOverride;
+        private float _weatherFogDensity;
+        private Color _weatherFogColor;
+
+        /// <summary>The current altitude-driven fog density (before any weather override).</summary>
+        public float BaseFogDensity => _currentFog;
+
+        /// <summary>The current altitude-driven fog colour (before any weather override).</summary>
+        public Color BaseFogColor => _currentSkyColor;
+
         private void Start()
         {
             if (altitudeSource == null)
@@ -114,11 +125,22 @@ namespace SWEF.Atmosphere
             _currentBlend = ExpSmoothing.ExpLerp(_currentBlend, targetBlend, transitionSmoothing, dt);
             _currentSun = ExpSmoothing.ExpLerp(_currentSun, targetSun, transitionSmoothing, dt);
 
-            // Defer fog to WeatherController when active weather is not Clear
+            // Defer fog to WeatherController (Phase 9) when active weather is not Clear
             if (weatherController != null && weatherController.CurrentWeather != WeatherController.WeatherType.Clear)
                 return;
 
-            RenderSettings.fogDensity = _currentFog;
+            // Phase 32 — apply weather fog override if active
+            if (_weatherFogOverride)
+            {
+                RenderSettings.fog        = true;
+                RenderSettings.fogDensity = _weatherFogDensity;
+                RenderSettings.fogColor   = _weatherFogColor;
+            }
+            else
+            {
+                RenderSettings.fogDensity = _currentFog;
+            }
+
             RenderSettings.ambientSkyColor = _currentSkyColor;
 
             if (skyboxMaterial != null)
@@ -131,6 +153,28 @@ namespace SWEF.Atmosphere
                     finalSun *= nightIntensityFactor;
                 sunLight.intensity = finalSun;
             }
+        }
+
+        // ── Phase 32 — Public weather override API ────────────────────────────────
+
+        /// <summary>
+        /// Called by <see cref="SWEF.Weather.WeatherFogController"/> to override the
+        /// altitude-based fog with weather-driven density and colour.
+        /// </summary>
+        public void SetWeatherOverride(float fogDensity, Color fogColor)
+        {
+            _weatherFogOverride = true;
+            _weatherFogDensity  = fogDensity;
+            _weatherFogColor    = fogColor;
+        }
+
+        /// <summary>
+        /// Called by <see cref="SWEF.Weather.WeatherFogController"/> when weather clears,
+        /// reverting fog control to the altitude-based system.
+        /// </summary>
+        public void ClearWeatherOverride()
+        {
+            _weatherFogOverride = false;
         }
     }
 }
