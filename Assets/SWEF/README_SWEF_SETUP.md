@@ -3386,3 +3386,47 @@ _Phase 32 does not add new PlayerPrefs keys._ Weather state is ephemeral (re-fet
 - **AudioClips** (rain, wind, thunder) are user-provided. Assign them in `WeatherSoundController` Inspector.
 - **Weather icons** (sprites indexed by `WeatherType`) are user-provided.
 - Phase 9's `WeatherController`, `WindController`, and `WeatherStateManager` continue to function alongside Phase 32 systems. `WeatherFlightModifier` uses Phase 32 references when available and falls back to Phase 9 automatically.
+
+---
+
+## Phase 36 — Replay Theater & Cinematic Editor
+
+### Overview
+
+A full Replay Theater mode with cinematic camera editing, timeline scrubbing,
+import/export, and thumbnail generation.  Extends the existing `Recorder/`,
+`Replay/`, and `Cinema/` systems.
+
+### New Scripts (10) — `Assets/SWEF/Scripts/ReplayTheater/` — namespace `SWEF.ReplayTheater`
+
+| # | File | Role |
+|---|------|------|
+| 1 | `ReplayTheaterManager.cs` | Singleton manager; `EnterTheater(ReplayData)` / `ExitTheater()`; pauses game |
+| 2 | `ReplayTimeline.cs` | Timeline controller; play/pause/stop/seek; 0.25×–4× speed; A-B loop |
+| 3 | `CinematicCameraEditor.cs` | Camera keyframe editor; Free/Follow/Orbit/Track/Dolly modes; Catmull-Rom |
+| 4 | `CameraKeyframe.cs` | Serializable keyframe data (position, rotation, FOV, DOF, easing curve) |
+| 5 | `ReplayTheaterUI.cs` | Full Canvas UI (scrub bar, transport, speed/mode dropdowns, exit) |
+| 6 | `TimelineTrack.cs` | Visual scrub bar with drag-to-scrub, zoom/scroll, keyframe markers |
+| 7 | `ReplayExporter.cs` | Export PNG frame sequence, camera-path JSON, `.swef-replay` package |
+| 8 | `ReplayImporter.cs` | Import `.swef-replay` packages and camera-path JSON; validates integrity |
+| 9 | `ReplayThumbnailGenerator.cs` | Captures render at 25% replay time; caches PNG; loads from `ReplayData.thumbnailPng` |
+| 10 | `ReplayTheaterSettings.cs` | `[CreateAssetMenu]` ScriptableObject — speed steps, export quality, UI theme colours |
+
+### Assembly Definition
+
+`SWEF.ReplayTheater.asmdef` references `SWEF.Core`, `SWEF.Recorder`, `SWEF.Replay`, `SWEF.Cinema`.
+
+### Updated Files
+
+| File | Change |
+|------|--------|
+| `Replay/ReplayData.cs` | Added `recordedAt` (ISO-8601), `thumbnailPng` (byte[]), `ToSwefReplayPackage()`, `FromSwefReplayPackage()` |
+| `Cinema/CinematicCameraPath.cs` | Added `EvaluateAtTime(float t)` returning `(position, rotation, fov)` tuple |
+| `Core/BootManager.cs` | Added `EnterReplayTheater(ReplayData)` and `ExitReplayTheater()` static helpers; Phase 36 init log |
+
+### Quick Start
+
+1. Create a `ReplayTheaterSettings` asset via *Assets → Create → SWEF → Replay Theater Settings*.
+2. Add a `ReplayTheaterManager` (+ child `ReplayTimeline`, `CinematicCameraEditor`, `ReplayTheaterUI`) to a persistent GameObject.
+3. Call `BootManager.EnterReplayTheater(myReplayData)` or `ReplayTheaterManager.Instance.EnterTheater(data)` to open the theater.
+4. Use `ReplayExporter.ExportReplayPackage(path, data, editor)` to save a `.swef-replay` file and `ReplayImporter.ImportReplayPackage(path)` to load it back.

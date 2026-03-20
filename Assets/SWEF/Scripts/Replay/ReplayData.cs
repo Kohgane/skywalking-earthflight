@@ -19,11 +19,17 @@ namespace SWEF.Replay
         /// <summary>Display name of the player who recorded this replay.</summary>
         public string playerName;
 
+        /// <summary>ISO-8601 timestamp when the replay was recorded (<c>DateTime.UtcNow.ToString("o")</c>).</summary>
+        public string recordedAt;
+
         /// <summary>Replay file format version.</summary>
         public int version = 1;
 
         /// <summary>ISO-8601 timestamp of when the replay was created.</summary>
         public string createdAt;
+
+        /// <summary>Raw PNG bytes for an embedded preview thumbnail.  May be null.</summary>
+        public byte[] thumbnailPng;
 
         /// <summary>Total duration of the replay in seconds.</summary>
         public float totalDurationSec;
@@ -60,11 +66,13 @@ namespace SWEF.Replay
         /// <returns>A fully populated <see cref="ReplayData"/> object.</returns>
         public static ReplayData FromFlightRecorder(FlightRecorder recorder)
         {
+            string now = System.DateTime.UtcNow.ToString("o");
             var data = new ReplayData
             {
                 replayId   = System.Guid.NewGuid().ToString(),
                 playerName = SystemInfo.deviceName,
-                createdAt  = System.DateTime.UtcNow.ToString("o"),
+                createdAt  = now,
+                recordedAt = now,
                 startLat   = Core.SWEFSession.Lat,
                 startLon   = Core.SWEFSession.Lon,
             };
@@ -118,6 +126,36 @@ namespace SWEF.Replay
         /// <param name="json">The JSON string to parse.</param>
         public static ReplayData FromJson(string json) => JsonUtility.FromJson<ReplayData>(json);
 
+        /// <summary>
+        /// Serializes this instance to the <c>.swef-replay</c> package JSON format.
+        /// </summary>
+        /// <returns>JSON string representing the full package payload.</returns>
+        public string ToSwefReplayPackage()
+        {
+            var wrapper = new SwefReplayPackage { schemaVersion = 1, replayData = this };
+            return JsonUtility.ToJson(wrapper, true);
+        }
+
+        /// <summary>
+        /// Deserializes a <c>.swef-replay</c> package JSON string and returns the
+        /// embedded <see cref="ReplayData"/>.
+        /// </summary>
+        /// <param name="json">JSON package string.</param>
+        /// <returns>The embedded <see cref="ReplayData"/>, or <c>null</c> on failure.</returns>
+        public static ReplayData FromSwefReplayPackage(string json)
+        {
+            try
+            {
+                var wrapper = JsonUtility.FromJson<SwefReplayPackage>(json);
+                return wrapper?.replayData;
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"[SWEF] ReplayData.FromSwefReplayPackage: {e.Message}");
+                return null;
+            }
+        }
+
         // ── Helpers ───────────────────────────────────────────────────────────────
 
         /// <summary>
@@ -125,6 +163,18 @@ namespace SWEF.Replay
         /// Falls back to zero when there are no frames.
         /// </summary>
         public float GetDuration() => frames.Count > 0 ? frames[frames.Count - 1].time : 0f;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>Wrapper used for the <c>.swef-replay</c> package file format.</summary>
+    [System.Serializable]
+    internal class SwefReplayPackage
+    {
+        /// <summary>Package schema version (currently 1).</summary>
+        public int        schemaVersion;
+        /// <summary>The embedded replay data.</summary>
+        public ReplayData replayData;
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
