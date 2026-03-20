@@ -32,6 +32,10 @@ namespace SWEF.Audio
         private readonly Dictionary<AudioSource, AudioLowPassFilter> _filters =
             new Dictionary<AudioSource, AudioLowPassFilter>();
 
+        // Baseline volumes stored before occlusion is applied
+        private readonly Dictionary<AudioSource, float> _baselineVolumes =
+            new Dictionary<AudioSource, float>();
+
         // ── Unity lifecycle ───────────────────────────────────────────────────────
         private void Awake()
         {
@@ -97,16 +101,25 @@ namespace SWEF.Audio
 
         private void ApplyOcclusion(AudioSource src)
         {
+            // Store baseline once per source (before any occlusion touches it)
+            if (!_baselineVolumes.ContainsKey(src))
+                _baselineVolumes[src] = src.volume;
+
             var lpf = GetOrAddFilter(src);
             if (lpf != null) lpf.cutoffFrequency = filterCutoff;
-            // Temporarily reduce volume — we store the original and restore on reset
-            src.volume *= volumeReduction;
+            src.volume = _baselineVolumes[src] * volumeReduction;
         }
 
         private void ResetOcclusion(AudioSource src)
         {
             if (_filters.TryGetValue(src, out var lpf) && lpf != null)
                 lpf.cutoffFrequency = 22000f;
+
+            if (_baselineVolumes.TryGetValue(src, out float baseline))
+            {
+                src.volume = baseline;
+                _baselineVolumes.Remove(src);
+            }
         }
 
         private AudioLowPassFilter GetOrAddFilter(AudioSource src)
