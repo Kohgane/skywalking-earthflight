@@ -1184,14 +1184,14 @@ FlightController.IsFlying → false
 
 ## Phase 43 — Hidden Gems & Secret Locations Discovery System
 
-A curated database of 50+ real-world hidden locations across all continents that players can discover while flying. Features proximity detection, fog-of-war reveal, collectible cards, lore entries, and deep integration with existing minimap, achievement, tour, and progression systems.
+A curated database of 55 real-world hidden locations across all continents that players can discover while flying. Features proximity detection, fog-of-war reveal, collectible cards, lore entries, and deep integration with existing minimap, achievement, tour, and progression systems.
 
 ### New Scripts (`Assets/SWEF/Scripts/HiddenGems/`)
 
 | # | Script | Namespace | Purpose |
 |---|--------|-----------|---------|
 | 1 | `HiddenGemData.cs` | `SWEF.HiddenGems` | Pure data classes: `HiddenGemDefinition`, `HiddenGemState`, `GemDiscoveryEvent`; all enums |
-| 2 | `HiddenGemDatabase.cs` | `SWEF.HiddenGems` | Static database of 53 real-world hidden gems with accurate GPS coordinates |
+| 2 | `HiddenGemDatabase.cs` | `SWEF.HiddenGems` | Static database of 55 real-world hidden gems with accurate GPS coordinates |
 | 3 | `HiddenGemManager.cs` | `SWEF.HiddenGems` | Singleton manager: proximity detection with spatial hashing, persistence, events, minimap blips |
 | 4 | `GemDiscoveryUI.cs` | `SWEF.HiddenGems` | Animated discovery popup with queue system, 8-second auto-dismiss, share/navigate buttons |
 | 5 | `GemCollectionUI.cs` | `SWEF.HiddenGems` | Full-screen gallery with tabs, grid cards, detail view, sort/filter/search |
