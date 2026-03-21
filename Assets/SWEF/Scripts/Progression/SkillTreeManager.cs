@@ -135,6 +135,19 @@ namespace SWEF.Progression
         public int GetAvailableSkillPoints() => _save.availableSkillPoints;
 
         /// <summary>
+        /// Adds the specified number of skill points to the player's available pool.
+        /// Called by <see cref="SWEF.DailyChallenge.ChallengeRewardController"/> for season-pass rewards.
+        /// </summary>
+        /// <param name="count">Number of skill points to grant (clamped to ≥ 1).</param>
+        public void AddSkillPoint(int count = 1)
+        {
+            if (count < 1) count = 1;
+            _save.availableSkillPoints += count;
+            Save();
+            Debug.Log($"[SWEF] SkillTreeManager: Granted {count} skill point(s) from external reward. Total available: {_save.availableSkillPoints}.");
+        }
+
+        /// <summary>
         /// Refunds all spent skill points and clears unlocked skills.
         /// Call with user confirmation before invoking.
         /// </summary>
