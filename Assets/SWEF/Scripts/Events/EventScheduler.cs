@@ -149,8 +149,14 @@ namespace SWEF.Events
                 int activeCount = CountActiveInstancesOf(data.eventId);
                 if (activeCount >= data.maxConcurrentInstances) continue;
 
-                // Time of day gate (only restrict aurora / meteor to night)
-                if (isNight && (data.eventType == WorldEventType.AirShow || data.eventType == WorldEventType.Festival))
+                // Time of day gate
+                // Day events (AirShow, Festival) are suppressed at night.
+                // Night events (Aurora, MeteorShower) are suppressed during the day.
+                if (isNight && (data.eventType == WorldEventType.AirShow ||
+                                data.eventType == WorldEventType.Festival))
+                    continue;
+                if (!isNight && (data.eventType == WorldEventType.Aurora ||
+                                 data.eventType == WorldEventType.MeteorShower))
                     continue;
 
                 // Weather-dependency (optional null-safe)

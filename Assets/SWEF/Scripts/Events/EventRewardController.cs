@@ -71,9 +71,12 @@ namespace SWEF.Events
         private Coroutine _popupCoroutine;
         private readonly List<GameObject> _rows = new List<GameObject>();
 
+        private SWEF.Achievement.AchievementManager _achievementManager;
+
         // ── Unity lifecycle ───────────────────────────────────────────────────────
         private void Awake()
         {
+            _achievementManager = FindFirstObjectByType<SWEF.Achievement.AchievementManager>();
             if (popupPanel != null)
             {
                 _shownPos  = popupPanel.anchoredPosition;
@@ -115,8 +118,7 @@ namespace SWEF.Events
             // Achievement reward
             if (!string.IsNullOrEmpty(instance.eventData?.achievementId))
             {
-                var achievementManager = FindFirstObjectByType<SWEF.Achievement.AchievementManager>();
-                achievementManager?.TryUnlock(instance.eventData.achievementId);
+                _achievementManager?.TryUnlock(instance.eventData.achievementId);
 
                 rewards.Add(new RewardItem
                 {

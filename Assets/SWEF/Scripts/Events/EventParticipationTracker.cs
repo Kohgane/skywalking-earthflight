@@ -43,6 +43,12 @@ namespace SWEF.Events
         [Tooltip("Fraction of event duration the player must spend inside the radius to count as completed.")]
         [SerializeField, Range(0f, 1f)] private float completionThreshold = 0.25f;
 
+        /// <summary>
+        /// The fraction of event duration the player must spend in the event region to
+        /// count as a completed participation. Exposed for UI display purposes.
+        /// </summary>
+        public float CompletionThreshold => completionThreshold;
+
         [Header("References")]
         [Tooltip("Transform used as the player's position for distance checks. Auto-resolved if null.")]
         [SerializeField] private Transform playerTransform;
@@ -58,6 +64,9 @@ namespace SWEF.Events
 
         private static readonly string SaveFileName = "event_participation.json";
 
+        private SWEF.Achievement.AchievementManager _achievementManager;
+        private EventRewardController _rewardController;
+
         [Serializable]
         private class SaveData { public List<EventParticipation> records = new List<EventParticipation>(); }
 
@@ -69,6 +78,8 @@ namespace SWEF.Events
                 var fc = FindFirstObjectByType<SWEF.Flight.FlightController>();
                 if (fc != null) playerTransform = fc.transform;
             }
+            _achievementManager = FindFirstObjectByType<SWEF.Achievement.AchievementManager>();
+            _rewardController   = FindFirstObjectByType<EventRewardController>();
             LoadHistory();
         }
 
@@ -194,12 +205,10 @@ namespace SWEF.Events
         {
             Debug.Log($"[SWEF] EventParticipationTracker: player completed event '{inst.eventData.eventId}', earned {record.xpEarned} XP.");
 
-            var achievementManager = FindFirstObjectByType<SWEF.Achievement.AchievementManager>();
-            if (achievementManager != null && !string.IsNullOrEmpty(inst.eventData.achievementId))
-                achievementManager.TryUnlock(inst.eventData.achievementId);
+            if (_achievementManager != null && !string.IsNullOrEmpty(inst.eventData.achievementId))
+                _achievementManager.TryUnlock(inst.eventData.achievementId);
 
-            var rewardController = FindFirstObjectByType<EventRewardController>();
-            if (rewardController != null)
+            if (_rewardController != null)
             {
                 var rewards = new List<EventRewardController.RewardItem>
                 {
@@ -223,7 +232,7 @@ namespace SWEF.Events
                     });
                 }
 
-                rewardController.ShowRewardPopup(rewards);
+                _rewardController.ShowRewardPopup(rewards);
             }
         }
 

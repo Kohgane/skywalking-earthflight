@@ -66,6 +66,7 @@ namespace SWEF.Events
         private Coroutine               _toastCoroutine;
         private Vector2                 _toastShownPos;
         private Vector2                 _toastHiddenPos;
+        private SWEF.GuidedTour.WaypointNavigator _waypointNavigator;
 
         // ── Unity lifecycle ───────────────────────────────────────────────────────
         private void Awake()
@@ -90,8 +91,9 @@ namespace SWEF.Events
 
         private void OnEnable()
         {
-            _scheduler = FindFirstObjectByType<EventScheduler>();
-            _tracker   = FindFirstObjectByType<EventParticipationTracker>();
+            _scheduler         = FindFirstObjectByType<EventScheduler>();
+            _tracker           = FindFirstObjectByType<EventParticipationTracker>();
+            _waypointNavigator = FindFirstObjectByType<SWEF.GuidedTour.WaypointNavigator>();
 
             if (_scheduler != null)
                 _scheduler.OnEventSpawned += ShowEventNotification;
@@ -192,11 +194,12 @@ namespace SWEF.Events
                 float progress = 0f;
                 if (participating)
                 {
+                    float threshold = _tracker.CompletionThreshold;
                     foreach (var rec in _tracker.GetActiveParticipation())
                     {
                         if (rec.instanceId == _trackedHudInstance.instanceId.ToString())
                         {
-                            float maxPart = _trackedHudInstance.eventData.maxDurationMinutes * 60f * 0.25f;
+                            float maxPart = _trackedHudInstance.eventData.maxDurationMinutes * 60f * threshold;
                             progress = Mathf.Clamp01(rec.totalParticipationSeconds / maxPart);
                             break;
                         }
@@ -249,11 +252,10 @@ namespace SWEF.Events
 
         private void NavigateToEvent(WorldEventInstance instance)
         {
-            var navigator = FindFirstObjectByType<SWEF.GuidedTour.WaypointNavigator>();
-            if (navigator != null)
+            if (_waypointNavigator != null)
             {
-                navigator.SetManualTarget(instance.spawnPosition);
-                navigator.EnableAutoPilot();
+                _waypointNavigator.SetManualTarget(instance.spawnPosition);
+                _waypointNavigator.EnableAutoPilot();
                 Debug.Log($"[SWEF] EventNotificationUI: navigating to event '{instance.eventData?.eventId}'.");
             }
             else

@@ -55,6 +55,7 @@ namespace SWEF.Events
         private EventParticipationTracker _tracker;
         private CalendarTab               _currentTab = CalendarTab.ActiveNow;
         private readonly List<GameObject> _entries    = new List<GameObject>();
+        private SWEF.GuidedTour.WaypointNavigator _waypointNavigator;
 
         // ── Unity lifecycle ───────────────────────────────────────────────────────
         private void Awake()
@@ -64,8 +65,9 @@ namespace SWEF.Events
 
         private void OnEnable()
         {
-            _scheduler = FindFirstObjectByType<EventScheduler>();
-            _tracker   = FindFirstObjectByType<EventParticipationTracker>();
+            _scheduler         = FindFirstObjectByType<EventScheduler>();
+            _tracker           = FindFirstObjectByType<EventParticipationTracker>();
+            _waypointNavigator = FindFirstObjectByType<SWEF.GuidedTour.WaypointNavigator>();
 
             if (tabActiveNowButton != null) tabActiveNowButton.onClick.AddListener(() => SwitchTab(CalendarTab.ActiveNow));
             if (tabUpcomingButton  != null) tabUpcomingButton.onClick.AddListener(() => SwitchTab(CalendarTab.Upcoming));
@@ -201,11 +203,10 @@ namespace SWEF.Events
             {
                 btn.onClick.AddListener(() =>
                 {
-                    var nav = FindFirstObjectByType<SWEF.GuidedTour.WaypointNavigator>();
-                    if (nav != null)
+                    if (_waypointNavigator != null)
                     {
-                        nav.SetManualTarget(instance.spawnPosition);
-                        nav.EnableAutoPilot();
+                        _waypointNavigator.SetManualTarget(instance.spawnPosition);
+                        _waypointNavigator.EnableAutoPilot();
                     }
                     Close();
                 });

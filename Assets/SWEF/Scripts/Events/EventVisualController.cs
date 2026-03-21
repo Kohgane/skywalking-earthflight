@@ -18,6 +18,7 @@ namespace SWEF.Events
             public Guid             instanceId;
             public GameObject       root;
             public ParticleSystem[] particles;
+            public int[]            originalMaxParticles; // cached to avoid compounding on SetVisualIntensity
             public Coroutine        lifecycleCoroutine;
         }
 
@@ -92,10 +93,13 @@ namespace SWEF.Events
 
             var entry = new VisualEntry
             {
-                instanceId = instance.instanceId,
-                root       = root,
-                particles  = root.GetComponentsInChildren<ParticleSystem>()
+                instanceId            = instance.instanceId,
+                root                  = root,
+                particles             = root.GetComponentsInChildren<ParticleSystem>()
             };
+            entry.originalMaxParticles = new int[entry.particles.Length];
+            for (int i = 0; i < entry.particles.Length; i++)
+                entry.originalMaxParticles[i] = entry.particles[i].main.maxParticles;
 
             entry.lifecycleCoroutine = StartCoroutine(LifecycleCoroutine(entry, instance));
             _visuals[key] = entry;
@@ -130,10 +134,10 @@ namespace SWEF.Events
             if (!_visuals.TryGetValue(key, out var entry)) return;
 
             intensity = Mathf.Clamp01(intensity);
-            foreach (var ps in entry.particles)
+            for (int i = 0; i < entry.particles.Length; i++)
             {
-                var main = ps.main;
-                main.maxParticles = Mathf.RoundToInt(main.maxParticles * intensity);
+                var main = entry.particles[i].main;
+                main.maxParticles = Mathf.RoundToInt(entry.originalMaxParticles[i] * intensity);
             }
 
             // Scale root by intensity

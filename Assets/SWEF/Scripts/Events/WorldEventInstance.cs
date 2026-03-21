@@ -95,15 +95,16 @@ namespace SWEF.Events
         /// <summary>
         /// Transitions the instance from <see cref="WorldEventState.Pending"/> to
         /// <see cref="WorldEventState.Active"/>.
+        /// The <see cref="endTime"/> set by the constructor is preserved; this method
+        /// only advances the state and records the real activation time.
         /// </summary>
         public void Activate()
         {
             if (state != WorldEventState.Pending) return;
+            float elapsed = Time.time - startTime;
             state     = WorldEventState.Active;
             startTime = Time.time;
-            endTime   = startTime + (eventData != null
-                ? UnityEngine.Random.Range(eventData.minDurationMinutes, eventData.maxDurationMinutes) * 60f
-                : endTime - startTime);
+            endTime  += elapsed; // keep the original duration intact
         }
 
         /// <summary>
