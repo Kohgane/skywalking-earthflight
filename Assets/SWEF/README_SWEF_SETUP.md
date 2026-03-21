@@ -3430,3 +3430,156 @@ import/export, and thumbnail generation.  Extends the existing `Recorder/`,
 2. Add a `ReplayTheaterManager` (+ child `ReplayTimeline`, `CinematicCameraEditor`, `ReplayTheaterUI`) to a persistent GameObject.
 3. Call `BootManager.EnterReplayTheater(myReplayData)` or `ReplayTheaterManager.Instance.EnterTheater(data)` to open the theater.
 4. Use `ReplayExporter.ExportReplayPackage(path, data, editor)` to save a `.swef-replay` file and `ReplayImporter.ImportReplayPackage(path)` to load it back.
+
+---
+
+## Phase 44 — Custom Aircraft & Avatar System
+
+### Overview
+
+A comprehensive aircraft customisation system allowing players to personalise their
+aircraft appearance with unlockable and purchasable skins, contrail colours, particle
+effects, decals, and cockpit themes.  Includes a visual Hangar UI for previewing
+customisations, integration with the Progression / Achievement / IAP / Settings
+systems, and multiplayer sync so other players see your customisations.
+
+### New Scripts (12) — `Assets/SWEF/Scripts/Aircraft/` — namespace `SWEF.Aircraft`
+
+| # | File | Role |
+|---|------|------|
+| 1 | `AircraftData.cs` | Pure data classes & enums: `AircraftSkinRarity`, `AircraftPartType`, `AircraftUnlockType`, `AircraftSkinDefinition`, `AircraftUnlockCondition`, `AircraftLoadout`, `AircraftCustomizationSaveData` |
+| 2 | `AircraftSkinRegistry.cs` | Singleton skin registry with O(1) dictionary lookup; provides `GetSkin`, `GetSkinsByPart`, `GetSkinsByRarity`, `GetDefaultSkins`, `GetAllSkins`, `GetSkinsForUnlockType` |
+| 3 | `AircraftCustomizationManager.cs` | Singleton manager — unlocked skins, active loadout CRUD, favourites, JSON persistence to `aircraft_customization.json` |
+| 4 | `AircraftUnlockEvaluator.cs` | Static utility — evaluates unlock conditions against PilotRank, Achievement, IAP, SeasonPass, HiddenGem, and Event systems |
+| 5 | `AircraftVisualController.cs` | MonoBehaviour on the player aircraft — applies materials, trail colours, particle prefabs, decals, and aura effects at runtime |
+| 6 | `AircraftTrailController.cs` | Manages contrail opacity (speed-driven) and width (altitude-driven) via `ExpSmoothing.ExpLerp` |
+| 7 | `AircraftHangarUI.cs` | Full-screen Hangar UI with skin-card grid, part-type filter buttons, rarity dropdown, sort modes, and loadout management |
+| 8 | `AircraftSkinCardUI.cs` | Individual card: preview icon, rarity badge (colour-coded), lock indicator with unlock text, Equip button, Equipped indicator, favourite star |
+| 9 | `AircraftPreviewController.cs` | 3-D preview model — drag-to-orbit, pinch/scroll zoom, auto-rotate when idle, `ShowPreview` / `PreviewSingleSkin` / `ResetPreview` |
+| 10 | `AircraftMultiplayerSync.cs` | Serialises loadout to `body:id|wings:id|...` format; broadcasts on loadout change; applies incoming loadout to remote `AircraftVisualController` |
+| 11 | `AircraftAchievementBridge.cs` | Reports skin-unlock milestones to `AchievementManager`: total skins, first skin, first Legendary, full same-rarity set, loadout count |
+| 12 | `AircraftSettingsBridge.cs` | Persists aircraft-specific settings via PlayerPrefs; fires `OnAircraftSettingsChanged`; bridges with `SettingsManager.OnSettingsChanged` |
+
+### Skin Definition Structure
+
+```
+AircraftSkinDefinition
+├── skinId               (string — unique key)
+├── displayName          (string)
+├── description          (string)
+├── rarity               (AircraftSkinRarity: Common/Uncommon/Rare/Epic/Legendary)
+├── partType             (AircraftPartType: Body/Wings/Engine/Cockpit/Trail/Decal/Particle/Aura)
+├── previewIconId        (string — Resources sprite path)
+├── materialId           (string — Resources material path)
+├── trailColorPrimary    (Color — Trail type)
+├── trailColorSecondary  (Color — Trail type)
+├── particleSystemId     (string — Resources prefab path, Particle/Aura types)
+├── unlockCondition      (AircraftUnlockCondition)
+├── iapProductId         (string — empty if not purchasable)
+├── requiredPilotRank    (int — 0 = no requirement)
+├── isDefault            (bool — true for starter set)
+└── metadata             (SerializableStringDictionary)
+```
+
+### Rarity System & Badge Colours
+
+| Rarity | Badge Colour |
+|--------|-------------|
+| Common | Grey `#BFBFBF` |
+| Uncommon | Green `#40DA40` |
+| Rare | Blue `#1A80FF` |
+| Epic | Purple `#A626E6` |
+| Legendary | Gold `#FFB31A` |
+
+### Loadout System (8 Customisable Slots)
+
+Each `AircraftLoadout` covers all eight `AircraftPartType` slots: Body, Wings, Engine, Cockpit, Trail, Decal, Particle, Aura.  Players can create named loadouts, switch between them, and delete extras.  The active loadout ID is persisted in `aircraft_customization.json`.
+
+### Hangar UI Setup
+
+1. Add `AircraftSkinRegistry` to a persistent scene GameObject; populate `allSkins` in the Inspector.
+2. Add `AircraftCustomizationManager` to the same or another persistent GameObject.
+3. Add `AircraftHangarUI` to the HUD Canvas. Assign:
+   - `skinGridParent` — a `ScrollRect` content transform.
+   - `skinCardPrefab` — a prefab with `AircraftSkinCardUI`.
+   - `partFilterButtons` — one `Button` per `AircraftPartType`.
+   - `rarityFilterDropdown` — a `Dropdown` with entries: All, Common, Uncommon, Rare, Epic, Legendary.
+   - `previewController` — the `AircraftPreviewController` scene object.
+4. Add `AircraftPreviewController` to a dedicated preview-scene area; assign `previewPivot`, `previewCamera`, and `previewVisualController`.
+5. Call `AircraftHangarUI.Open()` from any button.
+
+### Multiplayer Sync Behaviour
+
+When a player changes their active loadout, `AircraftMultiplayerSync` serialises it as:
+
+```
+body:skin_001|wings:skin_002|engine:skin_003|cockpit:skin_004|trail:skin_005|decal:skin_006|particle:skin_007|aura:skin_008
+```
+
+This string is broadcast via `NetworkManager2`. On the receiving side, call `OnRemoteLoadoutReceived(playerId, data)` which deserialises and applies the loadout to the registered remote `AircraftVisualController`.
+
+Register remote player visual controllers with:
+```csharp
+multiplayerSync.RegisterRemotePlayer(playerId, remoteVisualController);
+```
+
+### Integration Points
+
+| System | Integration |
+|--------|-------------|
+| `ProgressionManager` | `AircraftUnlockEvaluator` checks `CurrentRankLevel` for PilotRank conditions |
+| `AchievementManager` | `AircraftUnlockEvaluator` calls `IsUnlocked`; `AircraftAchievementBridge` calls `ReportProgress` / `SetProgress` |
+| `IAPManager` | `AircraftUnlockEvaluator` calls `HasPurchased` for Purchase conditions |
+| `SeasonPassManager` | `AircraftUnlockEvaluator` checks `IsSeasonActive` + `GetCurrentTier` |
+| `HiddenGemManager` | `AircraftUnlockEvaluator` calls `IsGemDiscovered` for HiddenGem conditions |
+| `EventParticipationTracker` | `AircraftUnlockEvaluator` calls `IsParticipatingIn(Guid)` for Event conditions |
+| `SettingsManager` | `AircraftSettingsBridge` subscribes to `OnSettingsChanged` |
+| `NetworkManager2` | `AircraftMultiplayerSync` broadcasts loadout on change |
+| `FlightController` | `AircraftTrailController` reads `CurrentSpeedMps` |
+| `AltitudeController` | `AircraftTrailController` reads `CurrentAltitudeMeters` |
+| `LocalizationManager` | `AircraftHangarUI` uses `LocalizationManager` for localised strings |
+
+### PlayerPrefs Keys Added (Phase 44)
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `SWEF_Aircraft_TrailEnabled` | int (0/1) | 1 | Master toggle for contrail rendering |
+| `SWEF_Aircraft_ParticleQuality` | int 0–3 | 2 | 0=Off, 1=Low, 2=Medium, 3=High |
+| `SWEF_Aircraft_ShowOtherPlayerSkins` | int (0/1) | 1 | Whether to render remote customisations |
+| `SWEF_Aircraft_AuraEnabled` | int (0/1) | 1 | Master toggle for aura effects |
+
+### JSON Save File
+
+`aircraft_customization.json` in `Application.persistentDataPath`:
+
+```json
+{
+  "unlockedSkinIds": ["skin_default_body", "skin_default_trail"],
+  "activeLoadoutId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  "loadouts": [
+    {
+      "loadoutId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+      "loadoutName": "Default",
+      "bodySkinId": "skin_default_body",
+      "trailSkinId": "skin_default_trail",
+      ...
+    }
+  ],
+  "favoriteSkins": ["skin_legendary_aurora"]
+}
+```
+
+### Achievement IDs Reported
+
+| ID | Trigger |
+|----|---------|
+| `aircraft_skins_unlocked` | SetProgress: total unique skins |
+| `aircraft_first_skin` | First skin ever unlocked |
+| `aircraft_legendary_first` | First Legendary skin unlocked |
+| `aircraft_full_set` | All 8 slots from the same rarity equipped |
+| `aircraft_loadouts_created` | SetProgress: total loadouts created |
+| `aircraft_common_skins` | ReportProgress: Common skins unlocked |
+| `aircraft_uncommon_skins` | ReportProgress: Uncommon skins unlocked |
+| `aircraft_rare_skins` | ReportProgress: Rare skins unlocked |
+| `aircraft_epic_skins` | ReportProgress: Epic skins unlocked |
+| `aircraft_legendary_skins` | ReportProgress: Legendary skins unlocked |
