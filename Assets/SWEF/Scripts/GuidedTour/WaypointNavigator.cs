@@ -97,6 +97,18 @@ namespace SWEF.GuidedTour
             autopilotSpeed = Mathf.Clamp01(speed);
         }
 
+        /// <summary>
+        /// Sets an arbitrary world-space target position independent of any active tour.
+        /// Useful for navigating the player to a world event location.
+        /// </summary>
+        /// <param name="position">World-space destination.</param>
+        public void SetManualTarget(Vector3 position)
+        {
+            _targetPosition = position;
+            _hasTarget      = true;
+            Debug.Log($"[SWEF] WaypointNavigator: manual target set to {position}.");
+        }
+
         // ── Internal ──────────────────────────────────────────────────────────────
         private void HandleWaypointReached(int index, TourData.WaypointData data)
         {
