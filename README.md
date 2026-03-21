@@ -815,3 +815,107 @@ ChallengeRewardController
 | `ChallengeRewardController` | `SWEF.Progression.CosmeticUnlockManager` — `UnlockCosmetic()` |
 | `ChallengeRewardController` | `SWEF.Progression.SkillTreeManager` — `AddSkillPoint()` |
 | `SeasonPassManager` | `ChallengeRewardController.GrantSeasonReward()` |
+
+---
+
+## Phase 41 — Social Hub & Player Profile System
+
+New directory: `Assets/SWEF/Scripts/SocialHub/` — 10 scripts, namespace `SWEF.SocialHub`.
+
+### Scripts
+
+| # | Script | Namespace | Description |
+|---|--------|-----------|-------------|
+| 1 | `PlayerProfile.cs` | `SWEF.SocialHub` | Serializable data class — public profile snapshot (identity, rank, stats, achievements, cosmetics) |
+| 2 | `PlayerProfileManager.cs` | `SWEF.SocialHub` | Singleton — builds local profile from live systems, caches remote profiles to JSON |
+| 3 | `FriendManager.cs` | `SWEF.SocialHub` | Singleton — friend list / request management, persists to `friends.json` |
+| 4 | `SocialHubController.cs` | `SWEF.SocialHub` | Central controller — opens/closes the Social Hub overlay, routes panel navigation |
+| 5 | `ProfileCardUI.cs` | `SWEF.SocialHub` | Compact profile card — avatar, name, title, rank, stats summary, action button |
+| 6 | `FriendListUI.cs` | `SWEF.SocialHub` | Friend list panel — confirmed friends, incoming/outgoing requests, add-friend form |
+| 7 | `SocialActivityFeed.cs` | `SWEF.SocialHub` | Singleton — records social events, auto-hooks into Progression/Achievement/DailyChallenge/Multiplayer |
+| 8 | `ProfileCustomizationUI.cs` | `SWEF.SocialHub` | Customization panel — avatar picker, title selector, live preview card |
+| 9 | `PlayerSearchUI.cs` | `SWEF.SocialHub` | Search panel — searches cached remote profiles by name, shows add-friend actions |
+| 10 | `SocialNotificationSystem.cs` | `SWEF.SocialHub` | Singleton — generates/persists social notifications; friend requests, activity, lobby joins |
+
+### PlayerProfile Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `playerId` | string | Unique player UUID |
+| `displayName` | string | Player-chosen display name (2–20 chars) |
+| `avatarId` | string | Selected avatar asset identifier |
+| `titleId` | string | Equipped title (NameTag cosmetic id) |
+| `pilotRankLevel` | int | Current pilot rank level (1–50) |
+| `pilotRankName` | string | Human-readable rank name |
+| `totalXP` | long | Total accumulated XP |
+| `totalFlightTimeMinutes` | float | Total flight time in minutes |
+| `totalDistanceKm` | float | Total distance flown in km |
+| `maxAltitudeMeters` | float | Highest altitude ever reached (metres) |
+| `maxSpeedKmh` | float | Top speed ever achieved (km/h) |
+| `totalFlights` | int | Number of completed flights |
+| `achievementsUnlocked` | int | Count of unlocked achievements |
+| `achievementsTotal` | int | Total achievements available |
+| `dailyStreak` | int | Current consecutive-day streak |
+| `seasonTier` | int | Current season-pass tier |
+| `isPremium` | bool | Premium season-pass status |
+| `equippedCosmetics` | Dictionary<string,string> | Category name → equipped cosmetic id |
+
+### Social Hub Architecture
+
+```
+SocialHubController.Open(panel)
+  ├── SocialHubPanel.MyProfile        → PlayerProfileManager.GetLocalProfile()
+  │                                       └─ ProgressionManager, AchievementManager,
+  │                                          DailyChallengeManager, SeasonPassManager,
+  │                                          CosmeticUnlockManager
+  ├── SocialHubPanel.Friends          → FriendListUI.Refresh()
+  │                                       └─ FriendManager: friends, incoming, outgoing
+  ├── SocialHubPanel.ActivityFeed     → ActivityFeedUI.Refresh()
+  │                                       └─ SocialActivityFeed.GetEntries()
+  ├── SocialHubPanel.PlayerSearch     → PlayerSearchUI (searches cached remote profiles)
+  │                                       └─ PlayerProfileManager.GetAllRemoteProfiles()
+  └── SocialHubPanel.Customization    → ProfileCustomizationUI.Open()
+                                          ├─ PlayerProfileManager.SetDisplayName()
+                                          ├─ PlayerProfileManager.SetAvatarId()
+                                          └─ CosmeticUnlockManager.EquipCosmetic(NameTag)
+```
+
+### Activity Feed Event Sources
+
+| Event | Source |
+|-------|--------|
+| FlightCompleted | `SocialActivityFeed.NotifyFlightCompleted()` |
+| AchievementUnlocked | `AchievementManager.OnAchievementUnlocked` |
+| RankUp | `ProgressionManager.OnRankUp` |
+| SeasonTierReached | `SeasonPassManager.OnTierAdvanced` |
+| ChallengeCompleted | `DailyChallengeManager.OnChallengeCompleted` |
+| BecameFriends | `FriendManager.OnFriendAdded` |
+| JoinedMultiplayer | `NetworkManager2.OnLobbyJoined` |
+
+### Persistence
+
+| File | Contents |
+|------|----------|
+| `friends.json` | Friend entries (status, display name, timestamp) |
+| `social_profiles.json` | Cached remote PlayerProfile objects |
+| `social_activity.json` | Rolling activity feed (max 200 entries) |
+| `social_notifications.json` | Social notifications (max 100, read/unread) |
+
+### Integration Points
+
+| Phase 41 Script | Integrates With |
+|----------------|----------------|
+| `PlayerProfileManager` | `SWEF.Progression.ProgressionManager` — XP, rank, stats |
+| `PlayerProfileManager` | `SWEF.Progression.CosmeticUnlockManager` — equipped cosmetics |
+| `PlayerProfileManager` | `SWEF.Achievement.AchievementManager` — achievement counts |
+| `PlayerProfileManager` | `SWEF.DailyChallenge.DailyChallengeManager` — daily streak |
+| `PlayerProfileManager` | `SWEF.DailyChallenge.SeasonPassManager` — season tier, premium |
+| `SocialActivityFeed` | `SWEF.Progression.ProgressionManager.OnRankUp` |
+| `SocialActivityFeed` | `SWEF.Achievement.AchievementManager.OnAchievementUnlocked` |
+| `SocialActivityFeed` | `SWEF.DailyChallenge.DailyChallengeManager.OnChallengeCompleted` |
+| `SocialActivityFeed` | `SWEF.DailyChallenge.SeasonPassManager.OnTierAdvanced` |
+| `SocialActivityFeed` | `SWEF.Multiplayer.NetworkManager2.OnLobbyJoined` |
+| `SocialNotificationSystem` | `FriendManager.OnFriendAdded`, `OnFriendListChanged` |
+| `SocialNotificationSystem` | `SocialActivityFeed.OnActivityPosted` |
+| `SocialNotificationSystem` | `SWEF.Multiplayer.NetworkManager2.OnPlayerConnected` |
+| `ProfileCustomizationUI` | `SWEF.Progression.CosmeticUnlockManager.GetUnlockedCosmetics()` |
