@@ -436,3 +436,80 @@ SaveSystemUI (Singleton)
 | `CloudSyncManager` | `SaveConflictResolver` — delegates conflict detection on download |
 | `SaveSystemUI` | `SaveConflictResolver` — shows resolution prompt on `OnConflictDetected` |
 | `SaveIntegrityChecker` | `BootManager` — auto-scan on boot, quarantine corrupted slots |
+
+---
+
+## Phase 37 — Guided Tour & Waypoint Navigation System
+
+### New Scripts (8 files in `Assets/SWEF/Scripts/GuidedTour/`)
+
+| # | Script | Namespace | Purpose |
+|---|--------|-----------|---------|
+| 1 | `TourData.cs` | `SWEF.GuidedTour` | ScriptableObject — defines a tour with ordered `WaypointData` list, difficulty, estimated duration, and localization key |
+| 2 | `TourManager.cs` | `SWEF.GuidedTour` | Singleton MonoBehaviour — manages tour lifecycle (start/pause/resume/cancel/complete), coroutine-driven auto-advance, events |
+| 3 | `WaypointNavigator.cs` | `SWEF.GuidedTour` | Navigation assistance and optional auto-pilot via `FlightController.Step()`; calculates bearing & distance to next waypoint |
+| 4 | `WaypointHUD.cs` | `SWEF.GuidedTour` | HUD overlay — on-screen waypoint markers, distance labels, off-screen direction arrows, progress bar, waypoint counter |
+| 5 | `TourNarrationController.cs` | `SWEF.GuidedTour` | Queue-based audio + subtitle narration with `LocalizationManager` integration; skip/volume controls |
+| 6 | `TourCatalogUI.cs` | `SWEF.GuidedTour` | Scrollable tour list with difficulty/status/region filters, search bar, per-entry start button wired to `TourManager.StartTour()` |
+| 7 | `TourProgressTracker.cs` | `SWEF.GuidedTour` | Singleton — JSON-persisted completion data, 1–3 star rating, `AchievementManager` integration on milestones |
+| 8 | `TourMinimapOverlay.cs` | `SWEF.GuidedTour` | `LineRenderer`-based minimap path; visited (green) vs. remaining (white) segments; player marker; toggle visibility |
+
+### Key Data Types
+
+| Type | File | Description |
+|------|------|-------------|
+| `TourDifficulty` | `TourData.cs` | Enum: `Easy / Medium / Hard` |
+| `TourData.WaypointData` | `TourData.cs` | Struct: `position`, `lookAtTarget`, `waypointName`, `narrationKey`, `stayDurationSeconds`, `triggerRadius`, optional `cameraAngleOverride` |
+| `TourProgressTracker.TourResult` | `TourProgressTracker.cs` | Struct: `completionTime`, `waypointsVisited`, `starsEarned`, `completedDate` (ISO-8601) |
+
+### Architecture
+
+```
+TourManager (Singleton, coroutine-driven)
+│   ├── StartTour(TourData) / PauseTour() / ResumeTour() / CancelTour() / SkipToWaypoint(int)
+│   ├── Coroutine polls WaypointNavigator.DistanceToNextWaypoint vs triggerRadius
+│   ├── Dwells for stayDurationSeconds then auto-advances
+│   └── Events: OnTourStarted / OnWaypointReached / OnTourCompleted / OnTourCancelled
+│
+WaypointNavigator  →  FlightController.Step(yaw, pitch, 0) for autopilot steering
+│   ├── DistanceToNextWaypoint / BearingToNextWaypoint (read-only properties)
+│   ├── EnableAutoPilot() / DisableAutoPilot() / SetAutoPilotSpeed(float)
+│   └── Subscribes to TourManager.OnWaypointReached to advance target position
+│
+WaypointHUD  →  Camera.WorldToScreenPoint per waypoint
+│   ├── Spawns marker prefabs into a Canvas RectTransform container
+│   ├── Clamps off-screen waypoints to a direction arrow
+│   └── Drives Slider progress bar and "N/M" counter Text
+│
+TourNarrationController  →  LocalizationManager.Instance.GetText(narrationKey)
+│   ├── Queue<NarrationRequest> — never overlaps AudioSource playback
+│   ├── PlayNarration(key, clip) / SkipNarration() / SetNarrationVolume(float)
+│   └── Fades subtitle CanvasGroup out when queue empties
+│
+TourCatalogUI
+│   ├── Instantiates tourEntryPrefab per matching TourData in contentRoot
+│   ├── Filters: difficulty dropdown / status dropdown / region dropdown / search InputField
+│   └── Each entry's Button calls TourManager.StartTour() then hides catalog
+│
+TourProgressTracker (Singleton)
+│   ├── Persists to persistentDataPath/tour_progress.json (JsonUtility)
+│   ├── GetTourProgress(tourId) / SaveTourResult(tourId, result) / GetCompletedTourCount()
+│   └── TriggerAchievements → AchievementManager.TryUnlock / ReportProgress
+│
+TourMinimapOverlay
+│   ├── pathLineRenderer (all waypoints) + visitedLineRenderer (visited segment)
+│   ├── Colours: remaining = white, visited = green, player marker = yellow
+│   └── Show() / Hide() / Toggle()
+```
+
+### Integration Points
+
+| Phase 37 Script | Integrates With |
+|----------------|----------------|
+| `WaypointNavigator` | `SWEF.Flight.FlightController` — calls `SetThrottle` + `Step()` for autopilot |
+| `TourNarrationController` | `SWEF.Localization.LocalizationManager` — `GetText(narrationKey)` for subtitles |
+| `TourProgressTracker` | `SWEF.Achievement.AchievementManager` — `TryUnlock` + `ReportProgress` on milestones |
+| `TourManager` | `WaypointNavigator` — polls `DistanceToNextWaypoint` in trigger-check loop |
+| `TourCatalogUI` | `TourProgressTracker` — reads completion/star status per entry |
+| `TourMinimapOverlay` | `SWEF.Flight.FlightController` — reads player transform for marker position |
+
