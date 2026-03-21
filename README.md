@@ -1033,7 +1033,7 @@ The Flight Journal & Logbook System is an automatic flight diary that records ev
 ```
 ┌─ JournalPanelUI ─────────────────────────────────────────┐
 │  ScrollView cards  │  Filter bar  │  Sort  │  Search      │
-└─────────────────────────────────────────────────────────-─┘
+└─────────────────────────────────────────────────────────┘
          ↕                     ↕
    JournalManager ←── JournalAutoRecorder
    │  (Singleton, DDOL)    │  altitude samples (5 s)

@@ -295,7 +295,7 @@ namespace SWEF.Journal
         private static string FormatDate(string isoDate)
         {
             if (DateTime.TryParse(isoDate, null, System.Globalization.DateTimeStyles.RoundtripKind, out DateTime dt))
-                return dt.ToLocalTime().ToString("MMMM dd, yyyy  HH:mm");
+                return dt.ToLocalTime().ToString("MMMM dd, yyyy HH:mm");
             return isoDate ?? string.Empty;
         }
 

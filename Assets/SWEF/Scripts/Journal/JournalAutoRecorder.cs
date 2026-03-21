@@ -94,7 +94,7 @@ namespace SWEF.Journal
             AccumulatedDistanceKm += delta / 1000f;
             _lastPosition = pos;
 
-            // Speed tracking (convert m/s → km/h).
+            // Convert m/s to km/h (multiply by 3.6 = 3600 s/h ÷ 1000 m/km).
             float speedKmh = _flight.CurrentSpeedMps * 3.6f;
             if (speedKmh > MaxSpeedKmh) MaxSpeedKmh = speedKmh;
             _speedAccum      += speedKmh;

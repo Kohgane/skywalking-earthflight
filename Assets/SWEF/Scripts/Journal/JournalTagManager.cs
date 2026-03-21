@@ -120,8 +120,8 @@ namespace SWEF.Journal
         {
             if (string.IsNullOrWhiteSpace(tag)) return;
             tag = tag.Trim().ToLowerInvariant();
-            _tagUsage.TryGetValue(tag, out int count);
-            _tagUsage[tag] = count; // ensure present even with 0 uses
+            if (!_tagUsage.ContainsKey(tag))
+                _tagUsage[tag] = 0; // register with zero uses
             SaveTags();
         }
 
