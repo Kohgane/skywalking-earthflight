@@ -1179,3 +1179,112 @@ FlightController.IsFlying → false
 | `JournalDetailUI` | `SWEF.Replay.GhostRacer` — start ghost replay |
 | `JournalTagManager` | `SWEF.Multiplayer.NetworkManager2` — multiplayer tag suggestion |
 | `JournalShareController` | Follows `SWEF.Achievement.AchievementShareController` pattern |
+
+---
+
+## Phase 43 — Hidden Gems & Secret Locations Discovery System
+
+A curated database of 50+ real-world hidden locations across all continents that players can discover while flying. Features proximity detection, fog-of-war reveal, collectible cards, lore entries, and deep integration with existing minimap, achievement, tour, and progression systems.
+
+### New Scripts (`Assets/SWEF/Scripts/HiddenGems/`)
+
+| # | Script | Namespace | Purpose |
+|---|--------|-----------|---------|
+| 1 | `HiddenGemData.cs` | `SWEF.HiddenGems` | Pure data classes: `HiddenGemDefinition`, `HiddenGemState`, `GemDiscoveryEvent`; all enums |
+| 2 | `HiddenGemDatabase.cs` | `SWEF.HiddenGems` | Static database of 53 real-world hidden gems with accurate GPS coordinates |
+| 3 | `HiddenGemManager.cs` | `SWEF.HiddenGems` | Singleton manager: proximity detection with spatial hashing, persistence, events, minimap blips |
+| 4 | `GemDiscoveryUI.cs` | `SWEF.HiddenGems` | Animated discovery popup with queue system, 8-second auto-dismiss, share/navigate buttons |
+| 5 | `GemCollectionUI.cs` | `SWEF.HiddenGems` | Full-screen gallery with tabs, grid cards, detail view, sort/filter/search |
+| 6 | `GemRadarUI.cs` | `SWEF.HiddenGems` | Compass-style HUD radar pointing to nearest undiscovered gem, with warmth-based pulsing |
+| 7 | `GemMinimapIntegration.cs` | `SWEF.HiddenGems` | Bridges `HiddenGemManager` ↔ `MinimapManager`; registers blips, distance-based visibility |
+| 8 | `GemTourGenerator.cs` | `SWEF.HiddenGems` | Static utility generating `TourData` from gem selections (continent/rarity/nearby/custom) |
+| 9 | `GemStatisticsTracker.cs` | `SWEF.HiddenGems` | Analytics tracker: discovery rate, streaks, continent completion, rarity distribution |
+| 10 | `Editor/HiddenGemEditorWindow.cs` | `SWEF.Editor` | Unity Editor tool: validation, GPS check, duplicate detection, charts, export/import JSON |
+
+### Gem Rarities & Colours
+
+| Rarity | Colour | XP Reward | Discovery Radius |
+|--------|--------|-----------|-----------------|
+| Common | `#AAAAAA` | 50 XP | 600 m |
+| Uncommon | `#1EFF00` | 100 XP | 500 m |
+| Rare | `#0070FF` | 200 XP | 400 m |
+| Epic | `#A335EE` | 500 XP | 300 m |
+| Legendary | `#FF8000` | 1000 XP | 200 m |
+
+### Gem Categories (15)
+
+`NaturalWonder`, `AncientRuin`, `SecretBeach`, `HiddenWaterfall`, `UndergroundCave`,
+`AbandonedStructure`, `SacredSite`, `GeologicalFormation`, `HiddenVillage`,
+`MysteriousLandmark`, `UnexploredIsland`, `ForgottenTemple`, `NaturalArch`,
+`VolcanicFormation`, `IceFormation`
+
+### Continental Gem Counts
+
+| Continent | Count |
+|-----------|-------|
+| Asia | 10 |
+| Europe | 10 |
+| North America | 8 |
+| South America | 8 |
+| Africa | 8 |
+| Oceania | 8 |
+| Antarctica | 3 |
+| **Total** | **55** |
+
+### Architecture
+
+```
+HiddenGemManager (Singleton, DontDestroyOnLoad)
+│   ├── Loads HiddenGemDefinition[] from HiddenGemDatabase.GetAllGems()
+│   ├── Persists HiddenGemState[] → persistentDataPath/hidden_gems.json
+│   ├── Spatial hash grid for proximity detection (10 km grid cells)
+│   └── Events: OnGemDiscovered, OnGemFavorited
+│
+├── GemDiscoveryUI          → subscribes OnGemDiscovered, shows popup queue
+├── GemCollectionUI         → full gallery with filters/sort/detail view
+├── GemRadarUI              → HUD compass pointing to nearest undiscovered
+├── GemMinimapIntegration   → bridges to MinimapManager blip system
+├── GemTourGenerator        → creates TourData from gem selections
+├── GemStatisticsTracker    → analytics + persistent stats
+│
+└── Editor/HiddenGemEditorWindow  → validation, preview, testing
+```
+
+### Persistence
+
+| File | Location | Contents |
+|------|----------|----------|
+| `hidden_gems.json` | `Application.persistentDataPath` | All `HiddenGemState` records |
+| `hidden_gems_stats.json` | `Application.persistentDataPath` | Discovery statistics |
+
+### Localization Keys (Phase 43)
+
+Added to all 8 language files (`lang_en.json` … `lang_pt.json`):
+
+- `gem_panel_title`, `gem_filter_*`, `gem_total_progress`, `gem_discovery_popup_title`
+- `gem_radar_cold`, `gem_radar_warm`, `gem_radar_hot`, `gem_radar_nearby`
+- `gem_rarity_*` (5 rarities) — with UI colour coding
+- `gem_continent_*` (7 continents)
+- `gem_category_*` (15 categories)
+- 55 gem name/description/fact keys (e.g. `gem_trolltunga_name`, `gem_trolltunga_desc`, `gem_trolltunga_fact`)
+- `gem_undiscovered_hint`, `gem_locked_requirement`, `gem_navigate_button`, `gem_share_button`
+- `gem_tour_continent`, `gem_tour_rarity`, `gem_tour_nearby`, `gem_tour_custom`
+- `gem_stats_title`, `gem_stats_rate`, `gem_stats_streak`
+
+### Integration Points
+
+| HiddenGems Script | Integrates With |
+|------------------|----------------|
+| `HiddenGemManager` | `SWEF.Flight.FlightController` — player position, velocity |
+| `HiddenGemManager` | `SWEF.Minimap.MinimapManager` — RegisterBlip/UnregisterBlip |
+| `HiddenGemManager` | `SWEF.Progression.ProgressionManager.AddXP()` |
+| `HiddenGemManager` | `SWEF.Achievement.AchievementManager.ReportProgress()` |
+| `HiddenGemManager` | `SWEF.Analytics.UserBehaviorTracker.TrackFeatureDiscovery()` |
+| `GemDiscoveryUI` | `SWEF.Localization.LocalizationManager` |
+| `GemDiscoveryUI` | `SWEF.Social.ShareManager.ShareText()` |
+| `GemDiscoveryUI` | `SWEF.GuidedTour.WaypointNavigator.SetManualTarget()` |
+| `GemCollectionUI` | `SWEF.GuidedTour.TourManager.StartTour()` |
+| `GemMinimapIntegration` | `SWEF.Minimap.MinimapManager` |
+| `GemTourGenerator` | `SWEF.GuidedTour.TourData`, `TourManager` |
+| `GemStatisticsTracker` | `SWEF.Progression.ProgressionManager.TotalFlightTimeSeconds` |
+| `GemRadarUI` | `SWEF.Minimap.MinimapManager.GetBlip()` |
