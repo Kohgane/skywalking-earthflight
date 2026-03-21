@@ -513,3 +513,71 @@ TourMinimapOverlay
 | `TourCatalogUI` | `TourProgressTracker` — reads completion/star status per entry |
 | `TourMinimapOverlay` | `SWEF.Flight.FlightController` — reads player transform for marker position |
 
+
+---
+
+## Phase 38 — Dynamic Event System & World Events
+
+### New Scripts (8 files in `Assets/SWEF/Scripts/Events/`)
+
+| # | File | Namespace | Role |
+|---|------|-----------|------|
+| 1 | `WorldEventData.cs` | `SWEF.Events` | ScriptableObject — event template with type, duration, spawn region, probability, rewards, recurrence, seasonal constraint |
+| 2 | `WorldEventInstance.cs` | `SWEF.Events` | Plain C# class — live runtime instance; state machine (`Pending → Active → Expiring → Ended`); `RemainingTime`, `Progress01`, `IsActive` |
+| 3 | `EventScheduler.cs` | `SWEF.Events` | Singleton MonoBehaviour — loads `Resources/Events/`, coroutine-based evaluation loop, considers probability / cooldown / season / weather; `ForceSpawnEvent`, `GetActiveEvents`, `GetUpcomingEvents` |
+| 4 | `EventParticipationTracker.cs` | `SWEF.Events` | MonoBehaviour — distance-based participation detection, tracks time in region, completion threshold, JSON persistence, `AchievementManager` grant on completion |
+| 5 | `EventVisualController.cs` | `SWEF.Events` | MonoBehaviour — spawns prefabs from Resources, scale-in coroutine, particle management, fade-out on expiry; `SpawnVisual`, `DespawnVisual`, `SetVisualIntensity` |
+| 6 | `EventNotificationUI.cs` | `SWEF.Events` | MonoBehaviour — slide-in toast (name, distance, countdown, Navigate button), persistent HUD widget with countdown slider and participation progress |
+| 7 | `EventCalendarUI.cs` | `SWEF.Events` | MonoBehaviour — full-screen calendar with `Active Now / Upcoming / History` tabs, per-entry Navigate action via `WaypointNavigator.SetManualTarget` |
+| 8 | `EventRewardController.cs` | `SWEF.Events` | MonoBehaviour — `GrantRewards` + `ShowRewardPopup`; slide-up card with per-reward rows; `AchievementManager` unlock for achievement rewards |
+
+### Updated Scripts
+| File | Change |
+|------|--------|
+| `GuidedTour/WaypointNavigator.cs` | Added `SetManualTarget(Vector3)` public method for event-based navigation |
+
+### Architecture Overview
+
+```
+EventScheduler (Singleton, DontDestroyOnLoad)
+│   ├── Loads WorldEventData[] from Resources/Events/
+│   ├── Coroutine: EvaluateSpawns every evaluationIntervalSeconds
+│   │       ├── Checks: season, cooldown, concurrent cap, time-of-day, weather (null-safe)
+│   │       └── SpawnEvent() → WorldEventInstance (Pending → Activate())
+│   ├── TickActiveEvents(): Expire() when RemainingTime ≤ 0, clean Ended instances
+│   └── Events: OnEventSpawned / OnEventExpired
+│
+EventParticipationTracker
+│   ├── Subscribes to EventScheduler.OnEventSpawned / OnEventExpired
+│   ├── Update(): distance check → builds EventParticipation records
+│   ├── Completion threshold → GrantRewardsForEvent → AchievementManager + EventRewardController
+│   └── JSON persistence to Application.persistentDataPath/event_participation.json
+│
+EventVisualController
+│   ├── Subscribes to EventScheduler.OnEventSpawned / OnEventExpired
+│   ├── SpawnVisual → Instantiate prefab → ScaleIn coroutine → particle Play
+│   └── DespawnVisual → FadeOutAndDestroy coroutine
+│
+EventNotificationUI
+│   ├── ShowEventNotification → slide-in toast → Navigate button → WaypointNavigator.SetManualTarget
+│   └── Update(): HUD widget countdown + participation progress
+│
+EventCalendarUI
+│   ├── Tabs: Active Now (EventScheduler.GetActiveEvents), Upcoming (GetUpcomingEvents), History (tracker)
+│   └── Navigate entry → WaypointNavigator.SetManualTarget + EnableAutoPilot
+│
+EventRewardController
+│   ├── GrantRewards(instance, participation) → AchievementManager.TryUnlock
+│   └── ShowRewardPopup(rewards) → slide-up animated card
+```
+
+### Integration Points
+
+| Phase 38 Script | Integrates With |
+|----------------|----------------|
+| `EventScheduler` | `SWEF.Weather.WeatherManager` — weather-gated aurora / rare-weather spawning (null-safe) |
+| `EventParticipationTracker` | `SWEF.Achievement.AchievementManager` — `TryUnlock(achievementId)` on completion |
+| `EventParticipationTracker` | `SWEF.Flight.FlightController` — player transform for distance checks |
+| `EventNotificationUI` | `SWEF.GuidedTour.WaypointNavigator` — `SetManualTarget` + `EnableAutoPilot` on Navigate |
+| `EventCalendarUI` | `SWEF.GuidedTour.WaypointNavigator` — same Navigate-to-event flow |
+| `EventRewardController` | `SWEF.Achievement.AchievementManager` — `TryUnlock` for achievement rewards |
