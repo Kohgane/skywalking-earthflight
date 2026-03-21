@@ -919,3 +919,92 @@ SocialHubController.Open(panel)
 | `SocialNotificationSystem` | `SocialActivityFeed.OnActivityPosted` |
 | `SocialNotificationSystem` | `SWEF.Multiplayer.NetworkManager2.OnPlayerConnected` |
 | `ProfileCustomizationUI` | `SWEF.Progression.CosmeticUnlockManager.GetUnlockedCosmetics()` |
+
+## Phase 42 — Mini-Map & Radar System
+
+The Mini-Map & Radar system provides a comprehensive real-time navigation overlay with blip icons, a rotating radar sweep mode, a compass ring, and a full settings panel. All components are in `Assets/SWEF/Scripts/Minimap/` (namespace `SWEF.Minimap`).
+
+### Scripts (8 total)
+
+| # | Script | Role |
+|---|--------|------|
+| 1 | `MinimapData.cs` | Data layer — `MinimapIconType` enum (14 values) and `MinimapBlip` serializable class |
+| 2 | `MinimapManager.cs` | Singleton — blip registry, per-frame distance & bearing calculation, range culling |
+| 3 | `MinimapIconConfig.cs` | ScriptableObject — maps each `MinimapIconType` to `Sprite`, `Color`, scale, and label flag |
+| 4 | `MinimapRenderer.cs` | Canvas UI renderer — object-pooled blip icons, circular/square shapes, pulsing animations, smooth zoom |
+| 5 | `RadarOverlay.cs` | Radar sweep mode — rotating sweep line (default 6 RPM), phosphor-style fading blip dots, concentric range rings |
+| 6 | `MinimapBlipProvider.cs` | Auto-bridge — scans game systems and registers/deregisters blips; updates moving entity positions each frame |
+| 7 | `MinimapSettingsUI.cs` | Settings panel — toggle, shape, mode, zoom, opacity, icon size, category filters; full `PlayerPrefs` persistence |
+| 8 | `MinimapCompass.cs` | Compass ring — cardinal/intercardinal labels, heading-relative rotation, bearing-to-target line, distance text |
+
+### Architecture
+
+```
+                        ┌─────────────────────────────┐
+                        │       MinimapManager         │
+                        │  (singleton, DontDestroyOnLoad)│
+                        │  List<MinimapBlip> registry  │
+                        │  LateUpdate: dist + bearing  │
+                        └──────────┬──────────────────┘
+                                   │  GetActiveBlips()
+              ┌────────────────────┼────────────────────┐
+              ▼                    ▼                     ▼
+    MinimapRenderer          RadarOverlay          MinimapCompass
+    (blip icons, pool,    (sweep line, dots,    (cardinal labels,
+     shape, zoom lerp)     range rings, ping)    bearing indicator)
+              ▲
+    MinimapBlipProvider
+    (bridges game systems)
+      ├─ FlightController      → Player blip
+      ├─ WaypointNavigator     → Waypoint / WaypointNext / WaypointVisited
+      ├─ PlayerSyncSystem      → OtherPlayer blips
+      ├─ FormationFlyingManager→ FormationSlot blips
+      ├─ GhostRacer            → GhostReplay blip
+      ├─ EventScheduler        → WorldEvent blips
+      ├─ WeatherManager        → WeatherZone blips
+      └─ "SWEF_POI" tagged GOs → PointOfInterest blips
+
+    MinimapSettingsUI
+    (fires OnSettingsChanged → MinimapRenderer + RadarOverlay)
+```
+
+### Key Data Types
+
+| Type | Description |
+|------|-------------|
+| `MinimapIconType` | 14-value enum: `Player`, `Waypoint`, `WaypointNext`, `WaypointVisited`, `OtherPlayer`, `FormationSlot`, `GhostReplay`, `WorldEvent`, `WeatherZone`, `PointOfInterest`, `Destination`, `TourPath`, `DangerZone`, `LandingZone` |
+| `MinimapBlip` | Identity (`blipId`, `iconType`), world position, display (`label`, `color`), visibility flags (`isActive`, `isPulsing`), derived navigation (`distanceFromPlayer`, `bearingDeg`), metadata dictionary |
+| `IconEntry` | Per-`MinimapIconType` config: `sprite`, `defaultColor`, `defaultScale`, `showLabel` |
+| `MinimapShape` | `Circular` / `Square` — controls how `MinimapRenderer` clips blip positions |
+
+### Settings Persistence Keys
+
+| PlayerPrefs Key | Type | Default | Description |
+|-----------------|------|---------|-------------|
+| `SWEF_Minimap_Visible` | int (bool) | 1 | Whether the minimap is shown |
+| `SWEF_Minimap_Shape` | int (enum) | 0 (Circular) | Minimap shape |
+| `SWEF_Minimap_Mode` | int (bool) | 0 (Minimap) | 0 = minimap, 1 = radar |
+| `SWEF_Minimap_Zoom` | float | 1000 | World-unit radius shown |
+| `SWEF_Minimap_Opacity` | float | 1.0 | Blip layer opacity (0.3–1.0) |
+| `SWEF_Minimap_IconSize` | float | 1.0 | Icon scale multiplier (0.5–2.0) |
+| `SWEF_Minimap_ShowWeather` | int (bool) | 1 | Show weather zone blips |
+| `SWEF_Minimap_ShowPOI` | int (bool) | 1 | Show point-of-interest blips |
+| `SWEF_Minimap_ShowEvents` | int (bool) | 1 | Show world event blips |
+| `SWEF_Minimap_ShowOtherPlayers` | int (bool) | 1 | Show other player blips |
+| `SWEF_Minimap_ShowFormation` | int (bool) | 1 | Show formation slot blips |
+
+### Integration Points
+
+| Phase 42 Script | Integrates With |
+|----------------|----------------|
+| `MinimapManager` | `SWEF.Flight.FlightController` — auto-finds player transform |
+| `MinimapBlipProvider` | `SWEF.Flight.FlightController` — player blip position |
+| `MinimapBlipProvider` | `SWEF.GuidedTour.WaypointNavigator` — waypoint blips |
+| `MinimapBlipProvider` | `SWEF.Multiplayer.PlayerSyncSystem` — remote player blips |
+| `MinimapBlipProvider` | `SWEF.Multiplayer.FormationFlyingManager` — formation slot blips |
+| `MinimapBlipProvider` | `SWEF.Replay.GhostRacer` — ghost replay blip |
+| `MinimapBlipProvider` | `SWEF.Events.EventScheduler` — world event blips |
+| `MinimapBlipProvider` | `SWEF.Weather.WeatherManager` — weather zone blips |
+| `MinimapSettingsUI` | `MinimapRenderer` — shape, zoom, opacity, icon size |
+| `MinimapSettingsUI` | `RadarOverlay` — radar mode toggle |
+| `MinimapCompass` | `MinimapManager.PlayerTransform` — heading, nav target bearing |
