@@ -1008,3 +1008,174 @@ The Mini-Map & Radar system provides a comprehensive real-time navigation overla
 | `MinimapSettingsUI` | `MinimapRenderer` — shape, zoom, opacity, icon size |
 | `MinimapSettingsUI` | `RadarOverlay` — radar mode toggle |
 | `MinimapCompass` | `MinimapManager.PlayerTransform` — heading, nav target bearing |
+
+## Phase 43 — Flight Journal & Logbook System
+
+The Flight Journal & Logbook System is an automatic flight diary that records every flight session with rich metadata (route, altitude profile, distance, duration, weather, achievements, screenshots, tours). Players can browse, filter, search, and share their flight history. All components live in `Assets/SWEF/Scripts/Journal/` (namespace `SWEF.Journal`).
+
+### Scripts (10 total)
+
+| # | Script | Namespace | Purpose |
+|---|--------|-----------|---------|
+| 1 | `JournalData.cs` | `SWEF.Journal` | Pure data classes: `FlightLogEntry`, `JournalFilter`, `JournalStatistics`, `JournalSortBy` enum |
+| 2 | `JournalManager.cs` | `SWEF.Journal` | Singleton MonoBehaviour — auto-logging, persistence, CRUD API, events |
+| 3 | `JournalAutoRecorder.cs` | `SWEF.Journal` | Real-time data collection during flight (altitude, distance, speed, location) |
+| 4 | `JournalPanelUI.cs` | `SWEF.Journal` | Full-screen journal browser with filter bar, sort dropdown, and search |
+| 5 | `JournalDetailUI.cs` | `SWEF.Journal` | Single-flight detail view: notes, tags, screenshots, replay, share, delete |
+| 6 | `JournalStatisticsUI.cs` | `SWEF.Journal` | Statistics dashboard with animated counter transitions |
+| 7 | `JournalShareController.cs` | `SWEF.Journal` | Export & share flight logs (native share sheet / clipboard fallback) |
+| 8 | `JournalSearchEngine.cs` | `SWEF.Journal` | Filter, search, and sort logic decoupled from UI |
+| 9 | `JournalTagManager.cs` | `SWEF.Journal` | Global tag registry with auto-suggestion and usage statistics |
+| 10 | `JournalComparisonUI.cs` | `SWEF.Journal` | Side-by-side comparison of two flights with delta indicators |
+
+### Architecture
+
+```
+┌─ JournalPanelUI ─────────────────────────────────────────┐
+│  ScrollView cards  │  Filter bar  │  Sort  │  Search      │
+└─────────────────────────────────────────────────────────-─┘
+         ↕                     ↕
+   JournalManager ←── JournalAutoRecorder
+   │  (Singleton, DDOL)    │  altitude samples (5 s)
+   │  CRUD + events        │  distance accumulation
+   │  flight_journal.json  │  speed tracking
+   │                       └─ FlightController, AltitudeController
+   ├─ JournalSearchEngine      (filter / sort)
+   ├─ JournalTagManager        (tag registry / suggestions)
+   │
+   ├─ OnNewEntryAdded ──→ JournalPanelUI.Refresh()
+   ├─ OnEntryUpdated  ──→ JournalPanelUI.Refresh()
+   └─ OnEntryDeleted  ──→ JournalPanelUI.Refresh()
+
+JournalDetailUI ←── JournalManager.GetEntry()
+   ├─ notes / tags editor
+   ├─ screenshot gallery
+   ├─ Watch Replay → GhostRacer.StartRace()
+   └─ Share → JournalShareController.Share()
+
+JournalStatisticsUI ←── JournalManager.GetStatistics()
+   └─ animated counter transitions
+
+JournalComparisonUI ←── JournalManager.GetAllEntries()
+   └─ delta row (green/red arrows)
+```
+
+### Journal Data Model — FlightLogEntry
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `logId` | string | GUID unique identifier |
+| `flightDate` | string (ISO-8601) | Flight start timestamp (UTC) |
+| `departureLocation` | string | GPS or landmark name |
+| `arrivalLocation` | string | GPS or landmark name |
+| `durationSeconds` | float | Total flight duration |
+| `distanceKm` | float | Total distance flown |
+| `maxAltitudeM` | float | Peak altitude (metres) |
+| `avgSpeedKmh` | float | Average speed |
+| `maxSpeedKmh` | float | Peak speed |
+| `altitudeProfile` | float[] | Altitude sampled every 5 s |
+| `weatherCondition` | string | WeatherManager.CurrentWeather.description at start |
+| `atmosphereLayer` | string | Highest atmosphere layer reached |
+| `tourName` | string | Completed guided tour name (or empty) |
+| `achievementsUnlocked` | string[] | Achievement IDs earned during flight |
+| `screenshotPaths` | string[] | Up to 5 screenshot file paths |
+| `replayFileId` | string | Linked replay file ID |
+| `pilotRankAtTime` | string | Pilot rank at time of flight |
+| `xpEarned` | int | XP earned during flight |
+| `tags` | string[] | User-defined tags |
+| `notes` | string | Free-text notes (max 500 chars) |
+| `isFavorite` | bool | Favourite flag |
+| `flightPathHash` | string | Route comparison hash |
+
+### Auto-Recording Flow
+
+```
+FlightController.IsFlying → true
+        │
+        └─► JournalManager.BeginEntry()
+               └─► JournalAutoRecorder.BeginRecording()
+                     ├── departure GPS recorded
+                     ├── weather snapshot taken
+                     ├── altitude sample coroutine started (5 s interval)
+                     └── per-frame: distance Δ + speed tracking
+
+FlightController.IsFlying → false
+        │
+        └─► JournalManager.EndEntry()
+               ├─► JournalAutoRecorder.StopRecording()  ← fills entry fields
+               ├── duration < 10 s? → discard
+               ├── link replay file if FlightRecorder was active
+               ├── commit to _entries list
+               └── SaveJournal() + fire OnNewEntryAdded
+```
+
+### Filter & Search Capabilities (`JournalFilter`)
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `dateFrom` / `dateTo` | string (ISO) | Date range |
+| `minDuration` / `maxDuration` | float | Duration range (seconds) |
+| `minAltitude` / `maxAltitude` | float | Altitude range (metres) |
+| `weatherFilter` | string | Partial match on weather condition |
+| `tourFilter` | string | Partial match on tour name |
+| `tagsFilter` | string[] | Any-match tag filter |
+| `favoritesOnly` | bool | Only favourite entries |
+| `searchQuery` | string | Full-text across notes, locations, tags, tour, weather |
+| `sortBy` | JournalSortBy | Date / Duration / Distance / Altitude / Speed / XP |
+| `sortDescending` | bool | Default true |
+
+### Statistics Dashboard Fields (`JournalStatistics`)
+
+| Field | Description |
+|-------|-------------|
+| `totalFlights` | Count of all recorded flights |
+| `totalDistanceKm` | Cumulative distance |
+| `totalDurationHours` | Cumulative flight time |
+| `highestAltitudeEver` | All-time altitude record |
+| `fastestSpeedEver` | All-time speed record |
+| `longestFlightSeconds` | Longest single flight |
+| `favoriteWeather` | Most common weather condition |
+| `mostVisitedLocation` | Most frequent departure/arrival |
+| `flightsThisWeek` / `flightsThisMonth` | Recency counts |
+| `currentStreak` / `longestStreak` | Consecutive-day streaks |
+| `averageFlightDuration` | Mean duration (seconds) |
+| `averageAltitude` | Mean peak altitude (metres) |
+
+### Persistence
+
+| File | Location | Contents |
+|------|----------|----------|
+| `flight_journal.json` | `Application.persistentDataPath/` | All `FlightLogEntry` records |
+| `journal_tags.json` | `Application.persistentDataPath/` | Tag registry with use counts |
+
+### Localization Keys Added
+
+| Key | Default (English) |
+|-----|------------------|
+| `journal_sort_date` | "Date" |
+| `journal_sort_duration` | "Duration" |
+| `journal_sort_distance` | "Distance" |
+| `journal_sort_altitude` | "Altitude" |
+| `journal_sort_speed` | "Speed" |
+| `journal_sort_xp` | "XP" |
+| `journal_stats_unknown` | "Unknown" |
+| `journal_share_text` | "I flew {0:F1} km in {1:F0} min, reaching {2:F0} m!" |
+| `journal_compare_same_route` | "Same Route" |
+
+### Integration Points
+
+| Journal Script | Integrates With |
+|---------------|----------------|
+| `JournalManager` | `SWEF.Flight.FlightController.IsFlying` — auto flight detection |
+| `JournalManager` | `SWEF.Achievement.AchievementManager.OnAchievementUnlocked` |
+| `JournalManager` | `SWEF.Screenshot.ScreenshotController.OnScreenshotCaptured` |
+| `JournalManager` | `SWEF.GuidedTour.TourManager.OnTourCompleted` |
+| `JournalManager` | `SWEF.Progression.ProgressionManager.GetCurrentRank()` |
+| `JournalManager` | `SWEF.Weather.WeatherManager.CurrentWeather.description` |
+| `JournalAutoRecorder` | `SWEF.Flight.FlightController` — position, speed |
+| `JournalAutoRecorder` | `SWEF.Flight.AltitudeController` — current altitude |
+| `JournalAutoRecorder` | `SWEF.Recorder.FlightRecorder` — IsRecording flag |
+| `JournalDetailUI` | `SWEF.Replay.ReplayFileManager` — load replay by ID |
+| `JournalDetailUI` | `SWEF.Replay.GhostRacer` — start ghost replay |
+| `JournalTagManager` | `SWEF.Multiplayer.NetworkManager2` — multiplayer tag suggestion |
+| `JournalShareController` | Follows `SWEF.Achievement.AchievementShareController` pattern |

@@ -73,6 +73,12 @@ namespace SWEF.Flight
         /// <summary>Current speed in meters per second.</summary>
         public float CurrentSpeedMps => _vel.magnitude;
 
+        /// <summary>
+        /// True while the aircraft is in active flight (speed above the stall threshold).
+        /// Used by the Journal system and other observers to detect flight start/end.
+        /// </summary>
+        public bool IsFlying => _vel.magnitude > stallSpeedThreshold;
+
         public void SetThrottle(float t01)
         {
             float prev = Throttle01;
