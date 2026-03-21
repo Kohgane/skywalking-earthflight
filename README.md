@@ -698,3 +698,120 @@ Activities
 | `CosmeticUnlockManager` | `SWEF.Progression.ProgressionManager` — `OnRankUp` for auto-unlock |
 | `ProgressionHUD` | `SWEF.Progression.ProgressionManager` — `OnXPGained` / `OnRankUp` events |
 | `ProgressionProfileUI` | All three manager singletons for data display |
+
+## Phase 40 — Daily Challenge & Season Pass System
+
+New directory: `Assets/SWEF/Scripts/DailyChallenge/` — 12 scripts, namespace `SWEF.DailyChallenge`.
+
+### Scripts
+
+| # | Script | Namespace | Description |
+|---|--------|-----------|-------------|
+| 1 | `DailyChallengeDefinition.cs` | `SWEF.DailyChallenge` | ScriptableObject — challenge template (10 types, 4 difficulty tiers) |
+| 2 | `DailyChallengeManager.cs` | `SWEF.DailyChallenge` | Singleton — selects 3+1 challenges per UTC day using deterministic seed |
+| 3 | `DailyChallengeTracker.cs` | `SWEF.DailyChallenge` | Auto-tracker — per-frame flight metrics + event-based activity tracking |
+| 4 | `SeasonDefinition.cs` | `SWEF.DailyChallenge` | ScriptableObject — season pass definition (50 tiers, free + premium) |
+| 5 | `SeasonPassManager.cs` | `SWEF.DailyChallenge` | Singleton — season points, tier advancement, reward claiming |
+| 6 | `WeeklyChallengeDefinition.cs` | `SWEF.DailyChallenge` | ScriptableObject — weekly mega-challenge template |
+| 7 | `WeeklyChallengeManager.cs` | `SWEF.DailyChallenge` | Singleton — weekly challenges reset every Monday UTC 00:00 |
+| 8 | `ChallengeRewardController.cs` | `SWEF.DailyChallenge` | Reward distributor — XP, Sky Coins, season points, cosmetics, skill points |
+| 9 | `DailyChallengeHUD.cs` | `SWEF.DailyChallenge` | Always-visible HUD — challenge cards, progress bars, streak flame, reset timer |
+| 10 | `SeasonPassUI.cs` | `SWEF.DailyChallenge` | Full-screen season pass — tier track, reward preview, premium upsell |
+| 11 | `ChallengeNotificationUI.cs` | `SWEF.DailyChallenge` | Toast notifications — completions, streak milestones, tier-ups, weekly alerts |
+| 12 | `DailyChallengeDefaultData.cs` | `SWEF.DailyChallenge` | Static helper — 30+ daily defs, 10 weekly defs, Season 1 ("Sky Pioneer") |
+
+### Daily Challenge Architecture
+
+```
+UTC midnight → DailyChallengeManager.RefreshIfNewDay()
+                  │  seed = Year*10000 + Month*100 + Day
+                  └─ selects: 1 Easy + 1 Medium + 1 Hard + 1 Elite (bonus)
+
+Player activity → DailyChallengeTracker.Update()
+                      ├── FlyDistance   (position delta, km)
+                      ├── ReachAltitude (max altitude, m)
+                      ├── FlyDuration   (seconds)
+                      ├── AchieveSpeed  (km/h)
+                      ├── TakePhotos    (ScreenshotController.OnScreenshotCaptured)
+                      ├── CompleteTour  (TourManager.OnTourCompleted)
+                      ├── CompleteFormation (FormationFlyingManager.OnFormationBroken)
+                      └── PlayMultiplayer   (NetworkManager2.OnLobbyJoined)
+                               │
+                               └─▶ DailyChallengeManager.ReportProgress(type, amount)
+                                       │
+                                       └─▶ ActiveChallenge.currentProgress += amount
+                                               │ if >= targetValue
+                                               └─▶ OnChallengeCompleted event
+
+Player claims → DailyChallengeManager.ClaimReward(id)
+                    └─▶ ChallengeRewardController.GrantDailyChallengeReward(def, streak)
+                              ├── ProgressionManager.AddXP(xp × streakMultiplier)
+                              ├── ChallengeRewardController.AddCurrency(coins)
+                              └── SeasonPassManager.AddSeasonPoints(sp)
+```
+
+### Season Pass Structure
+
+```
+SeasonPassManager
+  ├── Active season loaded from Resources/Seasons/ (fallback: DailyChallengeDefaultData)
+  ├── currentSeasonPoints → currentTier = points / pointsPerTier
+  ├── Free track  — XP + currency every tier, cosmetics every 10 tiers
+  └── Premium track — higher XP, currency every 3rd tier, skill points every 7th,
+                      exclusive cosmetics every 10th, exclusive titles at T25 & T50
+```
+
+### Streak Bonus Mechanics
+
+| Consecutive Days | XP Multiplier |
+|-----------------|---------------|
+| 1 | ×1.1 (+10%) |
+| 2 | ×1.2 (+20%) |
+| 5 | ×1.5 (+50%) |
+| 10+ | ×2.0 (+100%, cap) |
+
+Streak resets if a UTC day passes with no challenge completion.
+
+### Virtual Currency (Sky Coins)
+
+- Stored in `Application.persistentDataPath/currency.json`
+- Granted by daily challenges (`baseCurrencyReward`) and season pass tiers
+- `ChallengeRewardController.GetCurrencyBalance()`, `AddCurrency(int)`, `SpendCurrency(int)` → bool
+- Display name localised as `currency_name` (e.g. "Sky Coins" / "스카이 코인")
+
+### Reward Flow
+
+```
+Challenge completion
+        │
+        ▼
+ChallengeRewardController
+        ├──▶ ProgressionManager.AddXP(amount, source)       [XP & rank]
+        ├──▶ SeasonPassManager.AddSeasonPoints(sp, source)  [season tier]
+        ├──▶ CosmeticUnlockManager.UnlockCosmetic(id)       [exclusive cosmetics]
+        ├──▶ SkillTreeManager.AddSkillPoint(count)          [skill points]
+        └──▶ currency balance += amount                     [Sky Coins]
+```
+
+### Season 1 — "Sky Pioneer"
+
+- **Duration**: 2026-01-01 → 2026-12-31 (UTC)
+- **50 tiers** × 100 season points per tier
+- **Free track**: XP every tier, currency every 5th, cosmetics every 10th
+- **Premium track**: XP (2×), currency every 3rd tier, skill point every 7th,
+  exclusive cosmetics every 10th, exclusive titles at tiers 25 & 50
+
+### Integration Points
+
+| Phase 40 Script | Integrates With |
+|----------------|----------------|
+| `DailyChallengeTracker` | `SWEF.Flight.FlightController` — position delta, speed |
+| `DailyChallengeTracker` | `SWEF.Flight.AltitudeController` — `CurrentAltitudeMeters` |
+| `DailyChallengeTracker` | `SWEF.Screenshot.ScreenshotController` — `OnScreenshotCaptured` |
+| `DailyChallengeTracker` | `SWEF.GuidedTour.TourManager` — `OnTourCompleted` |
+| `DailyChallengeTracker` | `SWEF.Multiplayer.FormationFlyingManager` — `OnFormationBroken` |
+| `DailyChallengeTracker` | `SWEF.Multiplayer.NetworkManager2` — `OnLobbyJoined` |
+| `ChallengeRewardController` | `SWEF.Progression.ProgressionManager` — `AddXP()` |
+| `ChallengeRewardController` | `SWEF.Progression.CosmeticUnlockManager` — `UnlockCosmetic()` |
+| `ChallengeRewardController` | `SWEF.Progression.SkillTreeManager` — `AddSkillPoint()` |
+| `SeasonPassManager` | `ChallengeRewardController.GrantSeasonReward()` |
