@@ -581,3 +581,120 @@ EventRewardController
 | `EventNotificationUI` | `SWEF.GuidedTour.WaypointNavigator` — `SetManualTarget` + `EnableAutoPilot` on Navigate |
 | `EventCalendarUI` | `SWEF.GuidedTour.WaypointNavigator` — same Navigate-to-event flow |
 | `EventRewardController` | `SWEF.Achievement.AchievementManager` — `TryUnlock` for achievement rewards |
+
+
+---
+
+## Phase 39 — Player Progression & Pilot Rank System
+
+### New Scripts (10 files in `Assets/SWEF/Scripts/Progression/`)
+
+| # | File | Namespace | Role |
+|---|------|-----------|------|
+| 1 | `PilotRankData.cs` | `SWEF.Progression` | ScriptableObject — defines a single rank (rankLevel 1–50, requiredXP, tier, icon, colour, unlock rewards) |
+| 2 | `ProgressionManager.cs` | `SWEF.Progression` | Singleton — central XP/rank tracker; `AddXP`, `GetCurrentRank`, `GetNextRank`, `GetProgressToNextRank01`, `UpdateFlightStats`; JSON persistence |
+| 3 | `XPSourceConfig.cs` | `SWEF.Progression` | ScriptableObject — all XP reward amounts and multipliers (flight, achievements, events, tours, multiplayer, bonuses) |
+| 4 | `XPTracker.cs` | `SWEF.Progression` | MonoBehaviour — auto-tracks per-frame flight/distance/formation XP; subscribes to AchievementManager, EventScheduler, TourManager; first-flight-of-day bonus |
+| 5 | `SkillTreeData.cs` | `SWEF.Progression` | ScriptableObject — single skill node (category, tier, cost, prerequisites, effect type & value) |
+| 6 | `SkillTreeManager.cs` | `SWEF.Progression` | Singleton — skill point allocation, prerequisite checks, cumulative effect lookup, reset; JSON persistence |
+| 7 | `CosmeticUnlockManager.cs` | `SWEF.Progression` | Singleton — cosmetic catalog, rank-gated auto-unlock, equip-per-category, JSON persistence |
+| 8 | `ProgressionHUD.cs` | `SWEF.Progression` | Always-visible HUD — animated XP bar, rank badge, level number, floating "+XP" popups, rank-up celebration animation |
+| 9 | `ProgressionProfileUI.cs` | `SWEF.Progression` | Full-screen profile — rank card, flight stats, skill tree grid (tap-to-unlock), cosmetics gallery (tap-to-equip), XP history log |
+| 10 | `ProgressionDefaultData.cs` | `SWEF.Progression` | Static helper — 50 ranks (exponential XP curve), 25 skills (5 categories × 5 tiers), default cosmetics, default XP config |
+
+### Architecture
+
+```
+ProgressionManager (Singleton, DontDestroyOnLoad)
+│   ├── Loads PilotRankData[] from Resources/Ranks/ (falls back to ProgressionDefaultData)
+│   ├── Persists progression.json → persistentDataPath
+│   ├── AddXP(amount, source) → CheckRankUps() → OnRankUp event
+│   └── Events: OnXPGained / OnRankUp / OnStatsUpdated
+│
+XPTracker
+│   ├── TrackFlightFrame(dt, km, inFormation)  — per-frame XP
+│   ├── Subscribes → AchievementManager.OnAchievementUnlocked
+│   ├── Subscribes → EventScheduler.OnEventExpired
+│   ├── Subscribes → TourManager.OnTourCompleted
+│   └── PlayerPrefs date key for first-flight-of-day bonus
+│
+SkillTreeManager (Singleton, DontDestroyOnLoad)
+│   ├── Subscribes → ProgressionManager.OnRankUp → grants 1+ skill points
+│   ├── UnlockSkill(id) — checks points & prerequisites
+│   ├── GetSkillEffect(type) — cumulative % bonus across all unlocked skills
+│   └── Persists skills.json
+│
+CosmeticUnlockManager (Singleton, DontDestroyOnLoad)
+│   ├── Subscribes → ProgressionManager.OnRankUp → auto-unlocks rank-gated cosmetics
+│   ├── EquipCosmetic(id, category) — one slot per category
+│   └── Persists cosmetics.json
+│
+ProgressionHUD
+│   ├── Subscribes → ProgressionManager.OnXPGained → floating popup + animated bar fill
+│   └── Subscribes → ProgressionManager.OnRankUp → full-screen flash + badge celebration
+│
+ProgressionProfileUI
+│   ├── RefreshAll() — rank card, stats, skill tree, cosmetics gallery, XP history
+│   └── Open() / Close()
+```
+
+### XP Data Flow
+
+```
+Activities
+│   ├── Flight time         ──→ XPTracker.TrackFlightFrame()
+│   ├── Distance flown      ──→ XPTracker.TrackFlightFrame()
+│   ├── Formation flight    ──→ XPTracker.TrackFlightFrame(inFormation=true)
+│   ├── Achievement unlock  ──→ AchievementManager.OnAchievementUnlocked
+│   ├── Event completion    ──→ EventParticipationTracker (direct AddXP)
+│   ├── Tour completed      ──→ TourManager.OnTourCompleted
+│   ├── Multiplayer session ──→ XPTracker.TrackMultiplayerSessionEnded()
+│   ├── Photo taken         ──→ XPTracker.TrackPhotoTaken()
+│   └── Replay shared       ──→ XPTracker.TrackReplayShared()
+│
+└──→ ProgressionManager.AddXP(amount, source)
+         ├── Accumulates currentXP
+         ├── Appends to XP history (capped at 200 entries)
+         ├── Fires OnXPGained(amount, source)
+         ├── CheckRankUps() → if currentXP ≥ nextRank.requiredXP
+         │       ├── Fires OnRankUp(oldRank, newRank)
+         │       │       ├── SkillTreeManager → grants skill points
+         │       │       ├── CosmeticUnlockManager → unlocks rank cosmetics
+         │       │       └── ProgressionHUD → plays rank-up celebration
+         └── Saves progression.json
+```
+
+### Rank Tiers & XP Curve
+
+| Tier | Levels | XP Formula | Colour |
+|------|--------|-----------|--------|
+| Trainee | 1–5 | `500 × level^1.5` | Grey |
+| Cadet | 6–12 | `500 × level^1.5` | Blue |
+| Pilot | 13–20 | `500 × level^1.5` | Green |
+| Captain | 21–28 | `500 × level^1.5` | Gold |
+| Commander | 29–36 | `500 × level^1.5` | Orange |
+| Ace | 37–42 | `500 × level^1.5` | Red |
+| Legend | 43–48 | `500 × level^1.5` | Purple |
+| Skywalker | 49–50 | `500 × level^1.5` | Cyan |
+
+### Skill Tree (25 nodes, 5 categories × 5 tiers)
+
+| Category | Effect | Tiers |
+|----------|--------|-------|
+| FlightHandling | SpeedBoost (+5%/tier) | 1–5 |
+| Exploration | EventRadius (+5%/tier) | 1–5 |
+| Social | FormationBonus (+5%/tier) | 1–5 |
+| Photography | CameraRange (+5%/tier) | 1–5 |
+| Endurance | StaminaBoost (+5%/tier) | 1–5 |
+
+### Integration Points
+
+| Phase 39 Script | Integrates With |
+|----------------|----------------|
+| `XPTracker` | `SWEF.Achievement.AchievementManager` — `OnAchievementUnlocked` event |
+| `XPTracker` | `SWEF.Events.EventScheduler` — `OnEventExpired` event |
+| `XPTracker` | `SWEF.GuidedTour.TourManager` — `OnTourCompleted` event |
+| `SkillTreeManager` | `SWEF.Progression.ProgressionManager` — `OnRankUp` for skill point grants |
+| `CosmeticUnlockManager` | `SWEF.Progression.ProgressionManager` — `OnRankUp` for auto-unlock |
+| `ProgressionHUD` | `SWEF.Progression.ProgressionManager` — `OnXPGained` / `OnRankUp` events |
+| `ProgressionProfileUI` | All three manager singletons for data display |
