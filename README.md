@@ -27,6 +27,7 @@ A mobile flight-experience app powered by Google Photorealistic 3D Tiles via Ces
 Assets/SWEF/
 ├── Scenes/          # Boot.unity + World.unity (created in Unity Editor)
 ├── Scripts/
+│   ├── Aircraft/    # AircraftData, SkinRegistry, CustomizationManager, VisualController, TrailController, HangarUI, SkinCardUI, PreviewController, MultiplayerSync, AchievementBridge, SettingsBridge, UnlockEvaluator
 │   ├── Cinema/      # TimeOfDayController, PhotoModeController, CinematicCameraPath, CinematicCameraUI
 │   ├── Core/        # BootManager, SWEFSession, WorldBootstrap
 │   ├── Flight/      # FlightController, TouchInputRouter, AltitudeController, HoldButton
@@ -1288,3 +1289,37 @@ Added to all 8 language files (`lang_en.json` … `lang_pt.json`):
 | `GemTourGenerator` | `SWEF.GuidedTour.TourData`, `TourManager` |
 | `GemStatisticsTracker` | `SWEF.Progression.ProgressionManager.TotalFlightTimeSeconds` |
 | `GemRadarUI` | `SWEF.Minimap.MinimapManager.GetBlip()` |
+
+---
+
+## Phase 44 — Custom Aircraft & Avatar System
+
+### New Scripts (12 files) — `Assets/SWEF/Scripts/Aircraft/` — namespace `SWEF.Aircraft`
+
+| # | Script | Purpose |
+|---|--------|---------|
+| 1 | `AircraftData.cs` | Pure data classes & enums: `AircraftSkinRarity`, `AircraftPartType`, `AircraftUnlockType`, `AircraftSkinDefinition`, `AircraftUnlockCondition`, `AircraftLoadout`, `AircraftCustomizationSaveData` |
+| 2 | `AircraftSkinRegistry.cs` | Singleton skin registry — O(1) lookups, filter by part/rarity/unlock type |
+| 3 | `AircraftCustomizationManager.cs` | Singleton manager — unlock, equip, loadout CRUD, favourites, JSON save/load |
+| 4 | `AircraftUnlockEvaluator.cs` | Static utility — evaluates unlock conditions against all game systems |
+| 5 | `AircraftVisualController.cs` | Applies materials, trail colours, particle/aura prefabs, decals at runtime |
+| 6 | `AircraftTrailController.cs` | Speed-driven opacity, altitude-driven width via `ExpSmoothing.ExpLerp` |
+| 7 | `AircraftHangarUI.cs` | Full-screen hangar with grid, part-filter, rarity filter, sort, loadout management |
+| 8 | `AircraftSkinCardUI.cs` | Skin card: icon, rarity badge, lock/unlock, equip button, favourite star |
+| 9 | `AircraftPreviewController.cs` | 3-D preview — drag orbit, pinch zoom, auto-rotate idle, skin preview |
+| 10 | `AircraftMultiplayerSync.cs` | Serialises/broadcasts loadout; applies incoming remote loadouts |
+| 11 | `AircraftAchievementBridge.cs` | Reports milestones (total skins, first Legendary, full set) to `AchievementManager` |
+| 12 | `AircraftSettingsBridge.cs` | Persists trail/particle/aura/remote-skin settings via PlayerPrefs |
+
+### PlayerPrefs Keys Added
+
+| Key | Default |
+|-----|---------|
+| `SWEF_Aircraft_TrailEnabled` | `1` (true) |
+| `SWEF_Aircraft_ParticleQuality` | `2` (Medium) |
+| `SWEF_Aircraft_ShowOtherPlayerSkins` | `1` (true) |
+| `SWEF_Aircraft_AuraEnabled` | `1` (true) |
+
+### Save File
+
+`aircraft_customization.json` in `Application.persistentDataPath` — serialised `AircraftCustomizationSaveData`.
