@@ -1326,101 +1326,135 @@ Added to all 8 language files (`lang_en.json` … `lang_pt.json`):
 
 ---
 
-## Phase 45 — In-Flight Music Player System
+## Phase 47 — Photo Mode & Drone Camera System
 
-### New Scripts (9 files) — `Assets/SWEF/Scripts/MusicPlayer/` — namespace `SWEF.MusicPlayer`
+New directory: `Assets/SWEF/Scripts/PhotoMode/` — namespace `SWEF.PhotoMode`
 
-| # | Script | Purpose |
-|---|--------|---------|
-| 1 | `MusicPlayerData.cs` | Enums & data classes: `MusicSource`, `PlaybackState`, `RepeatMode`, `ShuffleMode`, `EqualizerPreset`, `MusicMood`, `MusicTrack`, `MusicPlaylist`, `MusicPlayerConfig`, `FlightMusicProfile`, `MusicPlayerState` |
-| 2 | `MusicPlayerManager.cs` | Singleton manager — track library, playlist registry, crossfade, flight-adaptive playback |
-| 3 | `MusicPlaylistController.cs` | Playlist queue, shuffle (Fisher-Yates), repeat modes, history |
-| 4 | `MusicPlayerUI.cs` | Playback controls HUD: play/pause, skip, seek bar, volume, album art |
-| 5 | `MusicLibraryUI.cs` | Library browser: track list, playlist grid, search, sort, filter by mood |
-| 6 | `MusicFlightSync.cs` | Adjusts music energy/mood based on flight state (altitude, speed, manoeuvres) |
-| 7 | `MusicWeatherMixer.cs` | Crossfades between calm and intense playlists based on weather conditions |
-| 8 | `MusicVisualizerEffect.cs` | FFT-based spectrum visualiser rendered on the HUD or aircraft trail |
-| 9 | `MusicMultiplayerSync.cs` | Broadcasts currently playing track to nearby players; renders their playback info |
+### New Scripts (10 files)
+
+| # | Script | Namespace | Purpose |
+|---|--------|-----------|---------|
+| 1 | `PhotoModeData.cs` | `SWEF.PhotoMode` | Pure data classes & enums: `DroneMode`, `PhotoFilter`, `FrameStyle`, `FocusMode`, `PhotoResolution`, `PhotoFormat`, `DroneConfig`, `CameraSettings`, `PhotoMetadata` |
+| 2 | `DroneCameraController.cs` | `SWEF.PhotoMode` | MonoBehaviour — free-flying drone with 6 modes, battery system, collision avoidance, tether range limit |
+| 3 | `PhotoCameraController.cs` | `SWEF.PhotoMode` | MonoBehaviour — virtual camera settings (FOV, aperture, ISO, shutter speed, white balance, focus); drives post-processing |
+| 4 | `PhotoFilterSystem.cs` | `SWEF.PhotoMode` | MonoBehaviour — 12 built-in filter presets, intensity control, LUT support, custom filter save/load |
+| 5 | `PhotoFrameRenderer.cs` | `SWEF.PhotoMode` | MonoBehaviour — 8 frame styles, watermark, date/location stamp, EXIF bar compositing |
+| 6 | `PhotoCaptureManager.cs` | `SWEF.PhotoMode` | Singleton MonoBehaviour — single capture, burst, timer, bracketed HDR, panorama; generates thumbnails & JSON metadata |
+| 7 | `PhotoGalleryManager.cs` | `SWEF.PhotoMode` | Singleton MonoBehaviour — index, sort, filter, search, slideshow, batch delete/tag |
+| 8 | `PhotoModeUI.cs` | `SWEF.PhotoMode` | MonoBehaviour — full camera HUD with viewfinder overlays, drone controls, pinch-to-zoom, tap-to-focus, post-capture review |
+| 9 | `PhotoModeAnalytics.cs` | `SWEF.PhotoMode` | MonoBehaviour — usage tracking via `UserBehaviorTracker` and `TelemetryDispatcher` |
+| 10 | `DroneVisualController.cs` | `SWEF.PhotoMode` | MonoBehaviour — 3D drone model, propeller spin, LED indicators, gimbal, SFX, haptics |
+
+### Drone Modes
+
+| Mode | Description |
+|------|-------------|
+| `Free` | Full 6-DoF manual control by the player |
+| `Orbit` | Auto-circles a target transform at configurable radius & speed |
+| `FollowTarget` | Chases the player aircraft from behind at a configurable offset |
+| `Dolly` | Follows a spline path (CinematicCameraPath) at set speed |
+| `Static` | Position locked; only rotation is player-controlled |
+| `Selfie` | Front-facing with the player aircraft in frame |
+
+### Camera Settings Ranges
+
+| Setting | Range | Default |
+|---------|-------|---------|
+| Field of View | 10°–120° | 60° |
+| Aperture | f/1.4–f/22 | f/5.6 |
+| Shutter Speed | 1/8000 s–30 s | 1/250 s |
+| ISO | 100–12800 | 400 |
+| Exposure Compensation | −3 to +3 EV | 0 EV |
+| White Balance | 2500–10000 K | 5500 K |
+| Focus Distance | 0.5–1000 m | 10 m |
+| JPEG Quality | 1–100 | 95 |
+
+### Photo Filters
+
+`None` · `Vintage` · `Noir` · `Warm` · `Cool` · `HDR` · `Cinematic` · `Sunset` · `NightVision` · `Sketch` · `Tiltshift` · `Bokeh`
+
+### Frame Styles
+
+`None` · `Polaroid` · `Filmstrip` · `Panoramic` · `Square` · `Postcard` · `Passport` · `Widescreen`
+
+### Architecture Diagram
+
+```
+FlightController  ──────────────────────────┐
+                                             ▼
+                                  DroneCameraController
+                                  (modes, battery, tether)
+                                             │
+                          ┌──────────────────┼──────────────────┐
+                          ▼                  ▼                  ▼
+             PhotoCameraController    DroneVisualController  PhotoModeAnalytics
+             (FOV/aperture/focus)     (model/SFX/haptics)   (TelemetryDispatcher)
+                          │
+                          ▼
+                  PhotoFilterSystem
+                  (12 filters + LUT)
+                          │
+                          ▼
+                  PhotoFrameRenderer
+                  (8 frames + overlays)
+                          │
+                          ▼
+                  PhotoCaptureManager ──► ScreenshotController
+                  (burst/HDR/panorama)    ShareManager
+                          │
+                          ▼
+                  PhotoGalleryManager
+                  (index/sort/search/slideshow)
+                          │
+                          ▼
+                    PhotoModeUI
+                    (full HUD / review panel)
+```
+
+### Example Usage
+
+```csharp
+// Enter photo mode
+var drone = FindObjectOfType<DroneCameraController>();
+var capture = PhotoCaptureManager.Instance;
+var ui = FindObjectOfType<PhotoModeUI>();
+
+drone.Deploy();
+drone.SetMode(DroneMode.Orbit);
+
+// Adjust camera
+var cam = FindObjectOfType<PhotoCameraController>();
+cam.SetFOV(35f);
+cam.SetAperture(2.8f);
+
+// Apply filter
+var filters = FindObjectOfType<PhotoFilterSystem>();
+filters.ApplyFilter(PhotoFilter.Cinematic, 0.8f);
+
+// Capture
+capture.OnPhotoCaptured += meta =>
+    Debug.Log($"Saved to {meta.filePath}  ({meta.width}×{meta.height})");
+capture.CapturePhoto();
+
+// Recall drone
+drone.Recall();
+```
+
+### Localization Keys Added (all 8 languages)
+
+`photomode_title` · `photomode_drone_deploy` · `photomode_drone_recall` · `photomode_capture` · `photomode_burst` · `photomode_timer` · `photomode_hdr` · `photomode_panorama` · `photomode_filter_*` (×12) · `photomode_frame_*` (×8) · `photomode_settings_fov/aperture/iso/shutter/wb/focus` · `photomode_drone_battery` · `photomode_drone_range` · `photomode_drone_mode_*` (×6) · `photomode_gallery_title` · `photomode_gallery_sort_*` (×3) · `photomode_gallery_slideshow` · `photomode_gallery_compare` · `photomode_share` · `photomode_delete` · `photomode_export` · `photomode_tags`
 
 ### Integration Points
 
 | Script | Integrates With |
-|--------|----------------|
-| `MusicPlayerManager` | `SWEF.Audio.AudioManager` — BGM ducking |
-| `MusicFlightSync` | `SWEF.Flight.FlightController`, `AltitudeController` |
-| `MusicWeatherMixer` | `SWEF.Weather.WeatherManager` |
-| `MusicMultiplayerSync` | `SWEF.Multiplayer.MultiplayerManager` |
-
----
-
-## Phase 46 — Voice Chat & In-Flight Communication System
-
-### New Scripts (10 files) — `Assets/SWEF/Scripts/VoiceChat/` — namespace `SWEF.VoiceChat`
-
-| # | Script | Purpose |
-|---|--------|---------|
-| 1 | `VoiceChatData.cs` | Pure data classes & enums: `VoiceChatMode`, `VoiceChannel`, `VoiceCodec`, `VoiceQuality`, `VoiceChatParticipant`, `VoiceChatConfig` |
-| 2 | `VoiceChatManager.cs` | Singleton manager — microphone capture, Push-to-Talk, voice activation, channel management, participant tracking, music ducking |
-| 3 | `VoiceAudioProcessor.cs` | Audio processing pipeline: VAD, noise gate, spectral noise suppression, auto gain control, echo cancellation stub |
-| 4 | `VoiceSpatialAudio.cs` | 3D spatial voice — logarithmic distance attenuation, Doppler effect, Physics-raycast terrain/building occlusion |
-| 5 | `VoiceNetworkTransport.cs` | Network abstraction layer — `IVoiceTransport` interface, `DefaultVoiceTransport` stub, `VoicePacket`, jitter buffer, packet loss concealment (PLC) |
-| 6 | `VoiceChannelManager.cs` | Channel lifecycle — Proximity (auto via `MultiplayerManager.GetNearbyPlayers`), Team, Global (rate-limited), Private (1-on-1), ATC |
-| 7 | `VoiceChatUI.cs` | HUD overlay — mic status icon, active speaker list, channel dropdown, per-participant volume sliders, PTT indicator, VAD meter |
-| 8 | `VoiceChatSettings.cs` | Settings panel — device picker, sensitivity, volume, codec/quality, noise suppression, echo cancellation, AGC, PTT key binding, spatial audio, duck amount, proximity range, test microphone |
-| 9 | `VoiceRadioEffect.cs` | Aviation radio filter — band-pass EQ, static noise, gain compression, squelch open/close sounds; ATC = heavy, Proximity = minimal |
-| 10 | `VoiceChatAnalytics.cs` | Analytics — session duration, channel usage time, mute toggles, peak concurrent speakers, quality preferences |
-
-### Voice Channels
-
-| Channel | Description | Filter Intensity |
-|---------|-------------|-----------------|
-| `Proximity` | Auto-join/leave within 500 m — spatial 3D audio | Minimal (0.05) |
-| `Team` | Persistent team/group channel — full volume | Light (0.35) |
-| `Global` | Server-wide broadcast (5 s rate limit) | Medium (0.45) |
-| `Private` | 1-on-1 voice call | Light-Medium (0.30) |
-| `ATC` | Air Traffic Control roleplay — heavy radio effect | Heavy (0.90) |
-
-### Integration Points
-
-| Script | Integrates With |
-|--------|----------------|
-| `VoiceChatManager` | `SWEF.Audio.AudioMixerController` — Voice mixer group |
-| `VoiceChatManager` | `SWEF.MusicPlayer.MusicPlayerManager` — music ducking when voice is active |
-| `VoiceChatManager` | `SWEF.Settings.SettingsManager` — config persistence via PlayerPrefs |
-| `VoiceChatManager` | `SWEF.Analytics.TelemetryDispatcher` — mute/unmute events |
-| `VoiceChannelManager` | `SWEF.Multiplayer.MultiplayerManager.GetNearbyPlayers()` — proximity membership |
-| `VoiceChatUI` | `SWEF.UI.HudBinder` — HUD overlay positioning |
-| `VoiceChatUI` | `SWEF.Localization.LocalizationManager` — all UI text |
-| `VoiceChatUI` | `SWEF.Accessibility.AccessibilityManager` — UI scale |
-| `VoiceChatAnalytics` | `SWEF.Analytics.TelemetryDispatcher` — session/channel/quality events |
-
-### PlayerPrefs Keys Added
-
-| Key | Default |
-|-----|---------|
-| `SWEF_Voice_Mode` | `1` (PushToTalk) |
-| `SWEF_Voice_Device` | `""` (system default) |
-| `SWEF_Voice_Codec` | `0` (Opus) |
-| `SWEF_Voice_Quality` | `1` (Medium / 16 kHz) |
-| `SWEF_Voice_MasterVolume` | `0.8` |
-| `SWEF_Voice_DuckMusic` | `1` (true) |
-| `SWEF_Voice_SpatialAudio` | `1` (true) |
-| `SWEF_Voice_PushToTalkKey` | `86` (KeyCode.V) |
-| `SWEF_Voice_MuteKey` | `109` (KeyCode.M) |
-| `SWEF_Voice_NoiseSuppression` | `1` (true) |
-| `SWEF_Voice_EchoCancellation` | `1` (true) |
-| `SWEF_Voice_AutoGainControl` | `1` (true) |
-| `SWEF_Voice_VadThreshold` | `0.02` |
-| `SWEF_Voice_DuckAmount` | `0.5` |
-| `SWEF_Voice_ProximityRange` | `500` (metres) |
-
-### Localization Keys Added (22 keys × 8 languages)
-
-`voice_chat_title`, `voice_chat_mode`, `voice_chat_push_to_talk`, `voice_chat_voice_activated`,
-`voice_chat_channel_proximity`, `voice_chat_channel_team`, `voice_chat_channel_global`, `voice_chat_channel_private`, `voice_chat_channel_atc`,
-`voice_chat_muted`, `voice_chat_unmuted`, `voice_chat_deafened`, `voice_chat_speaking`,
-`voice_chat_settings`, `voice_chat_microphone`, `voice_chat_sensitivity`, `voice_chat_quality`,
-`voice_chat_noise_suppression`, `voice_chat_echo_cancellation`, `voice_chat_spatial_audio`,
-`voice_chat_radio_effect`, `voice_chat_test_mic`
-
-Languages: `en`, `ko`, `ja`, `zh`, `es`, `fr`, `de`, `pt`
+|--------|-----------------|
+| `DroneCameraController` | `SWEF.Flight.FlightController` — player position |
+| `DroneCameraController` | `SWEF.Analytics.UserBehaviorTracker` — feature discovery events |
+| `PhotoCameraController` | `SWEF.TimeOfDay.TimeOfDayManager` — current lighting state |
+| `PhotoCaptureManager` | `SWEF.Screenshot.ScreenshotController` — low-level capture |
+| `PhotoCaptureManager` | `SWEF.Social.ShareManager` — social sharing |
+| `PhotoModeUI` | `SWEF.UI.HudBinder` — overlay management |
+| `PhotoModeUI` | `SWEF.Accessibility.AccessibilityManager` — text scaling |
+| `DroneVisualController` | `SWEF.Audio.AudioManager` — SFX playback |
+| `DroneVisualController` | `SWEF.Haptic.HapticManager` — shutter snap feedback |
+| `PhotoModeAnalytics` | `SWEF.Analytics.TelemetryDispatcher` — event pipeline |
