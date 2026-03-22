@@ -1323,3 +1323,174 @@ Added to all 8 language files (`lang_en.json` … `lang_pt.json`):
 ### Save File
 
 `aircraft_customization.json` in `Application.persistentDataPath` — serialised `AircraftCustomizationSaveData`.
+
+---
+
+## Phase 49 — Route Planner & Custom Flight Path
+
+### New Scripts (10 files) — `Assets/SWEF/Scripts/RoutePlanner/` — namespace `SWEF.RoutePlanner`
+
+| # | Script | Purpose |
+|---|--------|---------|
+| 1 | `RoutePlannerData.cs` | Pure data classes & enums: `RouteType`, `WaypointType`, `RouteVisibility`, `NavigationStyle`, `RouteStatus`, `RouteWaypoint`, `FlightRoute`, `RouteProgress`, `RoutePlannerConfig` |
+| 2 | `RoutePlannerManager.cs` | Singleton manager — route CRUD, navigation state machine, waypoint triggering, ETA calculation, off-path detection |
+| 3 | `RouteBuilderController.cs` | Interactive route builder — tap-to-place waypoints, undo/redo stack, landmark snapping, Catmull-Rom distance estimation, route validation |
+| 4 | `RoutePathRenderer.cs` | 3D path line renderer — Catmull-Rom spline, altitude gradient colouring, animated flow, waypoint markers |
+| 5 | `RouteNavigationHUD.cs` | In-flight navigation HUD — next-waypoint panel, progress bar, constraint hints (altitude/speed), off-path warning, completion screen |
+| 6 | `RouteStorageManager.cs` | Persistent storage — JSON save/load to `Routes/MyRoutes/`, `Routes/Downloaded/`, `Routes/Drafts/`; import/export `.swefroute` files |
+| 7 | `RouteShareManager.cs` | Social sharing — deep links, QR code generation, `.swefroute` file sharing, multiplayer broadcast, per-route ratings & leaderboard |
+| 8 | `RoutePlannerUI.cs` | Full pre-flight planner UI — route list, detail view, builder mode, settings panel; delegates to `RouteBuilderController` |
+| 9 | `RouteRecommendationEngine.cs` | Intelligent route suggestions — scoring by rating/downloads/freshness, route-of-the-day, nearby routes, contextual recommendations |
+| 10 | `RoutePlannerAnalytics.cs` | Analytics tracking — route_created, route_started, route_completed, route_abandoned, waypoint_reached, off_path, route_shared, route_imported, route_rated, route_builder_used |
+
+### Route Types
+
+| Route Type | Description |
+|-----------|-------------|
+| `Scenic` | Relaxed sightseeing route designed for scenery |
+| `Speed` | Optimised for minimum travel time |
+| `Exploration` | Off-the-beaten-path discovery route |
+| `Challenge` | Skill-testing route with obstacles or constraints |
+| `Tour` | Guided tour converted into a reusable route |
+| `Custom` | Player-created route with no predefined purpose |
+| `Race` | Competitive route used in timed races |
+| `Photography` | Route curated for optimal photo opportunities |
+
+### Navigation Styles
+
+| Style | Description |
+|-------|-------------|
+| `FreeFollow` | Player may deviate freely; waypoints are suggestions |
+| `StrictPath` | Player must stay within the off-path threshold |
+| `TimeAttack` | Route is scored on elapsed time |
+| `Relaxed` | No constraints; enjoy the journey at any pace |
+
+### Waypoint Types
+
+| Type | Description |
+|------|-------------|
+| `Standard` | Regular navigation waypoint |
+| `Landmark` | Co-located with a named landmark from `LandmarkDatabase` |
+| `Photo` | Recommended photography vantage point with camera hint |
+| `Checkpoint` | Timed or ranked checkpoint |
+| `Start` | Route origin waypoint |
+| `Finish` | Route destination waypoint |
+| `RestStop` | Designated hover/pause location with `stayDuration` |
+| `HiddenGem` | Secret location tied to the `HiddenGemManager` system |
+| `Altitude` | Requires player to reach a minimum altitude |
+| `SpeedGate` | Requires player to reach a minimum airspeed |
+
+### Route Builder Features
+
+- **Tap-to-place** waypoints on 3D terrain or minimap
+- **Drag-to-reposition** with live distance/duration update
+- **Snap to Landmark** — auto-link nearby `LandmarkData` entries
+- **Snap to Favourite** — quick-add from `FavoritesManager`
+- **Snap to Hidden Gem** — include `HiddenGemManager` locations
+- **Undo / Redo** — full operation stack via `RouteBuilderController`
+- **Auto-suggest waypoints** — interesting landmarks along the path
+- **Catmull-Rom spline** preview — smooth 3D path estimation
+- **Route validation** — warns about missing Start/Finish, unconfigured speed/altitude gates
+- **Fast-forward preview** — animated path playback via `RoutePathRenderer`
+
+### Route File Format (`.swefroute`)
+
+```json
+{
+  "routeId": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "Alpine Sunrise Loop",
+  "description": "Dramatic peaks at golden hour",
+  "routeType": "Scenic",
+  "difficulty": 2,
+  "waypoints": [
+    {
+      "waypointId": "abc123",
+      "index": 0,
+      "latitude": 46.85,
+      "longitude": 9.53,
+      "altitude": 2500.0,
+      "waypointType": "Start",
+      "name": "Chur Valley",
+      "triggerRadius": 100.0,
+      "isOptional": false
+    }
+  ],
+  "estimatedDuration": 35.0,
+  "estimatedDistance": 180.0,
+  "maxAltitude": 4200.0,
+  "minAltitude": 800.0,
+  "isLoop": true,
+  "visibility": "Public",
+  "navigationStyle": "FreeFollow",
+  "weatherRecommendation": "Best in clear weather",
+  "timeOfDayRecommendation": "Best at sunrise",
+  "version": 1
+}
+```
+
+### Navigation HUD Layout
+
+```
+┌─────────────────────────────────────────────────────┐
+│  [Next Waypoint]  Chur Valley  ◄──── 4.2 km  ETA 1:15 │
+│  Progress ████████░░░░░░  6 / 10  waypoints          │
+│                                                       │
+│  Elapsed: 12:34  |  Dist: 87.3 km  |  Dev: 2         │
+│                                                       │
+│  [Altitude hint]  Climb to 3200 m                    │
+│  [Turn-by-turn]   In 2.0 km, fly towards Silvaplana  │
+└─────────────────────────────────────────────────────┘
+                   [Off-path warning banner]
+```
+
+### Architecture
+
+```
+RoutePlannerManager (Singleton, DontDestroyOnLoad)
+│   ├── Route CRUD (create, update, delete, getAll)
+│   ├── Navigation state machine (Idle → Planning → InProgress → Completed/Abandoned)
+│   ├── Waypoint proximity + off-path detection (coroutines)
+│   └── Events: OnRouteCreated, OnNavigationStarted, OnWaypointReached, OnRouteCompleted,
+│               OnOffPath, OnBackOnPath, OnNavigationPaused, OnNavigationResumed
+│
+├── RouteBuilderController  → interactive editing, undo/redo, validation
+├── RoutePathRenderer       → Catmull-Rom spline LineRenderer, animated flow, markers
+├── RouteNavigationHUD      → subscribes to manager events, refreshes every frame
+├── RouteStorageManager     → JSON persistence to persistentDataPath subfolders
+├── RouteShareManager       → deep links, QR, social share, multiplayer broadcast, ratings
+├── RoutePlannerUI          → full pre-flight map UI, delegates builder to RouteBuilderController
+├── RouteRecommendationEngine → scoring, nearby routes, route-of-the-day
+└── RoutePlannerAnalytics   → forwards events to SWEF.Analytics.UserBehaviorTracker
+```
+
+### Integration Points
+
+| RoutePlanner Script | Integrates With |
+|--------------------|----------------|
+| `RoutePlannerManager` | `SWEF.GuidedTour.WaypointNavigator.SetManualTarget()` |
+| `RoutePlannerManager` | `SWEF.Narration.NarrationManager.PlayNarration()` |
+| `RoutePlannerManager` | `SWEF.Flight.FlightController` — player position/speed |
+| `RoutePathRenderer` | `SWEF.Replay.FlightPathRenderer` — LineRenderer patterns |
+| `RoutePathRenderer` | `SWEF.Minimap.MinimapManager` — minimap path overlay |
+| `RouteBuilderController` | `SWEF.Narration.LandmarkDatabase.GetNearestLandmark()` |
+| `RouteBuilderController` | `SWEF.Favorites.FavoritesManager` — quick-add favourites |
+| `RouteBuilderController` | `SWEF.HiddenGems.HiddenGemManager` — gem waypoint snapping |
+| `RouteShareManager` | `SWEF.Social.ShareManager.ShareTextWithImage()` |
+| `RouteShareManager` | `SWEF.Multiplayer.MultiplayerManager.BroadcastCustomData()` |
+| `RoutePlannerAnalytics` | `SWEF.Analytics.UserBehaviorTracker.TrackFeatureDiscovery()` |
+| `RouteStorageManager` | `Application.persistentDataPath` — JSON file I/O |
+
+### Localization Keys (Phase 49)
+
+Added to all 8 language files (`lang_en.json` … `lang_pt.json`):
+
+- `route_planner_title`, `route_create`, `route_edit`, `route_delete`, `route_start`, `route_stop`
+- `route_waypoint_add`, `route_waypoint_edit`, `route_waypoint_delete`, `route_waypoint_types_*` (10 types)
+- `route_type_*` (8 route types)
+- `route_nav_*` (4 navigation styles)
+- `route_status_*` (5 status values)
+- `route_visibility_*` (3 visibility options)
+- `route_stats_*` (distance, duration, altitude, speed, waypoints, deviation)
+- `route_builder_*` (undo, redo, preview, validate, snap_to_landmark, auto_suggest)
+- `route_share_*` (share, import, export, qr_code, rate, leaderboard)
+- `route_nav_hud_*` (next_waypoint, eta, off_path, climb, descend, speed_up, completed)
