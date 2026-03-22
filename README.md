@@ -1323,3 +1323,104 @@ Added to all 8 language files (`lang_en.json` … `lang_pt.json`):
 ### Save File
 
 `aircraft_customization.json` in `Application.persistentDataPath` — serialised `AircraftCustomizationSaveData`.
+
+---
+
+## Phase 45 — In-Flight Music Player System
+
+### New Scripts (9 files) — `Assets/SWEF/Scripts/MusicPlayer/` — namespace `SWEF.MusicPlayer`
+
+| # | Script | Purpose |
+|---|--------|---------|
+| 1 | `MusicPlayerData.cs` | Enums & data classes: `MusicSource`, `PlaybackState`, `RepeatMode`, `ShuffleMode`, `EqualizerPreset`, `MusicMood`, `MusicTrack`, `MusicPlaylist`, `MusicPlayerConfig`, `FlightMusicProfile`, `MusicPlayerState` |
+| 2 | `MusicPlayerManager.cs` | Singleton manager — track library, playlist registry, crossfade, flight-adaptive playback |
+| 3 | `MusicPlaylistController.cs` | Playlist queue, shuffle (Fisher-Yates), repeat modes, history |
+| 4 | `MusicPlayerUI.cs` | Playback controls HUD: play/pause, skip, seek bar, volume, album art |
+| 5 | `MusicLibraryUI.cs` | Library browser: track list, playlist grid, search, sort, filter by mood |
+| 6 | `MusicFlightSync.cs` | Adjusts music energy/mood based on flight state (altitude, speed, manoeuvres) |
+| 7 | `MusicWeatherMixer.cs` | Crossfades between calm and intense playlists based on weather conditions |
+| 8 | `MusicVisualizerEffect.cs` | FFT-based spectrum visualiser rendered on the HUD or aircraft trail |
+| 9 | `MusicMultiplayerSync.cs` | Broadcasts currently playing track to nearby players; renders their playback info |
+
+### Integration Points
+
+| Script | Integrates With |
+|--------|----------------|
+| `MusicPlayerManager` | `SWEF.Audio.AudioManager` — BGM ducking |
+| `MusicFlightSync` | `SWEF.Flight.FlightController`, `AltitudeController` |
+| `MusicWeatherMixer` | `SWEF.Weather.WeatherManager` |
+| `MusicMultiplayerSync` | `SWEF.Multiplayer.MultiplayerManager` |
+
+---
+
+## Phase 46 — Voice Chat & In-Flight Communication System
+
+### New Scripts (10 files) — `Assets/SWEF/Scripts/VoiceChat/` — namespace `SWEF.VoiceChat`
+
+| # | Script | Purpose |
+|---|--------|---------|
+| 1 | `VoiceChatData.cs` | Pure data classes & enums: `VoiceChatMode`, `VoiceChannel`, `VoiceCodec`, `VoiceQuality`, `VoiceChatParticipant`, `VoiceChatConfig` |
+| 2 | `VoiceChatManager.cs` | Singleton manager — microphone capture, Push-to-Talk, voice activation, channel management, participant tracking, music ducking |
+| 3 | `VoiceAudioProcessor.cs` | Audio processing pipeline: VAD, noise gate, spectral noise suppression, auto gain control, echo cancellation stub |
+| 4 | `VoiceSpatialAudio.cs` | 3D spatial voice — logarithmic distance attenuation, Doppler effect, Physics-raycast terrain/building occlusion |
+| 5 | `VoiceNetworkTransport.cs` | Network abstraction layer — `IVoiceTransport` interface, `DefaultVoiceTransport` stub, `VoicePacket`, jitter buffer, packet loss concealment (PLC) |
+| 6 | `VoiceChannelManager.cs` | Channel lifecycle — Proximity (auto via `MultiplayerManager.GetNearbyPlayers`), Team, Global (rate-limited), Private (1-on-1), ATC |
+| 7 | `VoiceChatUI.cs` | HUD overlay — mic status icon, active speaker list, channel dropdown, per-participant volume sliders, PTT indicator, VAD meter |
+| 8 | `VoiceChatSettings.cs` | Settings panel — device picker, sensitivity, volume, codec/quality, noise suppression, echo cancellation, AGC, PTT key binding, spatial audio, duck amount, proximity range, test microphone |
+| 9 | `VoiceRadioEffect.cs` | Aviation radio filter — band-pass EQ, static noise, gain compression, squelch open/close sounds; ATC = heavy, Proximity = minimal |
+| 10 | `VoiceChatAnalytics.cs` | Analytics — session duration, channel usage time, mute toggles, peak concurrent speakers, quality preferences |
+
+### Voice Channels
+
+| Channel | Description | Filter Intensity |
+|---------|-------------|-----------------|
+| `Proximity` | Auto-join/leave within 500 m — spatial 3D audio | Minimal (0.05) |
+| `Team` | Persistent team/group channel — full volume | Light (0.35) |
+| `Global` | Server-wide broadcast (5 s rate limit) | Medium (0.45) |
+| `Private` | 1-on-1 voice call | Light-Medium (0.30) |
+| `ATC` | Air Traffic Control roleplay — heavy radio effect | Heavy (0.90) |
+
+### Integration Points
+
+| Script | Integrates With |
+|--------|----------------|
+| `VoiceChatManager` | `SWEF.Audio.AudioMixerController` — Voice mixer group |
+| `VoiceChatManager` | `SWEF.MusicPlayer.MusicPlayerManager` — music ducking when voice is active |
+| `VoiceChatManager` | `SWEF.Settings.SettingsManager` — config persistence via PlayerPrefs |
+| `VoiceChatManager` | `SWEF.Analytics.TelemetryDispatcher` — mute/unmute events |
+| `VoiceChannelManager` | `SWEF.Multiplayer.MultiplayerManager.GetNearbyPlayers()` — proximity membership |
+| `VoiceChatUI` | `SWEF.UI.HudBinder` — HUD overlay positioning |
+| `VoiceChatUI` | `SWEF.Localization.LocalizationManager` — all UI text |
+| `VoiceChatUI` | `SWEF.Accessibility.AccessibilityManager` — UI scale |
+| `VoiceChatAnalytics` | `SWEF.Analytics.TelemetryDispatcher` — session/channel/quality events |
+
+### PlayerPrefs Keys Added
+
+| Key | Default |
+|-----|---------|
+| `SWEF_Voice_Mode` | `1` (PushToTalk) |
+| `SWEF_Voice_Device` | `""` (system default) |
+| `SWEF_Voice_Codec` | `0` (Opus) |
+| `SWEF_Voice_Quality` | `1` (Medium / 16 kHz) |
+| `SWEF_Voice_MasterVolume` | `0.8` |
+| `SWEF_Voice_DuckMusic` | `1` (true) |
+| `SWEF_Voice_SpatialAudio` | `1` (true) |
+| `SWEF_Voice_PushToTalkKey` | `86` (KeyCode.V) |
+| `SWEF_Voice_MuteKey` | `109` (KeyCode.M) |
+| `SWEF_Voice_NoiseSuppression` | `1` (true) |
+| `SWEF_Voice_EchoCancellation` | `1` (true) |
+| `SWEF_Voice_AutoGainControl` | `1` (true) |
+| `SWEF_Voice_VadThreshold` | `0.02` |
+| `SWEF_Voice_DuckAmount` | `0.5` |
+| `SWEF_Voice_ProximityRange` | `500` (metres) |
+
+### Localization Keys Added (22 keys × 8 languages)
+
+`voice_chat_title`, `voice_chat_mode`, `voice_chat_push_to_talk`, `voice_chat_voice_activated`,
+`voice_chat_channel_proximity`, `voice_chat_channel_team`, `voice_chat_channel_global`, `voice_chat_channel_private`, `voice_chat_channel_atc`,
+`voice_chat_muted`, `voice_chat_unmuted`, `voice_chat_deafened`, `voice_chat_speaking`,
+`voice_chat_settings`, `voice_chat_microphone`, `voice_chat_sensitivity`, `voice_chat_quality`,
+`voice_chat_noise_suppression`, `voice_chat_echo_cancellation`, `voice_chat_spatial_audio`,
+`voice_chat_radio_effect`, `voice_chat_test_mic`
+
+Languages: `en`, `ko`, `ja`, `zh`, `es`, `fr`, `de`, `pt`
