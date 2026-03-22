@@ -70,8 +70,14 @@ namespace SWEF.TimeOfDay
         private int _moonPhaseId;
         private int _moonGlowId;
 
+        // ── Cached materials ──────────────────────────────────────────────────────
+        private Material _moonMaterial;
+        private Material _constellationMaterial;
+        private Material _milkyWayMaterial;
+
         // ── State ─────────────────────────────────────────────────────────────────
         private float _auroraTime;
+        private readonly MaterialPropertyBlock _auroraProps = new MaterialPropertyBlock();
 
         // ── Unity lifecycle ───────────────────────────────────────────────────────
 
@@ -82,6 +88,11 @@ namespace SWEF.TimeOfDay
 
             _moonPhaseId = Shader.PropertyToID(moonPhaseProperty);
             _moonGlowId  = Shader.PropertyToID(moonGlowProperty);
+
+            // Cache material instances to avoid per-frame allocations
+            if (moonRenderer       != null) _moonMaterial          = moonRenderer.material;
+            if (constellationOverlay!= null) _constellationMaterial = constellationOverlay.material;
+            if (milkyWayRenderer   != null) _milkyWayMaterial      = milkyWayRenderer.material;
         }
 
         private void Update()
@@ -133,25 +144,25 @@ namespace SWEF.TimeOfDay
             else if (effectiveVisibility <= 0.01f && starParticles.isPlaying) starParticles.Stop();
 
             // Constellation overlay
-            if (constellationOverlay != null)
+            if (constellationOverlay != null && _constellationMaterial != null)
             {
-                Color c = constellationOverlay.material.color;
+                Color c = _constellationMaterial.color;
                 c.a = effectiveVisibility * 0.5f;
-                constellationOverlay.material.color = c;
+                _constellationMaterial.color = c;
             }
         }
 
         private void UpdateMoon(SunMoonState state)
         {
-            if (moonRenderer == null) return;
+            if (moonRenderer == null || _moonMaterial == null) return;
 
             // Phase value — 0 = new moon, 0.5 = full, 1 = back to new
             float phaseValue = state.moonIllumination;
-            moonRenderer.material.SetFloat(_moonPhaseId, phaseValue);
+            _moonMaterial.SetFloat(_moonPhaseId, phaseValue);
 
             float moonAboveHorizon = Mathf.Clamp01(Mathf.InverseLerp(-5f, 10f, state.moonAltitudeDeg));
             float glowIntensity    = moonAboveHorizon * state.moonIllumination;
-            moonRenderer.material.SetFloat(_moonGlowId, glowIntensity);
+            _moonMaterial.SetFloat(_moonGlowId, glowIntensity);
 
             // Position moon in sky
             if (state.moonAltitudeDeg > -5f)
@@ -182,28 +193,22 @@ namespace SWEF.TimeOfDay
             {
                 _auroraTime += Time.deltaTime * auroraAnimSpeed;
 
-                // Animate curtain renderers
+                // Animate curtain renderers using MaterialPropertyBlock (no per-frame alloc)
                 var renderers = auroraRoot.GetComponentsInChildren<Renderer>();
+                float blend = (Mathf.Sin(_auroraTime) + 1f) * 0.5f;
+                Color auroraTint = Color.Lerp(auroraColorPrimary, auroraColorSecondary, blend) * lunarFactor;
                 foreach (var r in renderers)
                 {
-                    if (r.material.HasProperty("_MainTex"))
-                    {
-                        Vector2 offset = r.material.mainTextureOffset;
-                        offset.x = Mathf.Sin(_auroraTime * 0.3f) * 0.1f;
-                        r.material.mainTextureOffset = offset;
-                    }
-                    // Alternate between primary and secondary colors over time
-                    float blend = (Mathf.Sin(_auroraTime) + 1f) * 0.5f;
-                    Color auroraTint = Color.Lerp(auroraColorPrimary, auroraColorSecondary, blend) * lunarFactor;
-                    if (r.material.HasProperty("_Color"))
-                        r.material.color = auroraTint;
+                    r.GetPropertyBlock(_auroraProps);
+                    _auroraProps.SetColor("_Color", auroraTint);
+                    r.SetPropertyBlock(_auroraProps);
                 }
             }
         }
 
         private void UpdateMilkyWay(SunMoonState state)
         {
-            if (milkyWayRenderer == null) return;
+            if (milkyWayRenderer == null || _milkyWayMaterial == null) return;
 
             // Only visible at night with low moon illumination
             float cloudOcclusion = 1f - Mathf.Clamp01(externalCloudCoverage);
@@ -211,9 +216,9 @@ namespace SWEF.TimeOfDay
                                    * (1f - state.moonIllumination * 0.6f)
                                    * cloudOcclusion;
 
-            Color c = milkyWayRenderer.material.color;
+            Color c = _milkyWayMaterial.color;
             c.a = visibility;
-            milkyWayRenderer.material.color = c;
+            _milkyWayMaterial.color = c;
 
             // Rotate band based on hour of day to simulate Earth's rotation
             float hourAngle = timeOfDayManager.CurrentHour * milkyWayRotationSpeed;

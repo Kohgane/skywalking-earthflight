@@ -14,6 +14,9 @@ namespace SWEF.TimeOfDay
         private const double Deg2Rad = Math.PI / 180.0;
         private const double Rad2Deg = 180.0 / Math.PI;
 
+        // Obliquity coefficient used in mean obliquity calculation (arcseconds/Julian century)
+        private const double ObliquityCoeff = 46.8150;
+
         // Synodic month length in days
         private const double SynodicMonth = 29.53058867;
 
@@ -33,14 +36,10 @@ namespace SWEF.TimeOfDay
             DateTime utcTime, float latitude, float longitude)
         {
             double jd = ToJulianDay(utcTime);
-            GetSunCoordinates(jd, out double sunDec, out double sunRA);
 
-            double lst = GetLocalSiderealTime(jd, longitude);
-            double ha  = lst - sunDec; // Hour angle (reuse sunDec as transit here)
-
-            // Recompute properly using Declination
             GetSunEquatorial(jd, out double declRad, out double raDeg);
 
+            double lst = GetLocalSiderealTime(jd, longitude);
             double haRad = (lst - raDeg) * Deg2Rad;
             double latRad = latitude * Deg2Rad;
 
@@ -261,18 +260,13 @@ namespace SWEF.TimeOfDay
             double sunTrueLon = geomMeanLon + eqCenter;
             double appLon = sunTrueLon - 0.00569 - 0.00478 * Math.Sin((125.04 - 1934.136 * jc) * Deg2Rad);
 
-            double meanObliq = 23.0 + (26.0 + (21.448 - jc * (46.8150 + jc * (0.00059 - jc * 0.001813))) / 60.0) / 60.0;
+            double meanObliq = 23.0 + (26.0 + (21.448 - jc * (ObliquityCoeff + jc * (0.00059 - jc * 0.001813))) / 60.0) / 60.0;
             double obliqCorr = meanObliq + 0.00256 * Math.Cos((125.04 - 1934.136 * jc) * Deg2Rad);
 
             raDeg   = Math.Atan2(Math.Cos(obliqCorr * Deg2Rad) * Math.Sin(appLon * Deg2Rad),
                                  Math.Cos(appLon * Deg2Rad)) * Rad2Deg;
             raDeg   = Mod360(raDeg);
             declRad = Math.Asin(Math.Sin(obliqCorr * Deg2Rad) * Math.Sin(appLon * Deg2Rad));
-        }
-
-        private static void GetSunCoordinates(double jd, out double dec, out double ra)
-        {
-            GetSunEquatorial(jd, out dec, out ra);
         }
 
         private static double GetLocalSiderealTime(double jd, double longitude)
@@ -320,7 +314,7 @@ namespace SWEF.TimeOfDay
                             + 0.000289 * Math.Sin(3.0 * geomMeanAnom * Deg2Rad);
             double sunTrueLon = geomMeanLon + eqCenter;
             double appLon     = sunTrueLon  - 0.00569 - 0.00478 * Math.Sin((125.04 - 1934.136 * jc) * Deg2Rad);
-            double meanObliq  = 23.0 + (26.0 + (21.448 - jc * (46.815 + jc * (0.00059 - jc * 0.001813))) / 60.0) / 60.0;
+            double meanObliq  = 23.0 + (26.0 + (21.448 - jc * (ObliquityCoeff + jc * (0.00059 - jc * 0.001813))) / 60.0) / 60.0;
             double obliqCorr  = meanObliq + 0.00256 * Math.Cos((125.04 - 1934.136 * jc) * Deg2Rad);
             return Math.Asin(Math.Sin(obliqCorr * Deg2Rad) * Math.Sin(appLon * Deg2Rad)) * Rad2Deg;
         }
@@ -330,7 +324,7 @@ namespace SWEF.TimeOfDay
             double geomMeanLon  = Mod360(280.46646 + jc * (36000.76983 + jc * 0.0003032));
             double geomMeanAnom = Mod360(357.52911 + jc * (35999.05029 - jc * 0.0001537));
             double eccOrbit     = 0.016708634 - jc * (0.000042037 + jc * 0.0000001267);
-            double meanObliq    = 23.0 + (26.0 + (21.448 - jc * (46.815 + jc * (0.00059 - jc * 0.001813))) / 60.0) / 60.0;
+            double meanObliq    = 23.0 + (26.0 + (21.448 - jc * (ObliquityCoeff + jc * (0.00059 - jc * 0.001813))) / 60.0) / 60.0;
             double obliqCorr    = meanObliq + 0.00256 * Math.Cos((125.04 - 1934.136 * jc) * Deg2Rad);
             double y            = Math.Tan(obliqCorr / 2.0 * Deg2Rad);
             y *= y;

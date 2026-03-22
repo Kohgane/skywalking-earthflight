@@ -35,10 +35,7 @@ namespace SWEF.TimeOfDay
         [Tooltip("FlightController for reading the player's position.")]
         [SerializeField] private FlightController flightController;
 
-        [Tooltip("AltitudeController for reading current altitude layer.")]
-        [SerializeField] private AltitudeController altitudeController;
-
-        [Tooltip("AtmosphereController for sky/fog integration.")]
+        [Tooltip("AtmosphereController for sky/fog integration. Reserved for future atmospheric scattering integration.")]
         [SerializeField] private AtmosphereController atmosphereController;
 
         [Tooltip("SettingsManager for persisting time preferences.")]

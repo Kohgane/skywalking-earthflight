@@ -126,23 +126,23 @@ namespace SWEF.TimeOfDay
 
         private void OnSunrise()
         {
-            if (!IsFlying() || _sunriseWitnessed) return;
+            if (!IsFlying() || _sunriseWitnessed || timeOfDayManager == null) return;
             _sunriseWitnessed = true;
             Track("tod_sunrise_witnessed", new Dictionary<string, object>
             {
-                { "hour",    timeOfDayManager?.CurrentHour },
-                { "season",  timeOfDayManager?.CurrentSeason.ToString() }
+                { "hour",    timeOfDayManager.CurrentHour },
+                { "season",  timeOfDayManager.CurrentSeason.ToString() }
             });
         }
 
         private void OnSunset()
         {
-            if (!IsFlying() || _sunsetWitnessed) return;
+            if (!IsFlying() || _sunsetWitnessed || timeOfDayManager == null) return;
             _sunsetWitnessed = true;
             Track("tod_sunset_witnessed", new Dictionary<string, object>
             {
-                { "hour",    timeOfDayManager?.CurrentHour },
-                { "season",  timeOfDayManager?.CurrentSeason.ToString() }
+                { "hour",    timeOfDayManager.CurrentHour },
+                { "season",  timeOfDayManager.CurrentSeason.ToString() }
             });
         }
 
@@ -152,12 +152,12 @@ namespace SWEF.TimeOfDay
         /// </summary>
         public void OnScreenshotTaken()
         {
-            if (_goldenHourActive)
+            if (_goldenHourActive && timeOfDayManager != null)
             {
                 Track("tod_golden_hour_screenshot", new Dictionary<string, object>
                 {
-                    { "hour",   timeOfDayManager?.CurrentHour },
-                    { "season", timeOfDayManager?.CurrentSeason.ToString() }
+                    { "hour",   timeOfDayManager.CurrentHour },
+                    { "season", timeOfDayManager.CurrentSeason.ToString() }
                 });
             }
         }
