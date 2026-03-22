@@ -21,6 +21,7 @@ namespace SWEF.Narration
         private AudioManager _audioManager;
         private Coroutine    _duckCoroutine;
         private float        _originalBgmVolume = 1f;
+        private float        _duckedBgmVolume   = 0.5f;
         private bool         _isDucked;
 
         // ── Unity lifecycle ───────────────────────────────────────────────────────
@@ -56,8 +57,12 @@ namespace SWEF.Narration
                 return;
             }
 
+            var mgr = NarrationManager.Instance;
+            float speed = mgr != null ? Mathf.Clamp(mgr.Config.narrationSpeed, 0.5f, 2f) : 1f;
+
             narrationSource.clip   = clip;
             narrationSource.volume = Mathf.Clamp01(volume);
+            narrationSource.pitch  = speed;
             narrationSource.Play();
 
             var mgr = NarrationManager.Instance;
@@ -101,6 +106,7 @@ namespace SWEF.Narration
             var settings = FindFirstObjectByType<SWEF.Settings.SettingsManager>();
             _originalBgmVolume = settings != null ? settings.MasterVolume : 0.7f;
             float targetVolume  = _originalBgmVolume * (1f - Mathf.Clamp01(duckAmount));
+            _duckedBgmVolume    = targetVolume;
 
             if (_duckCoroutine != null) StopCoroutine(_duckCoroutine);
             _duckCoroutine = StartCoroutine(FadeBgm(_originalBgmVolume, targetVolume, 0.5f));
@@ -111,7 +117,7 @@ namespace SWEF.Narration
         {
             if (!_isDucked || _audioManager == null) return;
             if (_duckCoroutine != null) StopCoroutine(_duckCoroutine);
-            _duckCoroutine = StartCoroutine(FadeBgm(_originalBgmVolume * 0.5f, _originalBgmVolume, 0.8f));
+            _duckCoroutine = StartCoroutine(FadeBgm(_duckedBgmVolume, _originalBgmVolume, 0.8f));
             _isDucked = false;
         }
 

@@ -304,14 +304,16 @@ namespace SWEF.Narration
             }
 
             // Play audio (if available and preferred).
+            // Speed is applied as AudioSource.pitch inside NarrationAudioController.
             bool usingAudio = false;
             if (Config.preferAudioNarration && script.hasAudio && !string.IsNullOrEmpty(script.audioClipPath))
             {
                 usingAudio = true;
-                _audio?.PlayNarration(script.audioClipPath, Config.narrationVolume * Config.narrationSpeed);
+                _audio?.PlayNarration(script.audioClipPath, Config.narrationVolume);
             }
 
             // Iterate over segments.
+            // Speed controls how fast the text advances; audio pitch is handled in NarrationAudioController.
             float speed = Mathf.Max(0.1f, Config.narrationSpeed);
             for (int i = 0; i < script.segments.Count; i++)
             {
@@ -333,7 +335,7 @@ namespace SWEF.Narration
             if (!usingAudio) FinishPlayback(entry);
             else
             {
-                // Wait for audio to finish.
+                // Wait for audio to finish. Audio pitch = speed, so actual wall-clock duration = totalDuration / speed.
                 float remaining = script.totalDuration / speed;
                 yield return new WaitForSeconds(remaining);
                 FinishPlayback(entry);
