@@ -33,6 +33,9 @@ Assets/SWEF/
 │   ├── Flight/      # FlightController, TouchInputRouter, AltitudeController, HoldButton
 │   ├── Haptic/      # HapticManager, HapticTriggerZone
 │   ├── Replay/      # ReplayData, ReplayFileManager, GhostRacer, FlightPathRenderer, ReplayShareManager
+│   ├── TimeCapsule/ # TimeCapsuleData, TimeCapsuleManager, TimeCapsuleAutoCapture, TimeCapsuleUI, TimeCapsuleMapOverlay, TimeCapsuleNotificationService
+│   ├── FlightSchool/ # FlightSchoolData, FlightSchoolManager, FlightInstructor, FlightSchoolUI, FlightSchoolAnalyticsBridge
+│   ├── WeatherChallenge/ # WeatherChallengeData, WeatherChallengeManager, DynamicRouteGenerator, WeatherChallengeUI, RouteVisualizationController, WeatherChallengeAnalyticsBridge
 │   ├── UI/          # HudBinder, AccessibilityController, OneHandedModeController, VoiceCommandManager
 │   ├── XR/          # XRPlatformDetector, XRRigManager, XRInputAdapter, XRHandTracker, XRComfortSettings, XRUIAdapter
 │   └── Util/        # ExpSmoothing
@@ -1494,3 +1497,60 @@ Added to all 8 language files (`lang_en.json` … `lang_pt.json`):
 - `route_builder_*` (undo, redo, preview, validate, snap_to_landmark, auto_suggest)
 - `route_share_*` (share, import, export, qr_code, rate, leaderboard)
 - `route_nav_hud_*` (next_waypoint, eta, off_path, climb, descend, speed_up, completed)
+
+---
+
+## Phase 53 — Weather Challenges & Dynamic Route System
+
+### New Scripts (6 files) — `Assets/SWEF/Scripts/WeatherChallenge/` — namespace `SWEF.WeatherChallenge`
+
+| # | Script | Purpose |
+|---|--------|---------|
+| 1 | `WeatherChallengeData.cs` | Pure data layer — `ChallengeWeatherType`, `ChallengeDifficulty`, `ChallengeStatus` enums; `RouteWaypoint` (haversine proximity, required action, optional flag); `WeatherChallenge` (waypoints, scoring, weather modifiers, expiry helpers) |
+| 2 | `WeatherChallengeManager.cs` | Singleton manager — procedural challenge generation, lifecycle (start/complete/fail), per-frame waypoint proximity tracking, score calculation, JSON persistence, 5 events |
+| 3 | `DynamicRouteGenerator.cs` | Procedural route generator — inverse-haversine waypoint placement, weather/difficulty adjustment, route validation, static math utilities (haversine, bearing, destination point) |
+| 4 | `WeatherChallengeUI.cs` | UI controller — challenge browser list, detail panel, active HUD (timer/score/next waypoint), results summary; subscribes to manager events |
+| 5 | `RouteVisualizationController.cs` | 3D route renderer — `LineRenderer` path, prefab waypoint markers, colour-coded progress (pending/active/completed), particle burst on waypoint reached |
+| 6 | `WeatherChallengeAnalyticsBridge.cs` | Analytics bridge — tracks challenge_generated, challenge_started, challenge_completed, challenge_failed, waypoint_reached via `SWEF.Analytics.UserBehaviorTracker` |
+
+### Architecture
+
+```
+WeatherChallengeManager (Singleton, DontDestroyOnLoad)
+│   ├── GenerateChallenge → DynamicRouteGenerator.GenerateRoute()
+│   ├── StartChallenge / UpdateActiveChallenge / CompleteChallenge / FailChallenge
+│   ├── CalculateScore (time bonus + completion % + difficulty multiplier)
+│   ├── JSON persistence → Application.persistentDataPath/weatherchallenges.json
+│   └── Events: OnChallengeGenerated, OnChallengeStarted, OnWaypointReached,
+│               OnChallengeCompleted, OnChallengeFailed
+│
+├── DynamicRouteGenerator   → haversine/inverse-haversine waypoint placement, weather & difficulty adjustment
+├── WeatherChallengeUI      → browser, detail, HUD, results panels; subscribes to manager events
+├── RouteVisualizationController → LineRenderer path, colour-coded progress, particle waypoint feedback
+└── WeatherChallengeAnalyticsBridge → forwards events to SWEF.Analytics.UserBehaviorTracker
+```
+
+### Weather Scenarios
+
+| Weather Type | Wind Multiplier | Visibility | Key Mechanic |
+|-------------|----------------|-----------|-------------|
+| `ClearSkies` | 1.0× | 100% | Precision flying |
+| `Fog` | 0.8× | 15% | Instrument navigation |
+| `Rain` | 1.4× | 55% | Race the storm front |
+| `Thunderstorm` | 2.5× | 40% | Storm chasing, avoid cells |
+| `Snow` | 1.5× | 50% | Icing risk, low altitude |
+| `Turbulence` | 1.8× | 80% | Altitude/heading hold |
+| `Crosswind` | 3.0× | 90% | Crab-angle correction |
+| `Thermal` | 1.2× | 100% | Soar on rising air |
+| `Icing` | 1.3× | 60% | Stay in safe altitude band |
+
+### Integration Points
+
+| Script | Integrates With |
+|--------|----------------|
+| `WeatherChallengeManager` | `SWEF.Flight.FlightController` — player lat/lon/alt |
+| `WeatherChallengeManager` | `Application.persistentDataPath` — JSON persistence |
+| `DynamicRouteGenerator` | Haversine math — no external dependency |
+| `WeatherChallengeUI` | `UnityEngine.UI.Text`, `Button` — Unity UI |
+| `RouteVisualizationController` | `UnityEngine.LineRenderer`, `ParticleSystem` — Unity rendering |
+| `WeatherChallengeAnalyticsBridge` | `SWEF.Analytics.UserBehaviorTracker.TrackFeatureDiscovery()` |
