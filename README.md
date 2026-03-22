@@ -1326,107 +1326,171 @@ Added to all 8 language files (`lang_en.json` … `lang_pt.json`):
 
 ---
 
-## Phase 48 — Environmental Storytelling & Landmark Narration System
+## Phase 49 — Route Planner & Custom Flight Path
 
-An educational and immersive narration system that brings the world to life by telling stories, historical facts, and cultural information about 30 real-world landmarks as the player flies near them.  Combines proximity-triggered audio narration, subtitle display, minimap integration, fun-fact toasts, and a persistent discovery tracker.
+### New Scripts (10 files) — `Assets/SWEF/Scripts/RoutePlanner/` — namespace `SWEF.RoutePlanner`
 
-### New Scripts (11 files in `Assets/SWEF/Scripts/Narration/`)
+| # | Script | Purpose |
+|---|--------|---------|
+| 1 | `RoutePlannerData.cs` | Pure data classes & enums: `RouteType`, `WaypointType`, `RouteVisibility`, `NavigationStyle`, `RouteStatus`, `RouteWaypoint`, `FlightRoute`, `RouteProgress`, `RoutePlannerConfig` |
+| 2 | `RoutePlannerManager.cs` | Singleton manager — route CRUD, navigation state machine, waypoint triggering, ETA calculation, off-path detection |
+| 3 | `RouteBuilderController.cs` | Interactive route builder — tap-to-place waypoints, undo/redo stack, landmark snapping, Catmull-Rom distance estimation, route validation |
+| 4 | `RoutePathRenderer.cs` | 3D path line renderer — Catmull-Rom spline, altitude gradient colouring, animated flow, waypoint markers |
+| 5 | `RouteNavigationHUD.cs` | In-flight navigation HUD — next-waypoint panel, progress bar, constraint hints (altitude/speed), off-path warning, completion screen |
+| 6 | `RouteStorageManager.cs` | Persistent storage — JSON save/load to `Routes/MyRoutes/`, `Routes/Downloaded/`, `Routes/Drafts/`; import/export `.swefroute` files |
+| 7 | `RouteShareManager.cs` | Social sharing — deep links, QR code generation, `.swefroute` file sharing, multiplayer broadcast, per-route ratings & leaderboard |
+| 8 | `RoutePlannerUI.cs` | Full pre-flight planner UI — route list, detail view, builder mode, settings panel; delegates to `RouteBuilderController` |
+| 9 | `RouteRecommendationEngine.cs` | Intelligent route suggestions — scoring by rating/downloads/freshness, route-of-the-day, nearby routes, contextual recommendations |
+| 10 | `RoutePlannerAnalytics.cs` | Analytics tracking — route_created, route_started, route_completed, route_abandoned, waypoint_reached, off_path, route_shared, route_imported, route_rated, route_builder_used |
 
-| # | Script | Namespace | Purpose |
-|---|--------|-----------|---------|
-| 1 | `NarrationData.cs` | `SWEF.Narration` | Pure data classes & enums: `LandmarkCategory`, `NarrationTriggerType`, `NarrationPriority`, `NarrationState`, `LandmarkData`, `NarrationScript`, `NarrationSegment`, `NarrationConfig`, `NarrationQueueEntry` |
-| 2 | `LandmarkDatabase.cs` | `SWEF.Narration` | ScriptableObject — stores 30+ embedded real-world landmarks, degree-grid spatial indexing, `GetLandmarksNear()`, `GetLandmarkById()`, `GetLandmarksByCategory()`, `GetLandmarksByCountry()`, `GetNearestLandmark()`, `LoadFromJson()`, `MergeDatabase()` |
-| 3 | `NarrationManager.cs` | `SWEF.Narration` | Core singleton — frame-rate proximity detection, priority queue, playback coroutine, cooldown enforcement, config persistence (`narration_config.json`) |
-| 4 | `NarrationAudioController.cs` | `SWEF.Narration` | AudioSource management — loads clips from Resources, smooth BGM ducking/restore via `AudioManager.SetBGMVolume()`, pause/resume support |
-| 5 | `NarrationSubtitleUI.cs` | `SWEF.Narration` | Subtitle panel — segment-synchronised display, keyword rich-text highlighting, configurable font size, fade in/out CanvasGroup |
-| 6 | `NarrationHudPanel.cs` | `SWEF.Narration` | HUD overlay — proximity indicator with landmark name, active narration banner, auto-dismiss fun-fact toast |
-| 7 | `LandmarkDiscoveryTracker.cs` | `SWEF.Narration` | Persistent discovery state (`landmark_discoveries.json`) — first-discovery events, visit counts, `AchievementManager` milestone reporting |
-| 8 | `LandmarkMinimapIntegration.cs` | `SWEF.Narration` | `MinimapManager` bridge — registers `PointOfInterest` blips for every landmark, undiscovered/discovered colour coding, visibility respects config |
-| 9 | `NarrationSettingsUI.cs` | `SWEF.Narration` | Full settings panel — toggles and sliders for all `NarrationConfig` fields, live-apply via `NarrationManager.ApplyConfig()` |
-| 10 | `NarrationAnalytics.cs` | `SWEF.Narration` | Analytics tracking via `UserBehaviorTracker` — start/complete/skip counts, completion rate, most-played landmark & category |
-| 11 | `Editor/LandmarkDatabaseEditorWindow.cs` | `SWEF.Editor` | Unity Editor window — landmark list with search/filter, GPS/duplicate validation, JSON export, auto-find database asset |
+### Route Types
 
-### Key Data Types
+| Route Type | Description |
+|-----------|-------------|
+| `Scenic` | Relaxed sightseeing route designed for scenery |
+| `Speed` | Optimised for minimum travel time |
+| `Exploration` | Off-the-beaten-path discovery route |
+| `Challenge` | Skill-testing route with obstacles or constraints |
+| `Tour` | Guided tour converted into a reusable route |
+| `Custom` | Player-created route with no predefined purpose |
+| `Race` | Competitive route used in timed races |
+| `Photography` | Route curated for optimal photo opportunities |
+
+### Navigation Styles
+
+| Style | Description |
+|-------|-------------|
+| `FreeFollow` | Player may deviate freely; waypoints are suggestions |
+| `StrictPath` | Player must stay within the off-path threshold |
+| `TimeAttack` | Route is scored on elapsed time |
+| `Relaxed` | No constraints; enjoy the journey at any pace |
+
+### Waypoint Types
 
 | Type | Description |
 |------|-------------|
-| `LandmarkCategory` | Enum (10 values): `Natural`, `Historical`, `Cultural`, `Architectural`, `Religious`, `Modern`, `Geological`, `Archaeological`, `Industrial`, `Artistic` |
-| `NarrationTriggerType` | Enum (6 values): `Proximity`, `LookAt`, `FlyOver`, `FlyThrough`, `Manual`, `TimeOfDay` |
-| `NarrationPriority` | Enum (4 values): `Low`, `Normal`, `High`, `Critical` |
-| `NarrationState` | Enum (6 values): `Idle`, `Queued`, `Playing`, `Paused`, `Completed`, `Skipped` |
-| `LandmarkData` | Serializable class: GPS coords, category, trigger radius, UNESCO flag, tags, year built, architect, related landmarks |
-| `NarrationScript` | Serializable class: language code, title, ordered `NarrationSegment` list, audio path, fun facts, sources |
-| `NarrationSegment` | Serializable class: text, start/end time, highlight keywords, suggested camera angle, illustration path |
-| `NarrationConfig` | Serializable class: 20+ player settings (volume, duck, subtitles, speed, cooldown, discovery mode, etc.) |
-| `LandmarkDiscoveryState` | Serializable class: visit count, first-discovered timestamp, last-visited timestamp |
+| `Standard` | Regular navigation waypoint |
+| `Landmark` | Co-located with a named landmark from `LandmarkDatabase` |
+| `Photo` | Recommended photography vantage point with camera hint |
+| `Checkpoint` | Timed or ranked checkpoint |
+| `Start` | Route origin waypoint |
+| `Finish` | Route destination waypoint |
+| `RestStop` | Designated hover/pause location with `stayDuration` |
+| `HiddenGem` | Secret location tied to the `HiddenGemManager` system |
+| `Altitude` | Requires player to reach a minimum altitude |
+| `SpeedGate` | Requires player to reach a minimum airspeed |
 
-### Embedded Landmarks (30)
+### Route Builder Features
 
-| Region | Landmarks |
-|--------|-----------|
-| Europe | Eiffel Tower, Colosseum, Sagrada Família, Acropolis, Stonehenge, Venice Grand Canal, Hagia Sophia |
-| Asia | Great Wall, Taj Mahal, Angkor Wat, Mount Fuji, Petra, Borobudur, Mount Everest |
-| Africa | Great Pyramid of Giza, Victoria Falls, Mount Kilimanjaro |
-| Americas | Grand Canyon, Machu Picchu, Statue of Liberty, Chichén Itzá, Amazon River Source, Iguaçu Falls |
-| Oceania | Sydney Opera House, Uluru, Great Barrier Reef, Kata Tjuta |
-| Special | Burj Khalifa, Golden Gate Bridge, Aurora Borealis site |
+- **Tap-to-place** waypoints on 3D terrain or minimap
+- **Drag-to-reposition** with live distance/duration update
+- **Snap to Landmark** — auto-link nearby `LandmarkData` entries
+- **Snap to Favourite** — quick-add from `FavoritesManager`
+- **Snap to Hidden Gem** — include `HiddenGemManager` locations
+- **Undo / Redo** — full operation stack via `RouteBuilderController`
+- **Auto-suggest waypoints** — interesting landmarks along the path
+- **Catmull-Rom spline** preview — smooth 3D path estimation
+- **Route validation** — warns about missing Start/Finish, unconfigured speed/altitude gates
+- **Fast-forward preview** — animated path playback via `RoutePathRenderer`
+
+### Route File Format (`.swefroute`)
+
+```json
+{
+  "routeId": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "Alpine Sunrise Loop",
+  "description": "Dramatic peaks at golden hour",
+  "routeType": "Scenic",
+  "difficulty": 2,
+  "waypoints": [
+    {
+      "waypointId": "abc123",
+      "index": 0,
+      "latitude": 46.85,
+      "longitude": 9.53,
+      "altitude": 2500.0,
+      "waypointType": "Start",
+      "name": "Chur Valley",
+      "triggerRadius": 100.0,
+      "isOptional": false
+    }
+  ],
+  "estimatedDuration": 35.0,
+  "estimatedDistance": 180.0,
+  "maxAltitude": 4200.0,
+  "minAltitude": 800.0,
+  "isLoop": true,
+  "visibility": "Public",
+  "navigationStyle": "FreeFollow",
+  "weatherRecommendation": "Best in clear weather",
+  "timeOfDayRecommendation": "Best at sunrise",
+  "version": 1
+}
+```
+
+### Navigation HUD Layout
+
+```
+┌─────────────────────────────────────────────────────┐
+│  [Next Waypoint]  Chur Valley  ◄──── 4.2 km  ETA 1:15 │
+│  Progress ████████░░░░░░  6 / 10  waypoints          │
+│                                                       │
+│  Elapsed: 12:34  |  Dist: 87.3 km  |  Dev: 2         │
+│                                                       │
+│  [Altitude hint]  Climb to 3200 m                    │
+│  [Turn-by-turn]   In 2.0 km, fly towards Silvaplana  │
+└─────────────────────────────────────────────────────┘
+                   [Off-path warning banner]
+```
 
 ### Architecture
 
 ```
-NarrationManager (Singleton, DontDestroyOnLoad)
-│   ├── Reads LandmarkDatabase — proximity scan every 1 s
-│   ├── Priority queue → PlayNarration() coroutine
-│   ├── Persists NarrationConfig → narration_config.json
-│   └── Events: OnLandmarkEnterRange, OnLandmarkExitRange, OnNarrationStarted,
-│               OnNarrationFinished, OnSegmentChanged, OnFunFactReady
+RoutePlannerManager (Singleton, DontDestroyOnLoad)
+│   ├── Route CRUD (create, update, delete, getAll)
+│   ├── Navigation state machine (Idle → Planning → InProgress → Completed/Abandoned)
+│   ├── Waypoint proximity + off-path detection (coroutines)
+│   └── Events: OnRouteCreated, OnNavigationStarted, OnWaypointReached, OnRouteCompleted,
+│               OnOffPath, OnBackOnPath, OnNavigationPaused, OnNavigationResumed
 │
-├── NarrationAudioController   → AudioManager.SetBGMVolume() ducking
-├── NarrationSubtitleUI        → segment text + keyword highlights
-├── NarrationHudPanel          → proximity badge + fun-fact toast
-├── LandmarkDiscoveryTracker   → JSON persistence + achievement milestones
-├── LandmarkMinimapIntegration → MinimapManager blip registration
-├── NarrationSettingsUI        → player config panel
-├── NarrationAnalytics         → UserBehaviorTracker engagement metrics
-│
-└── Editor/LandmarkDatabaseEditorWindow — validation, GPS check, JSON export
+├── RouteBuilderController  → interactive editing, undo/redo, validation
+├── RoutePathRenderer       → Catmull-Rom spline LineRenderer, animated flow, markers
+├── RouteNavigationHUD      → subscribes to manager events, refreshes every frame
+├── RouteStorageManager     → JSON persistence to persistentDataPath subfolders
+├── RouteShareManager       → deep links, QR, social share, multiplayer broadcast, ratings
+├── RoutePlannerUI          → full pre-flight map UI, delegates builder to RouteBuilderController
+├── RouteRecommendationEngine → scoring, nearby routes, route-of-the-day
+└── RoutePlannerAnalytics   → forwards events to SWEF.Analytics.UserBehaviorTracker
 ```
-
-### Persistence
-
-| File | Location | Contents |
-|------|----------|----------|
-| `narration_config.json` | `Application.persistentDataPath` | Serialised `NarrationConfig` |
-| `landmark_discoveries.json` | `Application.persistentDataPath` | `LandmarkDiscoveryState` records |
-
-### Localization Keys Added (Phase 48)
-
-Added to all 8 language files (`lang_en.json` … `lang_pt.json`):
-
-- `narration_panel_title`, `narration_settings_title`
-- `narration_enabled`, `narration_auto_play`, `narration_duck_music`, `narration_prefer_audio`
-- `narration_show_subtitles`, `narration_auto_advance`, `narration_show_minimap`, `narration_show_proximity`
-- `narration_fun_facts`, `narration_discovery_mode`, `narration_volume`, `narration_duck_amount`
-- `narration_subtitle_size`, `narration_segment_pause`, `narration_cooldown`, `narration_speed`
-- `narration_nearby_landmark`, `narration_playing`, `narration_skip_button`, `narration_fun_fact_prefix`, `narration_now_playing`
-- `narration_category_*` (10 categories), `narration_trigger_*` (6 types)
-- `narration_discovered`, `narration_total_discovered`, `narration_first_visit`
-- 30 landmark name keys (`lm_*_name`)
-- 30 landmark fun-fact keys (`lm_*_fact1`)
-- 60 narration segment text keys (`lm_*_seg0`, `lm_*_seg1`)
 
 ### Integration Points
 
-| Narration Script | Integrates With |
-|-----------------|----------------|
-| `NarrationManager` | `SWEF.Flight.FlightController` — player world position |
-| `NarrationManager` | `SWEF.Localization.LocalizationManager` — language code for script selection |
-| `NarrationManager` | `SWEF.Analytics.UserBehaviorTracker.TrackFeatureDiscovery()` |
-| `NarrationAudioController` | `SWEF.Audio.AudioManager.SetBGMVolume()` — BGM ducking |
-| `NarrationAudioController` | `SWEF.Settings.SettingsManager.MasterVolume` — duck reference volume |
-| `NarrationSubtitleUI` | `SWEF.Localization.LocalizationManager.GetText()` — localized landmark names |
-| `NarrationHudPanel` | `SWEF.Localization.LocalizationManager.GetText()` — fun fact text |
-| `LandmarkDiscoveryTracker` | `SWEF.Achievement.AchievementManager.ReportProgress()` |
-| `LandmarkDiscoveryTracker` | `SWEF.Journal.JournalManager` |
-| `LandmarkMinimapIntegration` | `SWEF.Minimap.MinimapManager` — RegisterBlip/UnregisterBlip/GetBlip |
-| `NarrationAnalytics` | `SWEF.Analytics.UserBehaviorTracker.TrackFeatureDiscovery()` |
+| RoutePlanner Script | Integrates With |
+|--------------------|----------------|
+| `RoutePlannerManager` | `SWEF.GuidedTour.WaypointNavigator.SetManualTarget()` |
+| `RoutePlannerManager` | `SWEF.Narration.NarrationManager.PlayNarration()` |
+| `RoutePlannerManager` | `SWEF.Flight.FlightController` — player position/speed |
+| `RoutePathRenderer` | `SWEF.Replay.FlightPathRenderer` — LineRenderer patterns |
+| `RoutePathRenderer` | `SWEF.Minimap.MinimapManager` — minimap path overlay |
+| `RouteBuilderController` | `SWEF.Narration.LandmarkDatabase.GetNearestLandmark()` |
+| `RouteBuilderController` | `SWEF.Favorites.FavoritesManager` — quick-add favourites |
+| `RouteBuilderController` | `SWEF.HiddenGems.HiddenGemManager` — gem waypoint snapping |
+| `RouteShareManager` | `SWEF.Social.ShareManager.ShareTextWithImage()` |
+| `RouteShareManager` | `SWEF.Multiplayer.MultiplayerManager.BroadcastCustomData()` |
+| `RoutePlannerAnalytics` | `SWEF.Analytics.UserBehaviorTracker.TrackFeatureDiscovery()` |
+| `RouteStorageManager` | `Application.persistentDataPath` — JSON file I/O |
+
+### Localization Keys (Phase 49)
+
+Added to all 8 language files (`lang_en.json` … `lang_pt.json`):
+
+- `route_planner_title`, `route_create`, `route_edit`, `route_delete`, `route_start`, `route_stop`
+- `route_waypoint_add`, `route_waypoint_edit`, `route_waypoint_delete`, `route_waypoint_types_*` (10 types)
+- `route_type_*` (8 route types)
+- `route_nav_*` (4 navigation styles)
+- `route_status_*` (5 status values)
+- `route_visibility_*` (3 visibility options)
+- `route_stats_*` (distance, duration, altitude, speed, waypoints, deviation)
+- `route_builder_*` (undo, redo, preview, validate, snap_to_landmark, auto_suggest)
+- `route_share_*` (share, import, export, qr_code, rate, leaderboard)
+- `route_nav_hud_*` (next_waypoint, eta, off_path, climb, descend, speed_up, completed)
