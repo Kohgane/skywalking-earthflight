@@ -1323,3 +1323,110 @@ Added to all 8 language files (`lang_en.json` … `lang_pt.json`):
 ### Save File
 
 `aircraft_customization.json` in `Application.persistentDataPath` — serialised `AircraftCustomizationSaveData`.
+
+---
+
+## Phase 48 — Environmental Storytelling & Landmark Narration System
+
+An educational and immersive narration system that brings the world to life by telling stories, historical facts, and cultural information about 30 real-world landmarks as the player flies near them.  Combines proximity-triggered audio narration, subtitle display, minimap integration, fun-fact toasts, and a persistent discovery tracker.
+
+### New Scripts (11 files in `Assets/SWEF/Scripts/Narration/`)
+
+| # | Script | Namespace | Purpose |
+|---|--------|-----------|---------|
+| 1 | `NarrationData.cs` | `SWEF.Narration` | Pure data classes & enums: `LandmarkCategory`, `NarrationTriggerType`, `NarrationPriority`, `NarrationState`, `LandmarkData`, `NarrationScript`, `NarrationSegment`, `NarrationConfig`, `NarrationQueueEntry` |
+| 2 | `LandmarkDatabase.cs` | `SWEF.Narration` | ScriptableObject — stores 30+ embedded real-world landmarks, degree-grid spatial indexing, `GetLandmarksNear()`, `GetLandmarkById()`, `GetLandmarksByCategory()`, `GetLandmarksByCountry()`, `GetNearestLandmark()`, `LoadFromJson()`, `MergeDatabase()` |
+| 3 | `NarrationManager.cs` | `SWEF.Narration` | Core singleton — frame-rate proximity detection, priority queue, playback coroutine, cooldown enforcement, config persistence (`narration_config.json`) |
+| 4 | `NarrationAudioController.cs` | `SWEF.Narration` | AudioSource management — loads clips from Resources, smooth BGM ducking/restore via `AudioManager.SetBGMVolume()`, pause/resume support |
+| 5 | `NarrationSubtitleUI.cs` | `SWEF.Narration` | Subtitle panel — segment-synchronised display, keyword rich-text highlighting, configurable font size, fade in/out CanvasGroup |
+| 6 | `NarrationHudPanel.cs` | `SWEF.Narration` | HUD overlay — proximity indicator with landmark name, active narration banner, auto-dismiss fun-fact toast |
+| 7 | `LandmarkDiscoveryTracker.cs` | `SWEF.Narration` | Persistent discovery state (`landmark_discoveries.json`) — first-discovery events, visit counts, `AchievementManager` milestone reporting |
+| 8 | `LandmarkMinimapIntegration.cs` | `SWEF.Narration` | `MinimapManager` bridge — registers `PointOfInterest` blips for every landmark, undiscovered/discovered colour coding, visibility respects config |
+| 9 | `NarrationSettingsUI.cs` | `SWEF.Narration` | Full settings panel — toggles and sliders for all `NarrationConfig` fields, live-apply via `NarrationManager.ApplyConfig()` |
+| 10 | `NarrationAnalytics.cs` | `SWEF.Narration` | Analytics tracking via `UserBehaviorTracker` — start/complete/skip counts, completion rate, most-played landmark & category |
+| 11 | `Editor/LandmarkDatabaseEditorWindow.cs` | `SWEF.Editor` | Unity Editor window — landmark list with search/filter, GPS/duplicate validation, JSON export, auto-find database asset |
+
+### Key Data Types
+
+| Type | Description |
+|------|-------------|
+| `LandmarkCategory` | Enum (10 values): `Natural`, `Historical`, `Cultural`, `Architectural`, `Religious`, `Modern`, `Geological`, `Archaeological`, `Industrial`, `Artistic` |
+| `NarrationTriggerType` | Enum (6 values): `Proximity`, `LookAt`, `FlyOver`, `FlyThrough`, `Manual`, `TimeOfDay` |
+| `NarrationPriority` | Enum (4 values): `Low`, `Normal`, `High`, `Critical` |
+| `NarrationState` | Enum (6 values): `Idle`, `Queued`, `Playing`, `Paused`, `Completed`, `Skipped` |
+| `LandmarkData` | Serializable class: GPS coords, category, trigger radius, UNESCO flag, tags, year built, architect, related landmarks |
+| `NarrationScript` | Serializable class: language code, title, ordered `NarrationSegment` list, audio path, fun facts, sources |
+| `NarrationSegment` | Serializable class: text, start/end time, highlight keywords, suggested camera angle, illustration path |
+| `NarrationConfig` | Serializable class: 20+ player settings (volume, duck, subtitles, speed, cooldown, discovery mode, etc.) |
+| `LandmarkDiscoveryState` | Serializable class: visit count, first-discovered timestamp, last-visited timestamp |
+
+### Embedded Landmarks (30)
+
+| Region | Landmarks |
+|--------|-----------|
+| Europe | Eiffel Tower, Colosseum, Sagrada Família, Acropolis, Stonehenge, Venice Grand Canal, Hagia Sophia |
+| Asia | Great Wall, Taj Mahal, Angkor Wat, Mount Fuji, Petra, Borobudur, Mount Everest |
+| Africa | Great Pyramid of Giza, Victoria Falls, Mount Kilimanjaro |
+| Americas | Grand Canyon, Machu Picchu, Statue of Liberty, Chichén Itzá, Amazon River Source, Iguaçu Falls |
+| Oceania | Sydney Opera House, Uluru, Great Barrier Reef, Kata Tjuta |
+| Special | Burj Khalifa, Golden Gate Bridge, Aurora Borealis site |
+
+### Architecture
+
+```
+NarrationManager (Singleton, DontDestroyOnLoad)
+│   ├── Reads LandmarkDatabase — proximity scan every 1 s
+│   ├── Priority queue → PlayNarration() coroutine
+│   ├── Persists NarrationConfig → narration_config.json
+│   └── Events: OnLandmarkEnterRange, OnLandmarkExitRange, OnNarrationStarted,
+│               OnNarrationFinished, OnSegmentChanged, OnFunFactReady
+│
+├── NarrationAudioController   → AudioManager.SetBGMVolume() ducking
+├── NarrationSubtitleUI        → segment text + keyword highlights
+├── NarrationHudPanel          → proximity badge + fun-fact toast
+├── LandmarkDiscoveryTracker   → JSON persistence + achievement milestones
+├── LandmarkMinimapIntegration → MinimapManager blip registration
+├── NarrationSettingsUI        → player config panel
+├── NarrationAnalytics         → UserBehaviorTracker engagement metrics
+│
+└── Editor/LandmarkDatabaseEditorWindow — validation, GPS check, JSON export
+```
+
+### Persistence
+
+| File | Location | Contents |
+|------|----------|----------|
+| `narration_config.json` | `Application.persistentDataPath` | Serialised `NarrationConfig` |
+| `landmark_discoveries.json` | `Application.persistentDataPath` | `LandmarkDiscoveryState` records |
+
+### Localization Keys Added (Phase 48)
+
+Added to all 8 language files (`lang_en.json` … `lang_pt.json`):
+
+- `narration_panel_title`, `narration_settings_title`
+- `narration_enabled`, `narration_auto_play`, `narration_duck_music`, `narration_prefer_audio`
+- `narration_show_subtitles`, `narration_auto_advance`, `narration_show_minimap`, `narration_show_proximity`
+- `narration_fun_facts`, `narration_discovery_mode`, `narration_volume`, `narration_duck_amount`
+- `narration_subtitle_size`, `narration_segment_pause`, `narration_cooldown`, `narration_speed`
+- `narration_nearby_landmark`, `narration_playing`, `narration_skip_button`, `narration_fun_fact_prefix`, `narration_now_playing`
+- `narration_category_*` (10 categories), `narration_trigger_*` (6 types)
+- `narration_discovered`, `narration_total_discovered`, `narration_first_visit`
+- 30 landmark name keys (`lm_*_name`)
+- 30 landmark fun-fact keys (`lm_*_fact1`)
+- 60 narration segment text keys (`lm_*_seg0`, `lm_*_seg1`)
+
+### Integration Points
+
+| Narration Script | Integrates With |
+|-----------------|----------------|
+| `NarrationManager` | `SWEF.Flight.FlightController` — player world position |
+| `NarrationManager` | `SWEF.Localization.LocalizationManager` — language code for script selection |
+| `NarrationManager` | `SWEF.Analytics.UserBehaviorTracker.TrackFeatureDiscovery()` |
+| `NarrationAudioController` | `SWEF.Audio.AudioManager.SetBGMVolume()` — BGM ducking |
+| `NarrationAudioController` | `SWEF.Settings.SettingsManager.MasterVolume` — duck reference volume |
+| `NarrationSubtitleUI` | `SWEF.Localization.LocalizationManager.GetText()` — localized landmark names |
+| `NarrationHudPanel` | `SWEF.Localization.LocalizationManager.GetText()` — fun fact text |
+| `LandmarkDiscoveryTracker` | `SWEF.Achievement.AchievementManager.ReportProgress()` |
+| `LandmarkDiscoveryTracker` | `SWEF.Journal.JournalManager` |
+| `LandmarkMinimapIntegration` | `SWEF.Minimap.MinimapManager` — RegisterBlip/UnregisterBlip/GetBlip |
+| `NarrationAnalytics` | `SWEF.Analytics.UserBehaviorTracker.TrackFeatureDiscovery()` |
