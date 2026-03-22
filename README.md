@@ -1326,135 +1326,107 @@ Added to all 8 language files (`lang_en.json` … `lang_pt.json`):
 
 ---
 
-## Phase 47 — Photo Mode & Drone Camera System
+## Phase 48 — Environmental Storytelling & Landmark Narration System
 
-New directory: `Assets/SWEF/Scripts/PhotoMode/` — namespace `SWEF.PhotoMode`
+An educational and immersive narration system that brings the world to life by telling stories, historical facts, and cultural information about 30 real-world landmarks as the player flies near them.  Combines proximity-triggered audio narration, subtitle display, minimap integration, fun-fact toasts, and a persistent discovery tracker.
 
-### New Scripts (10 files)
+### New Scripts (11 files in `Assets/SWEF/Scripts/Narration/`)
 
 | # | Script | Namespace | Purpose |
 |---|--------|-----------|---------|
-| 1 | `PhotoModeData.cs` | `SWEF.PhotoMode` | Pure data classes & enums: `DroneMode`, `PhotoFilter`, `FrameStyle`, `FocusMode`, `PhotoResolution`, `PhotoFormat`, `DroneConfig`, `CameraSettings`, `PhotoMetadata` |
-| 2 | `DroneCameraController.cs` | `SWEF.PhotoMode` | MonoBehaviour — free-flying drone with 6 modes, battery system, collision avoidance, tether range limit |
-| 3 | `PhotoCameraController.cs` | `SWEF.PhotoMode` | MonoBehaviour — virtual camera settings (FOV, aperture, ISO, shutter speed, white balance, focus); drives post-processing |
-| 4 | `PhotoFilterSystem.cs` | `SWEF.PhotoMode` | MonoBehaviour — 12 built-in filter presets, intensity control, LUT support, custom filter save/load |
-| 5 | `PhotoFrameRenderer.cs` | `SWEF.PhotoMode` | MonoBehaviour — 8 frame styles, watermark, date/location stamp, EXIF bar compositing |
-| 6 | `PhotoCaptureManager.cs` | `SWEF.PhotoMode` | Singleton MonoBehaviour — single capture, burst, timer, bracketed HDR, panorama; generates thumbnails & JSON metadata |
-| 7 | `PhotoGalleryManager.cs` | `SWEF.PhotoMode` | Singleton MonoBehaviour — index, sort, filter, search, slideshow, batch delete/tag |
-| 8 | `PhotoModeUI.cs` | `SWEF.PhotoMode` | MonoBehaviour — full camera HUD with viewfinder overlays, drone controls, pinch-to-zoom, tap-to-focus, post-capture review |
-| 9 | `PhotoModeAnalytics.cs` | `SWEF.PhotoMode` | MonoBehaviour — usage tracking via `UserBehaviorTracker` and `TelemetryDispatcher` |
-| 10 | `DroneVisualController.cs` | `SWEF.PhotoMode` | MonoBehaviour — 3D drone model, propeller spin, LED indicators, gimbal, SFX, haptics |
+| 1 | `NarrationData.cs` | `SWEF.Narration` | Pure data classes & enums: `LandmarkCategory`, `NarrationTriggerType`, `NarrationPriority`, `NarrationState`, `LandmarkData`, `NarrationScript`, `NarrationSegment`, `NarrationConfig`, `NarrationQueueEntry` |
+| 2 | `LandmarkDatabase.cs` | `SWEF.Narration` | ScriptableObject — stores 30+ embedded real-world landmarks, degree-grid spatial indexing, `GetLandmarksNear()`, `GetLandmarkById()`, `GetLandmarksByCategory()`, `GetLandmarksByCountry()`, `GetNearestLandmark()`, `LoadFromJson()`, `MergeDatabase()` |
+| 3 | `NarrationManager.cs` | `SWEF.Narration` | Core singleton — frame-rate proximity detection, priority queue, playback coroutine, cooldown enforcement, config persistence (`narration_config.json`) |
+| 4 | `NarrationAudioController.cs` | `SWEF.Narration` | AudioSource management — loads clips from Resources, smooth BGM ducking/restore via `AudioManager.SetBGMVolume()`, pause/resume support |
+| 5 | `NarrationSubtitleUI.cs` | `SWEF.Narration` | Subtitle panel — segment-synchronised display, keyword rich-text highlighting, configurable font size, fade in/out CanvasGroup |
+| 6 | `NarrationHudPanel.cs` | `SWEF.Narration` | HUD overlay — proximity indicator with landmark name, active narration banner, auto-dismiss fun-fact toast |
+| 7 | `LandmarkDiscoveryTracker.cs` | `SWEF.Narration` | Persistent discovery state (`landmark_discoveries.json`) — first-discovery events, visit counts, `AchievementManager` milestone reporting |
+| 8 | `LandmarkMinimapIntegration.cs` | `SWEF.Narration` | `MinimapManager` bridge — registers `PointOfInterest` blips for every landmark, undiscovered/discovered colour coding, visibility respects config |
+| 9 | `NarrationSettingsUI.cs` | `SWEF.Narration` | Full settings panel — toggles and sliders for all `NarrationConfig` fields, live-apply via `NarrationManager.ApplyConfig()` |
+| 10 | `NarrationAnalytics.cs` | `SWEF.Narration` | Analytics tracking via `UserBehaviorTracker` — start/complete/skip counts, completion rate, most-played landmark & category |
+| 11 | `Editor/LandmarkDatabaseEditorWindow.cs` | `SWEF.Editor` | Unity Editor window — landmark list with search/filter, GPS/duplicate validation, JSON export, auto-find database asset |
 
-### Drone Modes
+### Key Data Types
 
-| Mode | Description |
+| Type | Description |
 |------|-------------|
-| `Free` | Full 6-DoF manual control by the player |
-| `Orbit` | Auto-circles a target transform at configurable radius & speed |
-| `FollowTarget` | Chases the player aircraft from behind at a configurable offset |
-| `Dolly` | Follows a spline path (CinematicCameraPath) at set speed |
-| `Static` | Position locked; only rotation is player-controlled |
-| `Selfie` | Front-facing with the player aircraft in frame |
+| `LandmarkCategory` | Enum (10 values): `Natural`, `Historical`, `Cultural`, `Architectural`, `Religious`, `Modern`, `Geological`, `Archaeological`, `Industrial`, `Artistic` |
+| `NarrationTriggerType` | Enum (6 values): `Proximity`, `LookAt`, `FlyOver`, `FlyThrough`, `Manual`, `TimeOfDay` |
+| `NarrationPriority` | Enum (4 values): `Low`, `Normal`, `High`, `Critical` |
+| `NarrationState` | Enum (6 values): `Idle`, `Queued`, `Playing`, `Paused`, `Completed`, `Skipped` |
+| `LandmarkData` | Serializable class: GPS coords, category, trigger radius, UNESCO flag, tags, year built, architect, related landmarks |
+| `NarrationScript` | Serializable class: language code, title, ordered `NarrationSegment` list, audio path, fun facts, sources |
+| `NarrationSegment` | Serializable class: text, start/end time, highlight keywords, suggested camera angle, illustration path |
+| `NarrationConfig` | Serializable class: 20+ player settings (volume, duck, subtitles, speed, cooldown, discovery mode, etc.) |
+| `LandmarkDiscoveryState` | Serializable class: visit count, first-discovered timestamp, last-visited timestamp |
 
-### Camera Settings Ranges
+### Embedded Landmarks (30)
 
-| Setting | Range | Default |
-|---------|-------|---------|
-| Field of View | 10°–120° | 60° |
-| Aperture | f/1.4–f/22 | f/5.6 |
-| Shutter Speed | 1/8000 s–30 s | 1/250 s |
-| ISO | 100–12800 | 400 |
-| Exposure Compensation | −3 to +3 EV | 0 EV |
-| White Balance | 2500–10000 K | 5500 K |
-| Focus Distance | 0.5–1000 m | 10 m |
-| JPEG Quality | 1–100 | 95 |
+| Region | Landmarks |
+|--------|-----------|
+| Europe | Eiffel Tower, Colosseum, Sagrada Família, Acropolis, Stonehenge, Venice Grand Canal, Hagia Sophia |
+| Asia | Great Wall, Taj Mahal, Angkor Wat, Mount Fuji, Petra, Borobudur, Mount Everest |
+| Africa | Great Pyramid of Giza, Victoria Falls, Mount Kilimanjaro |
+| Americas | Grand Canyon, Machu Picchu, Statue of Liberty, Chichén Itzá, Amazon River Source, Iguaçu Falls |
+| Oceania | Sydney Opera House, Uluru, Great Barrier Reef, Kata Tjuta |
+| Special | Burj Khalifa, Golden Gate Bridge, Aurora Borealis site |
 
-### Photo Filters
-
-`None` · `Vintage` · `Noir` · `Warm` · `Cool` · `HDR` · `Cinematic` · `Sunset` · `NightVision` · `Sketch` · `Tiltshift` · `Bokeh`
-
-### Frame Styles
-
-`None` · `Polaroid` · `Filmstrip` · `Panoramic` · `Square` · `Postcard` · `Passport` · `Widescreen`
-
-### Architecture Diagram
+### Architecture
 
 ```
-FlightController  ──────────────────────────┐
-                                             ▼
-                                  DroneCameraController
-                                  (modes, battery, tether)
-                                             │
-                          ┌──────────────────┼──────────────────┐
-                          ▼                  ▼                  ▼
-             PhotoCameraController    DroneVisualController  PhotoModeAnalytics
-             (FOV/aperture/focus)     (model/SFX/haptics)   (TelemetryDispatcher)
-                          │
-                          ▼
-                  PhotoFilterSystem
-                  (12 filters + LUT)
-                          │
-                          ▼
-                  PhotoFrameRenderer
-                  (8 frames + overlays)
-                          │
-                          ▼
-                  PhotoCaptureManager ──► ScreenshotController
-                  (burst/HDR/panorama)    ShareManager
-                          │
-                          ▼
-                  PhotoGalleryManager
-                  (index/sort/search/slideshow)
-                          │
-                          ▼
-                    PhotoModeUI
-                    (full HUD / review panel)
+NarrationManager (Singleton, DontDestroyOnLoad)
+│   ├── Reads LandmarkDatabase — proximity scan every 1 s
+│   ├── Priority queue → PlayNarration() coroutine
+│   ├── Persists NarrationConfig → narration_config.json
+│   └── Events: OnLandmarkEnterRange, OnLandmarkExitRange, OnNarrationStarted,
+│               OnNarrationFinished, OnSegmentChanged, OnFunFactReady
+│
+├── NarrationAudioController   → AudioManager.SetBGMVolume() ducking
+├── NarrationSubtitleUI        → segment text + keyword highlights
+├── NarrationHudPanel          → proximity badge + fun-fact toast
+├── LandmarkDiscoveryTracker   → JSON persistence + achievement milestones
+├── LandmarkMinimapIntegration → MinimapManager blip registration
+├── NarrationSettingsUI        → player config panel
+├── NarrationAnalytics         → UserBehaviorTracker engagement metrics
+│
+└── Editor/LandmarkDatabaseEditorWindow — validation, GPS check, JSON export
 ```
 
-### Example Usage
+### Persistence
 
-```csharp
-// Enter photo mode
-var drone = FindObjectOfType<DroneCameraController>();
-var capture = PhotoCaptureManager.Instance;
-var ui = FindObjectOfType<PhotoModeUI>();
+| File | Location | Contents |
+|------|----------|----------|
+| `narration_config.json` | `Application.persistentDataPath` | Serialised `NarrationConfig` |
+| `landmark_discoveries.json` | `Application.persistentDataPath` | `LandmarkDiscoveryState` records |
 
-drone.Deploy();
-drone.SetMode(DroneMode.Orbit);
+### Localization Keys Added (Phase 48)
 
-// Adjust camera
-var cam = FindObjectOfType<PhotoCameraController>();
-cam.SetFOV(35f);
-cam.SetAperture(2.8f);
+Added to all 8 language files (`lang_en.json` … `lang_pt.json`):
 
-// Apply filter
-var filters = FindObjectOfType<PhotoFilterSystem>();
-filters.ApplyFilter(PhotoFilter.Cinematic, 0.8f);
-
-// Capture
-capture.OnPhotoCaptured += meta =>
-    Debug.Log($"Saved to {meta.filePath}  ({meta.width}×{meta.height})");
-capture.CapturePhoto();
-
-// Recall drone
-drone.Recall();
-```
-
-### Localization Keys Added (all 8 languages)
-
-`photomode_title` · `photomode_drone_deploy` · `photomode_drone_recall` · `photomode_capture` · `photomode_burst` · `photomode_timer` · `photomode_hdr` · `photomode_panorama` · `photomode_filter_*` (×12) · `photomode_frame_*` (×8) · `photomode_settings_fov/aperture/iso/shutter/wb/focus` · `photomode_drone_battery` · `photomode_drone_range` · `photomode_drone_mode_*` (×6) · `photomode_gallery_title` · `photomode_gallery_sort_*` (×3) · `photomode_gallery_slideshow` · `photomode_gallery_compare` · `photomode_share` · `photomode_delete` · `photomode_export` · `photomode_tags`
+- `narration_panel_title`, `narration_settings_title`
+- `narration_enabled`, `narration_auto_play`, `narration_duck_music`, `narration_prefer_audio`
+- `narration_show_subtitles`, `narration_auto_advance`, `narration_show_minimap`, `narration_show_proximity`
+- `narration_fun_facts`, `narration_discovery_mode`, `narration_volume`, `narration_duck_amount`
+- `narration_subtitle_size`, `narration_segment_pause`, `narration_cooldown`, `narration_speed`
+- `narration_nearby_landmark`, `narration_playing`, `narration_skip_button`, `narration_fun_fact_prefix`, `narration_now_playing`
+- `narration_category_*` (10 categories), `narration_trigger_*` (6 types)
+- `narration_discovered`, `narration_total_discovered`, `narration_first_visit`
+- 30 landmark name keys (`lm_*_name`)
+- 30 landmark fun-fact keys (`lm_*_fact1`)
+- 60 narration segment text keys (`lm_*_seg0`, `lm_*_seg1`)
 
 ### Integration Points
 
-| Script | Integrates With |
-|--------|-----------------|
-| `DroneCameraController` | `SWEF.Flight.FlightController` — player position |
-| `DroneCameraController` | `SWEF.Analytics.UserBehaviorTracker` — feature discovery events |
-| `PhotoCameraController` | `SWEF.TimeOfDay.TimeOfDayManager` — current lighting state |
-| `PhotoCaptureManager` | `SWEF.Screenshot.ScreenshotController` — low-level capture |
-| `PhotoCaptureManager` | `SWEF.Social.ShareManager` — social sharing |
-| `PhotoModeUI` | `SWEF.UI.HudBinder` — overlay management |
-| `PhotoModeUI` | `SWEF.Accessibility.AccessibilityManager` — text scaling |
-| `DroneVisualController` | `SWEF.Audio.AudioManager` — SFX playback |
-| `DroneVisualController` | `SWEF.Haptic.HapticManager` — shutter snap feedback |
-| `PhotoModeAnalytics` | `SWEF.Analytics.TelemetryDispatcher` — event pipeline |
+| Narration Script | Integrates With |
+|-----------------|----------------|
+| `NarrationManager` | `SWEF.Flight.FlightController` — player world position |
+| `NarrationManager` | `SWEF.Localization.LocalizationManager` — language code for script selection |
+| `NarrationManager` | `SWEF.Analytics.UserBehaviorTracker.TrackFeatureDiscovery()` |
+| `NarrationAudioController` | `SWEF.Audio.AudioManager.SetBGMVolume()` — BGM ducking |
+| `NarrationAudioController` | `SWEF.Settings.SettingsManager.MasterVolume` — duck reference volume |
+| `NarrationSubtitleUI` | `SWEF.Localization.LocalizationManager.GetText()` — localized landmark names |
+| `NarrationHudPanel` | `SWEF.Localization.LocalizationManager.GetText()` — fun fact text |
+| `LandmarkDiscoveryTracker` | `SWEF.Achievement.AchievementManager.ReportProgress()` |
+| `LandmarkDiscoveryTracker` | `SWEF.Journal.JournalManager` |
+| `LandmarkMinimapIntegration` | `SWEF.Minimap.MinimapManager` — RegisterBlip/UnregisterBlip/GetBlip |
+| `NarrationAnalytics` | `SWEF.Analytics.UserBehaviorTracker.TrackFeatureDiscovery()` |
