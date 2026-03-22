@@ -1323,3 +1323,138 @@ Added to all 8 language files (`lang_en.json` … `lang_pt.json`):
 ### Save File
 
 `aircraft_customization.json` in `Application.persistentDataPath` — serialised `AircraftCustomizationSaveData`.
+
+---
+
+## Phase 47 — Photo Mode & Drone Camera System
+
+New directory: `Assets/SWEF/Scripts/PhotoMode/` — namespace `SWEF.PhotoMode`
+
+### New Scripts (10 files)
+
+| # | Script | Namespace | Purpose |
+|---|--------|-----------|---------|
+| 1 | `PhotoModeData.cs` | `SWEF.PhotoMode` | Pure data classes & enums: `DroneMode`, `PhotoFilter`, `FrameStyle`, `FocusMode`, `PhotoResolution`, `PhotoFormat`, `DroneConfig`, `CameraSettings`, `PhotoMetadata` |
+| 2 | `DroneCameraController.cs` | `SWEF.PhotoMode` | MonoBehaviour — free-flying drone with 6 modes, battery system, collision avoidance, tether range limit |
+| 3 | `PhotoCameraController.cs` | `SWEF.PhotoMode` | MonoBehaviour — virtual camera settings (FOV, aperture, ISO, shutter speed, white balance, focus); drives post-processing |
+| 4 | `PhotoFilterSystem.cs` | `SWEF.PhotoMode` | MonoBehaviour — 12 built-in filter presets, intensity control, LUT support, custom filter save/load |
+| 5 | `PhotoFrameRenderer.cs` | `SWEF.PhotoMode` | MonoBehaviour — 8 frame styles, watermark, date/location stamp, EXIF bar compositing |
+| 6 | `PhotoCaptureManager.cs` | `SWEF.PhotoMode` | Singleton MonoBehaviour — single capture, burst, timer, bracketed HDR, panorama; generates thumbnails & JSON metadata |
+| 7 | `PhotoGalleryManager.cs` | `SWEF.PhotoMode` | Singleton MonoBehaviour — index, sort, filter, search, slideshow, batch delete/tag |
+| 8 | `PhotoModeUI.cs` | `SWEF.PhotoMode` | MonoBehaviour — full camera HUD with viewfinder overlays, drone controls, pinch-to-zoom, tap-to-focus, post-capture review |
+| 9 | `PhotoModeAnalytics.cs` | `SWEF.PhotoMode` | MonoBehaviour — usage tracking via `UserBehaviorTracker` and `TelemetryDispatcher` |
+| 10 | `DroneVisualController.cs` | `SWEF.PhotoMode` | MonoBehaviour — 3D drone model, propeller spin, LED indicators, gimbal, SFX, haptics |
+
+### Drone Modes
+
+| Mode | Description |
+|------|-------------|
+| `Free` | Full 6-DoF manual control by the player |
+| `Orbit` | Auto-circles a target transform at configurable radius & speed |
+| `FollowTarget` | Chases the player aircraft from behind at a configurable offset |
+| `Dolly` | Follows a spline path (CinematicCameraPath) at set speed |
+| `Static` | Position locked; only rotation is player-controlled |
+| `Selfie` | Front-facing with the player aircraft in frame |
+
+### Camera Settings Ranges
+
+| Setting | Range | Default |
+|---------|-------|---------|
+| Field of View | 10°–120° | 60° |
+| Aperture | f/1.4–f/22 | f/5.6 |
+| Shutter Speed | 1/8000 s–30 s | 1/250 s |
+| ISO | 100–12800 | 400 |
+| Exposure Compensation | −3 to +3 EV | 0 EV |
+| White Balance | 2500–10000 K | 5500 K |
+| Focus Distance | 0.5–1000 m | 10 m |
+| JPEG Quality | 1–100 | 95 |
+
+### Photo Filters
+
+`None` · `Vintage` · `Noir` · `Warm` · `Cool` · `HDR` · `Cinematic` · `Sunset` · `NightVision` · `Sketch` · `Tiltshift` · `Bokeh`
+
+### Frame Styles
+
+`None` · `Polaroid` · `Filmstrip` · `Panoramic` · `Square` · `Postcard` · `Passport` · `Widescreen`
+
+### Architecture Diagram
+
+```
+FlightController  ──────────────────────────┐
+                                             ▼
+                                  DroneCameraController
+                                  (modes, battery, tether)
+                                             │
+                          ┌──────────────────┼──────────────────┐
+                          ▼                  ▼                  ▼
+             PhotoCameraController    DroneVisualController  PhotoModeAnalytics
+             (FOV/aperture/focus)     (model/SFX/haptics)   (TelemetryDispatcher)
+                          │
+                          ▼
+                  PhotoFilterSystem
+                  (12 filters + LUT)
+                          │
+                          ▼
+                  PhotoFrameRenderer
+                  (8 frames + overlays)
+                          │
+                          ▼
+                  PhotoCaptureManager ──► ScreenshotController
+                  (burst/HDR/panorama)    ShareManager
+                          │
+                          ▼
+                  PhotoGalleryManager
+                  (index/sort/search/slideshow)
+                          │
+                          ▼
+                    PhotoModeUI
+                    (full HUD / review panel)
+```
+
+### Example Usage
+
+```csharp
+// Enter photo mode
+var drone = FindObjectOfType<DroneCameraController>();
+var capture = PhotoCaptureManager.Instance;
+var ui = FindObjectOfType<PhotoModeUI>();
+
+drone.Deploy();
+drone.SetMode(DroneMode.Orbit);
+
+// Adjust camera
+var cam = FindObjectOfType<PhotoCameraController>();
+cam.SetFOV(35f);
+cam.SetAperture(2.8f);
+
+// Apply filter
+var filters = FindObjectOfType<PhotoFilterSystem>();
+filters.ApplyFilter(PhotoFilter.Cinematic, 0.8f);
+
+// Capture
+capture.OnPhotoCaptured += meta =>
+    Debug.Log($"Saved to {meta.filePath}  ({meta.width}×{meta.height})");
+capture.CapturePhoto();
+
+// Recall drone
+drone.Recall();
+```
+
+### Localization Keys Added (all 8 languages)
+
+`photomode_title` · `photomode_drone_deploy` · `photomode_drone_recall` · `photomode_capture` · `photomode_burst` · `photomode_timer` · `photomode_hdr` · `photomode_panorama` · `photomode_filter_*` (×12) · `photomode_frame_*` (×8) · `photomode_settings_fov/aperture/iso/shutter/wb/focus` · `photomode_drone_battery` · `photomode_drone_range` · `photomode_drone_mode_*` (×6) · `photomode_gallery_title` · `photomode_gallery_sort_*` (×3) · `photomode_gallery_slideshow` · `photomode_gallery_compare` · `photomode_share` · `photomode_delete` · `photomode_export` · `photomode_tags`
+
+### Integration Points
+
+| Script | Integrates With |
+|--------|-----------------|
+| `DroneCameraController` | `SWEF.Flight.FlightController` — player position |
+| `DroneCameraController` | `SWEF.Analytics.UserBehaviorTracker` — feature discovery events |
+| `PhotoCameraController` | `SWEF.TimeOfDay.TimeOfDayManager` — current lighting state |
+| `PhotoCaptureManager` | `SWEF.Screenshot.ScreenshotController` — low-level capture |
+| `PhotoCaptureManager` | `SWEF.Social.ShareManager` — social sharing |
+| `PhotoModeUI` | `SWEF.UI.HudBinder` — overlay management |
+| `PhotoModeUI` | `SWEF.Accessibility.AccessibilityManager` — text scaling |
+| `DroneVisualController` | `SWEF.Audio.AudioManager` — SFX playback |
+| `DroneVisualController` | `SWEF.Haptic.HapticManager` — shutter snap feedback |
+| `PhotoModeAnalytics` | `SWEF.Analytics.TelemetryDispatcher` — event pipeline |
