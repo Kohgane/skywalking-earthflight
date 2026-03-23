@@ -378,4 +378,154 @@ namespace SWEF.RoutePlanner
     }
 
     #endregion
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    //  Phase 49 (Dynamic Route Planning & Navigation) — supplementary types
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    #region Phase-49 Enumerations
+
+    /// <summary>Navigation mode controlling how guidance is presented to the player.</summary>
+    public enum NavigationMode
+    {
+        /// <summary>Player flies freely with no active route guidance.</summary>
+        FreeRoam,
+        /// <summary>Active route with HUD guidance arrows and distance readouts.</summary>
+        GuidedRoute,
+        /// <summary>Autopilot follows the planned route automatically.</summary>
+        AutoPilotAssist,
+        /// <summary>Competitive timed mode; off-path penalties apply.</summary>
+        RacingMode
+    }
+
+    /// <summary>High-level category for filtering and recommending routes.</summary>
+    public enum RouteCategory
+    {
+        /// <summary>Relaxed sightseeing with scenic views.</summary>
+        Scenic,
+        /// <summary>Optimised for high-speed runs.</summary>
+        Speed,
+        /// <summary>Skill-testing obstacles or constraints.</summary>
+        Challenge,
+        /// <summary>Discovery of unknown areas.</summary>
+        Exploration,
+        /// <summary>Structured tutorial or training circuit.</summary>
+        Training,
+        /// <summary>Player-created with no predefined purpose.</summary>
+        Custom
+    }
+
+    /// <summary>Difficulty rating for a route.</summary>
+    public enum RouteDifficulty
+    {
+        /// <summary>Suitable for new pilots.</summary>
+        Beginner,
+        /// <summary>Requires basic manoeuvring skills.</summary>
+        Intermediate,
+        /// <summary>Demands precise control.</summary>
+        Advanced,
+        /// <summary>Only for the most experienced pilots.</summary>
+        Expert
+    }
+
+    #endregion
+
+    #region Phase-49 Data Classes
+
+    /// <summary>
+    /// Lightweight world-space waypoint used by the navigation and visualiser scripts.
+    /// Stores a Unity <see cref="Vector3"/> position rather than lat/lon coordinates.
+    /// </summary>
+    [Serializable]
+    public class Waypoint
+    {
+        /// <summary>World-space position of this waypoint.</summary>
+        public Vector3 position;
+
+        /// <summary>Display name shown in the HUD and on waypoint markers.</summary>
+        public string name = "Waypoint";
+
+        /// <summary>Functional role of this waypoint.</summary>
+        public WaypointType type = WaypointType.Standard;
+
+        /// <summary>Distance in metres within which arrival is detected.</summary>
+        public float radius = 150f;
+
+        /// <summary>Hint altitude in metres above sea level (informational).</summary>
+        public float altitudeHint;
+
+        /// <summary>Optional description displayed in the waypoint info popup.</summary>
+        public string description = string.Empty;
+
+        /// <summary>Key used to select the icon sprite for this waypoint (e.g. "landmark", "photo").</summary>
+        public string iconType = "standard";
+
+        /// <summary>Zero-based order index within its parent route.</summary>
+        public int orderIndex;
+    }
+
+    /// <summary>
+    /// User-adjustable settings that control navigation HUD and guidance behaviour.
+    /// </summary>
+    [Serializable]
+    public class NavigationSettings
+    {
+        /// <summary>Default arrival detection radius in metres (overridden per waypoint when set).</summary>
+        public float arrivalDetectionRadius = 150f;
+
+        /// <summary>Opacity (0–1) of the guidance direction arrow.</summary>
+        [Range(0f, 1f)]
+        public float guidanceArrowOpacity = 1f;
+
+        /// <summary>Show distance-to-waypoint readout in the HUD.</summary>
+        public bool showDistanceReadout = true;
+
+        /// <summary>Show ETA readout in the HUD.</summary>
+        public bool showETA = true;
+
+        /// <summary>Show waypoint name and icon in the HUD.</summary>
+        public bool showWaypointName = true;
+
+        /// <summary>Show bearing compass strip.</summary>
+        public bool showCompass = true;
+
+        /// <summary>Show altitude guidance indicator.</summary>
+        public bool showAltitudeGuidance = true;
+
+        /// <summary>Show route completion progress bar.</summary>
+        public bool showProgressBar = true;
+
+        /// <summary>Show mini upcoming-waypoint list.</summary>
+        public bool showWaypointList = true;
+
+        /// <summary>Enable spoken navigation cues.</summary>
+        public bool voiceGuidanceEnabled = true;
+
+        /// <summary>Automatically advance to the next waypoint after arrival.</summary>
+        public bool autoAdvanceWaypoints = true;
+
+        /// <summary>Metres off-route before a deviation warning is shown.</summary>
+        public float offRouteWarningDistance = 500f;
+    }
+
+    /// <summary>
+    /// A scored route suggestion produced by <c>AutoRouteRecommender</c>.
+    /// </summary>
+    [Serializable]
+    public class RouteRecommendation
+    {
+        /// <summary>The recommended <see cref="FlightRoute"/>.</summary>
+        public FlightRoute route;
+
+        /// <summary>Composite match score (higher is better).</summary>
+        public float matchScore;
+
+        /// <summary>Human-readable explanation of why this route was recommended.</summary>
+        public string recommendationReason = string.Empty;
+
+        /// <summary>Descriptive tags that summarise the scoring factors (e.g. "nearby", "scenic").</summary>
+        public List<string> tags = new List<string>();
+    }
+
+    #endregion
 }
