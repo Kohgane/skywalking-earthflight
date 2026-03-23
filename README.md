@@ -86,6 +86,7 @@ Assets/SWEF/
 │   ├── Weather/          # WeatherData, WeatherCondition, WeatherManager, WeatherAPIClient, WeatherDataService, WeatherStateManager, WeatherLightingController, WeatherSkyboxController, WeatherFogController, WeatherVFXController, WeatherAudioController, WeatherSoundController, WeatherFlightModifier, PrecipitationSystem, WindSystem, WeatherUI
 │   ├── WeatherChallenge/ # WeatherChallengeData, WeatherChallengeManager, DynamicRouteGenerator, WeatherChallengeUI, RouteVisualizationController, WeatherChallengeAnalyticsBridge
 │   ├── Wildlife/         # WildlifeData, WildlifeManager, AnimalGroupController, BirdFlockController, MarineLifeController, AnimalAnimationController, WildlifeSpawnSystem, WildlifeAudioController, WildlifeJournalIntegration, WildlifeDebugOverlay
+│   ├── WorldEvent/       # WorldEventType, WorldEventData, RewardData, WorldEventManager, ActiveWorldEvent, EventObjective, EventSpawnZone, QuestChain, EventNotificationUI, WorldEventConfig
 │   └── XR/              # XRPlatformDetector, XRRigManager, XRInputAdapter, XRHandTracker, XRComfortSettings, XRUIAdapter
 └── README_SWEF_SETUP.md
 ```
@@ -1605,92 +1606,65 @@ WeatherChallengeManager (Singleton, DontDestroyOnLoad)
 
 ---
 
-## Phase 63 — Flight Formation & Wingman AI System
+## Phase 64 — Dynamic Event & World Quest System
 
-### New Scripts (8 files)
+### New Scripts (10 files in `Assets/SWEF/Scripts/WorldEvent/`) — namespace `SWEF.WorldEvent`
 
-| # | Script | Namespace | Purpose |
-|---|--------|-----------|---------|
-| 1 | `Formation/FormationConfig.cs` | `SWEF.Formation` | Static constants (`MaxWingmen = 5`, `DefaultSpacing = 15f`, `FormationTransitionTime = 2f`) and preset slot-offset tables for all seven formation types |
-| 2 | `Formation/FormationPattern.cs` | `SWEF.Formation` | ScriptableObject — stores a `List<Vector3> slotOffsets`, `float spacing`, `bool isDynamic`; `GetSlotWorldPosition(int, Transform)` computes world-space slot positions from the leader transform |
-| 3 | `Formation/WingmanPersonality.cs` | `SWEF.Formation` | ScriptableObject — `wingmanName`, `callSign`, `Sprite portrait`, `aggressiveness/discipline/skillLevel` (0–1), `AudioClip[] voiceLines`, `Color trailColor`; `GetEffectiveTolerance()` scales formation tightness |
-| 4 | `Formation/WingmanAI.cs` | `SWEF.Formation` | MonoBehaviour AI driver — `WingmanState` FSM (Forming / Following / Breaking / Attacking / Returning / Escorting), `MoveTowards` + `Quaternion.Slerp` navigation, 3-ray obstacle avoidance, `CommandAttack / CommandReturn / CommandEscort` API |
-| 5 | `Formation/FormationManager.cs` | `SWEF.Formation` | Singleton MonoBehaviour — holds `currentPattern` and `List<WingmanAI> wingmen`; `SetFormation`, `AddWingman / RemoveWingman`, `RecallAll / BreakFormation`; assigns slot positions every frame; publishes `OnFormationChanged / OnWingmanAdded / OnWingmanRemoved` |
-| 6 | `Formation/FormationSlotIndicator.cs` | `SWEF.Formation` | MonoBehaviour — renders holographic quad markers at each slot position; `occupiedColor / emptyColor`, distance-based alpha fade beyond `maxVisibleDistance = 200f`, `MaterialPropertyBlock` batching |
-| 7 | `Formation/EscortMission.cs` | `SWEF.Formation` | MonoBehaviour — `MissionStatus` FSM, `escortRadius` overlap scan, `maxAllowedDamage` hit counter, countdown timer; `StartMission / CompleteMission / FailMission`; `OnMissionStart / OnMissionEnd / OnTimeUpdate` events |
-| 8 | `Formation/WingmanRadioComms.cs` | `SWEF.Formation` | MonoBehaviour — `RadioCommand` enum, queued command dispatch with `commsDelay = 0.5f` and per-wingman response stagger; subtitle text via `OnRadioMessage(callSign, message)` event; optional `AudioSource` voice-line playback |
-
-### Formation Types
-
-| `FormationType` | Description | Slot layout (up to 5) |
-|-----------------|-------------|----------------------|
-| `VShape` | Classic V with leader at apex | ←1 →2 ←3 →4 ↓5 |
-| `EchelonLeft` | Staircase trailing left | ↙1 ↙2 ↙3 ↙4 ↙5 |
-| `EchelonRight` | Staircase trailing right | ↘1 ↘2 ↘3 ↘4 ↘5 |
-| `Diamond` | Four-point diamond + vertical pair | ←1 →2 ↓3 ↑4 ↓5 |
-| `Trail` | Single file behind leader | ↓1 ↓2 ↓3 ↓4 ↓5 |
-| `LineAbreast` | Side-by-side at same altitude | ←1 →2 ←3 →4 ←5 |
-| `FingerFour` | Asymmetric WWII fighter spread | staggered L/R |
+| # | File | Role |
+|---|------|------|
+| 1 | `WorldEventType.cs` | Enums — `EventCategory` (7 values), `EventPriority` (4), `EventStatus` (5), `QuestDifficulty` (4) |
+| 2 | `RewardData.cs` | Serialisable class — `experiencePoints`, `currency`, `unlockedItems`, `achievementId`, `reputationBonus` |
+| 3 | `WorldEventData.cs` | ScriptableObject template — identity, timing (`duration`/`cooldown`), spawn conditions (`minAltitude`/`maxAltitude`/`spawnRadius`/`minPlayerLevel`/`requiredBiomes`), `RewardData rewards` |
+| 4 | `EventObjective.cs` | Serialisable class — `ObjectiveType` enum (8 values), `description`, `requiredCount`/`currentCount`, `isCompleted`, `targetPosition`, `objectiveRadius`, `Increment()`/`Reset()` |
+| 5 | `WorldEventConfig.cs` | Static constants — `MaxConcurrentEvents`, `EventCheckInterval`, `BaseSpawnChance`, `MinEventDistance`, `MaxEventDistance`, `EventBeaconHeight`, `NearbyEventNotificationRange` |
+| 6 | `ActiveWorldEvent.cs` | MonoBehaviour runtime instance — lifecycle (`Activate`/`Complete`/`Fail`/`Expire`), `objectives`, `completionPercent`, pulsing beacon visuals, `OnStatusChanged` event |
+| 7 | `WorldEventManager.cs` | Singleton manager — coroutine spawn-check loop, altitude/biome/cooldown/level eligibility, `ForceSpawnEvent`, `CancelEvent`, `GetNearestEvent`, 4 public events |
+| 8 | `EventSpawnZone.cs` | MonoBehaviour trigger zone — `allowedCategories`, `biomeTag`, `spawnMultiplier`, `maxEventsInZone`, `AcceptsCategory`, `RegisterEvent`/`UnregisterEvent` |
+| 9 | `QuestChain.cs` | ScriptableObject quest line — ordered `List<WorldEventData>`, `currentStep`, `isCompleted`, `GetCurrentEvent()`, `AdvanceStep()`, `chainCompletionReward` |
+| 10 | `EventNotificationUI.cs` | MonoBehaviour HUD — animated slide-in popups, sequential queue, `ShowEventPopup`/`ShowEventComplete`/`ShowEventFailed`, `OnEventAccepted` event |
 
 ### Architecture
 
 ```
-FormationConfig (static)
-    └── slot offset tables for all FormationType × count combinations
-
-FormationPattern (ScriptableObject)
-    ├── slotOffsets: List<Vector3>      ← rebuilt from FormationConfig
-    ├── spacing, isDynamic
-    └── GetSlotWorldPosition(slot, leaderTransform)
-
-FormationManager (Singleton MonoBehaviour)
-    ├── currentPattern: FormationPattern
-    ├── wingmen: List<WingmanAI>
-    ├── Update → AssignSlotPositions → WingmanAI.SetSlotPosition()
-    └── Events: OnFormationChanged / OnWingmanAdded / OnWingmanRemoved
-
-WingmanAI (MonoBehaviour per wingman)
-    ├── WingmanState FSM
-    ├── Personality: WingmanPersonality   ← scales tolerance / speed / turn
-    ├── MoveTowards + Quaternion.Slerp
-    ├── 3-ray obstacle avoidance (fwd + ±45°, range 50m)
-    └── Event: OnStateChanged
-
-WingmanPersonality (ScriptableObject)
-    └── aggressiveness / discipline / skillLevel / voiceLines / trailColor
-
-FormationSlotIndicator (MonoBehaviour)
-    └── Reads FormationManager each frame → positions quad markers
-
-EscortMission (MonoBehaviour)
-    ├── OverlapSphere threat scan → CommandAttack on nearest free wingman
-    ├── Countdown timer → CompleteMission on expiry
-    ├── RegisterHit() → FailMission when maxAllowedDamage reached
-    └── Events: OnMissionStart / OnMissionEnd / OnTimeUpdate
-
-WingmanRadioComms (MonoBehaviour)
-    ├── SendCommand(RadioCommand) → queued with commsDelay
-    ├── Executes on FormationManager (RecallAll, BreakFormation, …)
-    └── Event: OnRadioMessage(callSign, message)
+WorldEventManager (Singleton, DontDestroyOnLoad)
+│   ├── SpawnCheckLoop (coroutine, every eventCheckInterval seconds)
+│   │       └── BuildCandidateList → altitude / biome / cooldown / level checks
+│   │           └── SpawnEvent → ActiveWorldEvent (Pending)
+│   ├── ForceSpawnEvent(data, position)  — scripted trigger
+│   ├── CancelEvent(eventId)
+│   ├── GetNearestEvent(position)
+│   └── Events: OnEventSpawned, OnEventCompleted, OnEventFailed, OnEventExpired
+│
+ActiveWorldEvent (per-event MonoBehaviour)
+│   ├── Activate()  → EventStatus.Active + ExpiryCountdown coroutine
+│   ├── Complete()  → EventStatus.Completed + NotifyEventCompleted
+│   ├── Fail()      → EventStatus.Failed    + NotifyEventFailed
+│   ├── Expire()    → EventStatus.Expired   + NotifyEventExpired
+│   ├── objectives  → List<EventObjective>  → completionPercent (0–1)
+│   └── Beacon visuals: pulsing Light + ParticleSystem
+│
+EventSpawnZone (scene trigger volumes)
+│   └── AcceptsCategory / RegisterEvent / UnregisterEvent
+│
+QuestChain (ScriptableObject)
+│   └── GetCurrentEvent / AdvanceStep → sequential WorldEventData steps
+│
+EventNotificationUI (Canvas MonoBehaviour)
+│   ├── Queue-based sequential popup display
+│   ├── slideInCurve animated slide-in/out
+│   └── OnEventAccepted — player clicks Track button
+│
+WorldEventConfig (static constants)
 ```
-
-### Key Data Types
-
-| Type | Kind | Key Members |
-|------|------|-------------|
-| `FormationType` | enum | VShape, EchelonLeft, EchelonRight, Diamond, Trail, LineAbreast, FingerFour |
-| `WingmanState` | enum | Forming, Following, Breaking, Attacking, Returning, Escorting |
-| `MissionStatus` | enum | NotStarted, InProgress, Succeeded, Failed |
-| `RadioCommand` | enum | FormUp, BreakFormation, AttackTarget, ReturnToBase, Acknowledge, RequestStatus |
 
 ### Integration Points
 
 | Script | Integrates With |
 |--------|----------------|
-| `FormationManager` | `WingmanAI.SetSlotPosition()` — slot assignment each frame |
-| `FormationManager` | `FormationPattern.GetSlotWorldPosition()` — world position calculation |
-| `WingmanAI` | `WingmanPersonality` — scales tolerance, turn speed, acceleration |
-| `EscortMission` | `FormationManager.wingmen` — threat intercept command dispatch |
-| `WingmanRadioComms` | `FormationManager.RecallAll() / BreakFormation()` — command execution |
-| `WingmanRadioComms` | `WingmanPersonality.GetRandomVoiceLine()` — voice-line playback |
-| `FormationSlotIndicator` | `FormationManager.CurrentPattern` — slot position queries |
+| `WorldEventManager` | `UnityEngine.GameObject.FindWithTag("Player")` — player transform |
+| `WorldEventManager` | `WorldEventData` assets in inspector `eventPool` list |
+| `ActiveWorldEvent` | `WorldEventManager.Instance` — lifecycle callbacks |
+| `EventNotificationUI` | `WorldEventManager.Instance` — subscribes to 3 events |
+| `EventNotificationUI` | `UnityEngine.UI.Text`, `Button`, `Image` — Unity UI |
+| `EventSpawnZone` | `UnityEngine.Collider` (RequireComponent) — trigger volume |
+| `QuestChain` | `WorldEventData` ScriptableObject assets — step list |
