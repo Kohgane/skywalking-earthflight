@@ -51,6 +51,7 @@ Assets/SWEF/
 │   ├── HiddenGems/       # HiddenGemData, HiddenGemDatabase, HiddenGemManager, GemDiscoveryUI, GemCollectionUI, GemRadarUI, GemMinimapIntegration, GemTourGenerator, GemStatisticsTracker, Editor/HiddenGemEditorWindow
 │   ├── IAP/              # IAPManager, IAPProductCatalog, IAPRestoreButton
 │   ├── Journal/          # JournalData, JournalManager, JournalAutoRecorder, JournalPanelUI, JournalDetailUI, JournalStatisticsUI, JournalShareController, JournalSearchEngine, JournalTagManager, JournalComparisonUI
+│   ├── Landing/          # LandingEnums, LandingConfig, RunwayData, AirportData, LandingDetector, ApproachGuidance, LandingGearController, AutoLandAssist, LandingUI, AirportRegistry
 │   ├── LOD/              # LODManager, LODTransitionBlender, OcclusionCullingHelper
 │   ├── Leaderboard/      # GlobalLeaderboardService, GlobalLeaderboardEntry, LeaderboardUI, LeaderboardEntryUI, LeaderboardCategory, LeaderboardTimeFilter, WeeklyChallengeManager, WeeklyChallengeUI
 │   ├── Localization/     # LocalizationManager, LanguageDatabase, LocalizationUI, LocalizedText, LocalizedImage, FontManager, PluralResolver, RTLTextHandler
@@ -1667,3 +1668,83 @@ HUDDashboard (Singleton)
 | `WarningSystem` | `FlightDataProvider.OnFlightDataUpdated` — subscribes for real-time evaluation |
 | All instruments | `TMPro.TextMeshProUGUI` — all text rendering |
 | All instruments | `UnityEngine.UI.Image` — gauges, bars, tapes, meters |
+
+---
+
+## Phase 68 — Landing & Airport System
+
+### New Scripts (10 files) — `Assets/SWEF/Scripts/Landing/` — namespace `SWEF.Landing`
+
+| # | File | Description |
+|---|------|-------------|
+| 1 | `LandingEnums.cs` | Enums — `LandingState` (9 values: InFlight→Taxiing/Aborted), `GearState` (5 values), `ApproachType` (Visual/ILS/GPS/CircleToLand), `RunwayCondition` (Dry/Wet/Icy/Snow/Flooded), `AirportSize` (Small/Medium/Large/International) |
+| 2 | `LandingConfig.cs` | Static config — glide slope defaults, safe/survivable touchdown speeds, gear timing, auto-deploy altitude, auto-land capture altitude, max crosswind, flare altitude, approach speed factor, landing score weights (CenterlineWeight=0.3, VerticalSpeedWeight=0.4, SmoothnessWeight=0.3), grade thresholds |
+| 3 | `RunwayData.cs` | `[Serializable]` class — runway ID, heading, length/width, threshold & end world positions, surface condition, glide slope angle, decision altitude, ILS/lighting flags; `GetRunwayDirection()` (normalized threshold→end vector), `GetRunwayCenter()` (average Y) |
+| 4 | `AirportData.cs` | ScriptableObject — ICAO ID, display name, city/country, size, lat/lon/elevation, `List<RunwayData>`, repair facility, fuel station, service tags, ILS frequency, airport icon sprite |
+| 5 | `LandingDetector.cs` | MonoBehaviour — `LandingState` machine (InFlight→Approaching→OnFinal→Flaring→Touchdown→Rolling→Stopped), downward raycast ground detection, centreline deviation check, composite landing score (centerline + vertical speed + smoothness), `GetLandingGrade()`, events `OnLandingStateChanged`, `OnTouchdown`, `OnLandingScored` |
+| 6 | `ApproachGuidance.cs` | MonoBehaviour — ILS localizer deviation (cross-track / beam half-width), glide slope deviation (actual vs ideal altitude on tan slope), recommended speed (stallSpeed × 1.3), recommended altitude, `isEstablished` flag within tolerances, `SetTargetRunway` / `CancelApproach`, events `OnApproachEstablished` / `OnApproachDeviation` |
+| 7 | `LandingGearController.cs` | MonoBehaviour — `GearState` machine with deploy/retract coroutines, `DeployProgress` 0→1, per-leg `Animator` drive via `DeployProgress` parameter, audio cues (deploy/retract/locked), `ToggleGear()` / `DeployGear()` / `RetractGear()` / `DamageGear()`, auto-deploy altitude warning via CockpitHUD `WarningSystem` (guarded by `#if SWEF_WARNINGSYSTEM_AVAILABLE`), `OnGearStateChanged` event |
+| 8 | `AutoLandAssist.cs` | MonoBehaviour — `AutoLandMode` enum (Off/GuidanceOnly/SemiAuto/FullAuto), crosswind limit check, capture at altitude, SemiAuto applies roll (localizer) + pitch (glide slope) corrections, FullAuto adds throttle management and flare pitch-up, `Engage(runway, mode)` / `Disengage()`, weather crosswind via `#if SWEF_WEATHER_AVAILABLE`, events `OnAutoLandModeChanged`, `OnAutoLandCapture`, `OnAutoLandDisengage` |
+| 9 | `LandingUI.cs` | MonoBehaviour — localizer / glide slope `RectTransform` needles, combined crosshair, distance/state/gear text, gear icon color (green/red/yellow), 4-light PAPI display (`UpdatePAPI` maps −1…+1 deviation to red/white pattern), animated landing score popup coroutine, runway overlay, auto-land mode label; subscribes to `LandingDetector.OnLandingScored` and `LandingGearController.OnGearStateChanged` |
+| 10 | `AirportRegistry.cs` | Singleton MonoBehaviour — `RegisterAirport` / `UnregisterAirport`, `GetNearestAirport(pos)`, `GetNearestAirportWithService(pos, service)`, `GetAirportsInRange(pos, range)`, `GetAirportById(icao)`, `GetBestRunway(airport, windDir)` (headwind alignment score), built-in "repair"/"fuel" service flag shortcuts, `TotalAirports` property |
+
+### Architecture
+
+```
+AirportRegistry (Singleton)
+│   ├── RegisterAirport / UnregisterAirport
+│   ├── GetNearestAirport(pos) — min distance scan
+│   ├── GetNearestAirportWithService(pos, service) — repair/fuel/tag filter
+│   ├── GetAirportsInRange(pos, range)
+│   ├── GetAirportById(icao) — O(n) lookup
+│   └── GetBestRunway(airport, windDir) — headwind alignment score
+│
+LandingDetector (MonoBehaviour)
+│   ├── State machine: InFlight → Approaching → OnFinal → Flaring → Touchdown → Rolling → Stopped
+│   ├── Downward raycast ground contact + centreline deviation check
+│   ├── Composite score: CenterlineWeight(0.3) + VerticalSpeedWeight(0.4) + SmoothnessWeight(0.3)
+│   └── Events: OnLandingStateChanged, OnTouchdown, OnLandingScored
+│
+ApproachGuidance (MonoBehaviour)
+│   ├── LocalizerDeviation  — cross-track / beam half-width (±1)
+│   ├── GlideSlopeDeviation — altitude error / beam half-width (±1)
+│   ├── RecommendedSpeed    — stallSpeed × ApproachSpeedFactor
+│   ├── RecommendedAltitude — ideal altitude on glide slope
+│   └── Events: OnApproachEstablished, OnApproachDeviation
+│
+LandingGearController (MonoBehaviour)
+│   ├── DeployGear() / RetractGear() / ToggleGear() / DamageGear()
+│   ├── Deploy/retract coroutine → DeployProgress 0→1
+│   ├── Animator drive + audio cues (deploy/retract/locked)
+│   └── Auto-deploy warning → SWEF.CockpitHUD.WarningSystem (#if SWEF_WARNINGSYSTEM_AVAILABLE)
+│
+AutoLandAssist (MonoBehaviour)
+│   ├── GuidanceOnly: display only
+│   ├── SemiAuto: roll (localizer) + pitch (glide slope) corrections
+│   ├── FullAuto: + throttle management + flare pitch-up
+│   ├── Crosswind check → SWEF.Weather.WeatherManager (#if SWEF_WEATHER_AVAILABLE)
+│   └── Events: OnAutoLandModeChanged, OnAutoLandCapture, OnAutoLandDisengage
+│
+LandingUI (MonoBehaviour)
+│   ├── ILS needles (localizer H bar, glide slope V bar, combined crosshair)
+│   ├── PAPI 4-light display (red/white by deviation)
+│   ├── Gear icon (green/yellow/red) + status text
+│   ├── Landing score popup (coroutine, configurable duration)
+│   └── Auto-land mode label
+```
+
+### Integration Points
+
+| Script | Integrates With |
+|--------|----------------|
+| `LandingDetector` | `UnityEngine.Physics.Raycast` — ground contact and AGL |
+| `LandingDetector` | `UnityEngine.Rigidbody` — vertical speed and position |
+| `LandingGearController` | `SWEF.CockpitHUD.WarningSystem.AddWarning()` — gear-up alert (guarded `#if SWEF_WARNINGSYSTEM_AVAILABLE`) |
+| `AutoLandAssist` | `SWEF.Weather.WeatherManager` — crosswind check (guarded `#if SWEF_WEATHER_AVAILABLE`) |
+| `AutoLandAssist` | `ApproachGuidance` — ILS deviations for flight-control corrections |
+| `AutoLandAssist` | `LandingDetector` — state for flare trigger |
+| `LandingUI` | `TMPro.TextMeshProUGUI` — all text elements |
+| `LandingUI` | `UnityEngine.UI.Image` — PAPI lights, gear icon |
+| `LandingUI` | `LandingDetector.OnLandingScored` — score popup |
+| `LandingUI` | `LandingGearController.OnGearStateChanged` — gear icon updates |
+| `AirportData` | `SWEF.Damage.RepairSystem` — `hasRepairFacility` flag (Phase 66) |
