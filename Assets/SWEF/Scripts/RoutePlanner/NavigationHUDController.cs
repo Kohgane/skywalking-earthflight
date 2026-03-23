@@ -345,10 +345,21 @@ namespace SWEF.RoutePlanner
             if (cg == null) yield break;
 
             float t = 0f;
-            while (t < TransitionTime * 0.5f) { t += Time.deltaTime; cg.alpha = 1f - t / (TransitionTime * 0.5f); yield return null; }
+            float halfTime = TransitionTime * 0.5f;
+            while (t < halfTime)
+            {
+                t          += Time.deltaTime;
+                cg.alpha    = 1f - t / halfTime;
+                yield return null;
+            }
             UpdateWaypointInfo();
             t = 0f;
-            while (t < TransitionTime * 0.5f) { t += Time.deltaTime; cg.alpha = t / (TransitionTime * 0.5f); yield return null; }
+            while (t < halfTime)
+            {
+                t          += Time.deltaTime;
+                cg.alpha    = t / halfTime;
+                yield return null;
+            }
             cg.alpha = 1f;
         }
 

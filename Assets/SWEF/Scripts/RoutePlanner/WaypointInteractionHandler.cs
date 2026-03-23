@@ -268,8 +268,8 @@ namespace SWEF.RoutePlanner
             var wp = navigationController.CurrentWaypoint;
             if (wp == null || playerTransform == null) return;
 
-            // Detect if player has passed the waypoint (moved beyond radius + MissedCheckDistance
-            // while the distance is now increasing)
+            // Detect if player has passed the waypoint (moved beyond radius + MissedCheckDistance)
+            // while the distance is now increasing.
             float dist = Vector3.Distance(playerTransform.position, wp.position);
             float prevDist = Vector3.Distance(_lastPlayerPos, wp.position);
 

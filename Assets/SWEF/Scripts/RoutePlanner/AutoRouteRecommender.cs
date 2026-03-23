@@ -205,11 +205,13 @@ namespace SWEF.RoutePlanner
             if (playerTransform == null || route.waypoints == null || route.waypoints.Count == 0)
                 return 0f;
 
-            // Use the first waypoint's lat/lon projected loosely onto the world
-            // (approximation — exact geo projection not available here)
+            // Use the first waypoint's start coordinates projected into a rough world-space
+            // approximation (1 degree ≈ 111 km → scaled to Unity units).
+            // TODO: replace with the game's actual geo-to-world conversion once available.
+            const float DegToUnits = 111_000f; // approximate metres per degree
             float dist = Vector3.Distance(playerTransform.position,
-                new Vector3((float)route.startLongitude * 100f, route.startAltitude,
-                            (float)route.startLatitude  * 100f));
+                new Vector3((float)route.startLongitude * DegToUnits, route.startAltitude,
+                            (float)route.startLatitude  * DegToUnits));
 
             return 1f - Mathf.Clamp01(dist / ProximityMaxDistance);
         }
