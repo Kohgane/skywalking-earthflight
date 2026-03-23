@@ -81,6 +81,12 @@ namespace SWEF.MusicPlayer
         /// <summary>Fired when the music volume changes.</summary>
         public event Action<float> OnVolumeChanged;
 
+        /// <summary>
+        /// Fired every frame while the player is playing, supplying the current playback
+        /// position in seconds. Subscribe from <c>KaraokeController</c> for lyric sync.
+        /// </summary>
+        public event Action<float> OnPlaybackTimeUpdated;
+
         // ── Properties ────────────────────────────────────────────────────────────
         /// <summary>Read-only access to the current player configuration.</summary>
         public MusicPlayerConfig Config => config;
@@ -127,6 +133,8 @@ namespace SWEF.MusicPlayer
                 _state.playbackPosition = musicSource.clip.length > 0f
                     ? musicSource.time / musicSource.clip.length
                     : 0f;
+
+                OnPlaybackTimeUpdated?.Invoke(musicSource.time);
             }
 
             // Track ended — advance to next
@@ -304,6 +312,24 @@ namespace SWEF.MusicPlayer
 
         /// <summary>Returns the current normalised playback position (0–1).</summary>
         public float GetPlaybackProgress() => _state.playbackPosition;
+
+        /// <summary>
+        /// Returns the current playback position in seconds, or 0 when nothing is playing.
+        /// </summary>
+        public float GetCurrentPlaybackTime()
+        {
+            if (musicSource == null || musicSource.clip == null) return 0f;
+            return musicSource.time;
+        }
+
+        /// <summary>
+        /// Returns the total duration of the current track in seconds, or 0 when no clip is loaded.
+        /// </summary>
+        public float GetCurrentTrackDuration()
+        {
+            if (musicSource == null || musicSource.clip == null) return 0f;
+            return musicSource.clip.length;
+        }
 
         /// <summary>Returns the currently active <see cref="MusicTrack"/>, or <c>null</c>.</summary>
         public MusicTrack GetCurrentTrack()
