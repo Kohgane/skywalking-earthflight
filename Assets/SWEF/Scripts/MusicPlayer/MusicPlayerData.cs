@@ -168,6 +168,13 @@ namespace SWEF.MusicPlayer
         public bool isFavorite;
 
         /// <summary>
+        /// Optional path to an LRC lyrics file for this track.
+        /// May be absolute, relative to <c>StreamingAssets</c>, or left empty.
+        /// Used by <c>LyricsDatabase</c> to locate embedded lyrics.
+        /// </summary>
+        public string lrcFilePath;
+
+        /// <summary>
         /// Arbitrary key/value metadata (e.g. genre, BPM, explicit flag).
         /// Not serialized to JSON automatically — callers must handle this field manually.
         /// </summary>

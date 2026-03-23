@@ -68,6 +68,17 @@ namespace SWEF.MusicPlayer
         [Tooltip("Close / collapse button on the full-player panel.")]
         [SerializeField] private Button collapseButton;
 
+        // ── Inspector — Lyrics ────────────────────────────────────────────────────
+        [Header("Lyrics")]
+        [Tooltip("Toggle button that shows/hides the lyrics panel.")]
+        [SerializeField] private Button lyricsToggleButton;
+
+        [Tooltip("LyricsDisplayUI panel controlled by the toggle button.")]
+        [SerializeField] private LyricsDisplayUI lyricsDisplayUI;
+
+        [Tooltip("Display mode used when lyrics are toggled on.")]
+        [SerializeField] private LyricsDisplayMode defaultLyricsMode = LyricsDisplayMode.Scroll;
+
         // ── Inspector — Animation ─────────────────────────────────────────────────
         [Header("Animation")]
         [Tooltip("Seconds for the slide-in / slide-out animation.")]
@@ -90,6 +101,7 @@ namespace SWEF.MusicPlayer
         private Coroutine          _slideCoroutine;
         private Button             _miniPlayerButton;
         private AccessibilityController _accessibilityController;
+        private bool               _lyricsVisible;
 
         // ── Unity lifecycle ───────────────────────────────────────────────────────
         private void Awake()
@@ -106,6 +118,9 @@ namespace SWEF.MusicPlayer
             if (nextButton      != null) nextButton.onClick.AddListener(OnNextClicked);
             if (prevButton      != null) prevButton.onClick.AddListener(OnPrevClicked);
             if (collapseButton  != null) collapseButton.onClick.AddListener(CollapseFullPlayer);
+
+            if (lyricsToggleButton != null)
+                lyricsToggleButton.onClick.AddListener(ToggleLyrics);
 
             if (_miniPlayerButton != null)
                 _miniPlayerButton.onClick.AddListener(ExpandFullPlayer);
@@ -223,6 +238,16 @@ namespace SWEF.MusicPlayer
         {
             if (_ignoreSliderCallback) return;
             MusicPlayerManager.Instance?.SetVolume(value);
+        }
+
+        // ── Lyrics toggle ─────────────────────────────────────────────────────────
+
+        /// <summary>Toggles the lyrics panel open or closed.</summary>
+        public void ToggleLyrics()
+        {
+            _lyricsVisible = !_lyricsVisible;
+            if (lyricsDisplayUI != null)
+                lyricsDisplayUI.SetMode(_lyricsVisible ? defaultLyricsMode : LyricsDisplayMode.Hidden);
         }
 
         // ── Expand / Collapse ─────────────────────────────────────────────────────
