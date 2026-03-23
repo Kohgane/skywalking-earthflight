@@ -78,6 +78,7 @@ Assets/SWEF/
 │   ├── VoiceChat/        # VoiceChatData, VoiceChatManager, VoiceAudioProcessor, VoiceSpatialAudio, VoiceNetworkTransport, VoiceChannelManager, VoiceChatUI, VoiceChatSettings, VoiceRadioEffect, VoiceChatAnalytics
 │   ├── Weather/          # WeatherData, WeatherCondition, WeatherManager, WeatherAPIClient, WeatherDataService, WeatherStateManager, WeatherLightingController, WeatherSkyboxController, WeatherFogController, WeatherVFXController, WeatherAudioController, WeatherSoundController, WeatherFlightModifier, PrecipitationSystem, WindSystem, WeatherUI
 │   ├── WeatherChallenge/ # WeatherChallengeData, WeatherChallengeManager, DynamicRouteGenerator, WeatherChallengeUI, RouteVisualizationController, WeatherChallengeAnalyticsBridge
+│   ├── Wildlife/         # WildlifeData, WildlifeManager, AnimalGroupController, BirdFlockController, MarineLifeController, AnimalAnimationController, WildlifeSpawnSystem, WildlifeAudioController, WildlifeJournalIntegration, WildlifeDebugOverlay
 │   └── XR/              # XRPlatformDetector, XRRigManager, XRInputAdapter, XRHandTracker, XRComfortSettings, XRUIAdapter
 └── README_SWEF_SETUP.md
 ```
