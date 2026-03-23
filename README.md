@@ -25,20 +25,60 @@ A mobile flight-experience app powered by Google Photorealistic 3D Tiles via Ces
 ## Project Structure
 ```
 Assets/SWEF/
-├── Scenes/          # Boot.unity + World.unity (created in Unity Editor)
+├── Scenes/               # Boot.unity + World.unity (created in Unity Editor)
 ├── Scripts/
-│   ├── Aircraft/    # AircraftData, SkinRegistry, CustomizationManager, VisualController, TrailController, HangarUI, SkinCardUI, PreviewController, MultiplayerSync, AchievementBridge, SettingsBridge, UnlockEvaluator
-│   ├── Cinema/      # TimeOfDayController, PhotoModeController, CinematicCameraPath, CinematicCameraUI
-│   ├── Core/        # BootManager, SWEFSession, WorldBootstrap
-│   ├── Flight/      # FlightController, TouchInputRouter, AltitudeController, HoldButton
-│   ├── Haptic/      # HapticManager, HapticTriggerZone
-│   ├── Replay/      # ReplayData, ReplayFileManager, GhostRacer, FlightPathRenderer, ReplayShareManager
-│   ├── TimeCapsule/ # TimeCapsuleData, TimeCapsuleManager, TimeCapsuleAutoCapture, TimeCapsuleUI, TimeCapsuleMapOverlay, TimeCapsuleNotificationService
-│   ├── FlightSchool/ # FlightSchoolData, FlightSchoolManager, FlightInstructor, FlightSchoolUI, FlightSchoolAnalyticsBridge
+│   ├── Accessibility/    # AccessibilityManager, AdaptiveInputManager, ColorblindFilter, SubtitleSystem, UIScalingSystem, HapticAccessibility, CognitiveAssistSystem, ScreenReaderBridge
+│   ├── Achievement/      # AchievementDefinition, AchievementState, AchievementManager, AchievementTracker, AchievementNotificationUI, AchievementPanelUI, AchievementCardUI, AchievementShareController, MilestoneDefinition, MilestoneTracker, AchievementData, AchievementUI
+│   ├── Aircraft/         # AircraftData, AircraftSkinRegistry, AircraftCustomizationManager, AircraftUnlockEvaluator, AircraftVisualController, AircraftTrailController, AircraftHangarUI, AircraftSkinCardUI, AircraftPreviewController, AircraftMultiplayerSync, AircraftAchievementBridge, AircraftSettingsBridge
+│   ├── Analytics/        # TelemetryEvent, TelemetryDispatcher, FlightTelemetryCollector, PerformanceTelemetryCollector, UserBehaviorTracker, ABTestManager, PrivacyConsentManager, AnalyticsDashboardData
+│   ├── Atmosphere/       # AtmosphereController, CloudLayer, DayNightCycle, WeatherController, WindController, ComfortVignette, ReentryEffect
+│   ├── Audio/            # AudioManager, AudioMixerController, AudioEventTrigger, AltitudeAudioTrigger, AltitudeSoundscapeController, WindAudioGenerator, DopplerEffectController, SonicBoomController, EnvironmentReverbController, AudioOcclusionSystem, SpatialAudioManager, MusicLayerSystem, AudioVisualizerData
+│   ├── Cinema/           # TimeOfDayController, PhotoModeController, CinematicCameraPath, CinematicCameraUI
+│   ├── CloudRendering/   # CloudRenderingManager, CloudSessionManager, StreamingClient, FrameDecoder, InputStreamEncoder, LatencyCompensator, NetworkQualityMonitor, AdaptiveBitrateController, HybridRenderingController, ServerDiscoveryService, CloudRenderingUI
+│   ├── Core/             # BootManager, SWEFSession, WorldBootstrap, AppLifecycleManager, SaveManager, AutoSaveController, CloudSaveController, DataMigrator, PerformanceManager, MemoryManager, QualityPresetManager, LoadingScreen, PauseManager, ErrorHandler, CrashReporter, AnalyticsLogger, AdManager, PremiumFeatureGate, SessionTracker, DeepLinkHandler, DebugConsole, DebugGizmoDrawer, FlightJournal, RatePromptManager, RatePromptUI
+│   ├── DailyChallenge/   # DailyChallengeDefinition, DailyChallengeDefaultData, DailyChallengeManager, DailyChallengeTracker, DailyChallengeHUD, ChallengeNotificationUI, ChallengeRewardController, WeeklyChallengeDefinition, WeeklyChallengeManager, SeasonDefinition, SeasonPassManager, SeasonPassUI
+│   ├── Editor/           # SWEFEditorWindow, SWEFBuildPreprocessor, SWEFSceneValidator, AchievementEditorWindow, LocalizationEditorWindow, AnalyticsDebugWindow, CloudRenderingDebugWindow, MultiplayerDebugWindow, PerformanceProfilerWindow, SpatialAudioDebugWindow, TerrainDebugWindow, WeatherDebugWindow
+│   ├── Events/           # WorldEventData, WorldEventInstance, EventScheduler, EventParticipationTracker, EventVisualController, EventNotificationUI, EventCalendarUI, EventRewardController
+│   ├── Favorites/        # FavoriteManager, FavoritesUI
+│   ├── Flight/           # FlightController, AltitudeController, TouchInputRouter, HoldButton, AeroPhysicsModel, AeroState, FlightPhysicsIntegrator, FlightPhysicsSnapshot, OrbitalMechanics, OrbitState, JetTrail, CameraController, StallWarningSystem
+│   ├── FlightSchool/     # FlightSchoolData, FlightSchoolManager, FlightInstructor, FlightSchoolUI, FlightSchoolAnalyticsBridge
+│   ├── GuidedTour/       # TourData, TourManager, WaypointNavigator, WaypointHUD, TourNarrationController, TourCatalogUI, TourProgressTracker, TourMinimapOverlay
+│   ├── Haptic/           # HapticManager, HapticPattern, HapticTriggerZone
+│   ├── HiddenGems/       # HiddenGemData, HiddenGemDatabase, HiddenGemManager, GemDiscoveryUI, GemCollectionUI, GemRadarUI, GemMinimapIntegration, GemTourGenerator, GemStatisticsTracker, Editor/HiddenGemEditorWindow
+│   ├── IAP/              # IAPManager, IAPProductCatalog, IAPRestoreButton
+│   ├── Journal/          # JournalData, JournalManager, JournalAutoRecorder, JournalPanelUI, JournalDetailUI, JournalStatisticsUI, JournalShareController, JournalSearchEngine, JournalTagManager, JournalComparisonUI
+│   ├── LOD/              # LODManager, LODTransitionBlender, OcclusionCullingHelper
+│   ├── Leaderboard/      # GlobalLeaderboardService, GlobalLeaderboardEntry, LeaderboardUI, LeaderboardEntryUI, LeaderboardCategory, LeaderboardTimeFilter, WeeklyChallengeManager, WeeklyChallengeUI
+│   ├── Localization/     # LocalizationManager, LanguageDatabase, LocalizationUI, LocalizedText, LocalizedImage, FontManager, PluralResolver, RTLTextHandler
+│   ├── Minimap/          # MinimapData, MinimapManager, MinimapRenderer, MinimapIconConfig, MinimapBlipProvider, MinimapCompass, MinimapSettingsUI, RadarOverlay
+│   ├── Multiplayer/      # MultiplayerManager, NetworkManager2, PlayerSyncController, PlayerSyncSystem, FormationFlyingManager, CoopMissionSystem, MultiplayerWeatherSync, MultiplayerHUD, MultiplayerScoreboard, MultiplayerRace, RoomManager, PlayerAvatar, RemotePlayerRenderer, NetworkTransport, VoiceChatManager, ProximityChat
+│   ├── MusicPlayer/      # MusicPlayerData, MusicPlayerManager, MusicPlaylistController, MusicPlayerUI, MusicLibraryUI, MusicFlightSync, MusicWeatherMixer, MusicVisualizerEffect, MusicMultiplayerSync, MusicEQController, MusicCrossfadeController, MusicSleepTimer
+│   ├── Narration/        # NarrationData, LandmarkDatabase, NarrationManager, NarrationAudioController, NarrationSubtitleUI, NarrationHudPanel, LandmarkDiscoveryTracker, LandmarkMinimapIntegration, NarrationSettingsUI, NarrationAnalytics, Editor/LandmarkDatabaseEditorWindow
+│   ├── Notification/     # NotificationManager, NotificationSettings
+│   ├── Offline/          # OfflineManager, OfflineFallbackController, OfflineHUD, TileCacheManager, TilePrefetchController, RegionDownloadUI
+│   ├── Performance/      # PerformanceProfiler, AdaptiveQualityController, RuntimeDiagnosticsHUD, MemoryPoolManager, GarbageCollectionTracker, DrawCallAnalyzer, AssetLoadProfiler, SceneLoadProfiler, TextureMemoryOptimizer
+│   ├── PhotoMode/        # PhotoModeData, PhotoModeUI, PhotoModeAnalytics, PhotoCameraController, PhotoCaptureManager, PhotoFilterSystem, PhotoFrameRenderer, PhotoGalleryManager, DroneCameraController, DroneVisualController
+│   ├── Progression/      # PilotRankData, ProgressionManager, XPSourceConfig, XPTracker, SkillTreeData, SkillTreeManager, CosmeticUnlockManager, ProgressionHUD, ProgressionProfileUI, ProgressionDefaultData
+│   ├── Recorder/         # FlightRecorder, FlightPlayback, RecorderUI
+│   ├── Replay/           # ReplayData, ReplayFileManager, GhostRacer, FlightPathRenderer, ReplayShareManager
+│   ├── ReplayTheater/    # ReplayTheaterManager, ReplayTheaterSettings, ReplayTheaterUI, ReplayTimeline, TimelineTrack, CameraKeyframe, CinematicCameraEditor, ReplayImporter, ReplayExporter, ReplayThumbnailGenerator
+│   ├── RoutePlanner/     # RoutePlannerData, RoutePlannerManager, RouteBuilderController, RoutePathRenderer, RouteNavigationHUD, RouteStorageManager, RouteShareManager, RoutePlannerUI, RouteRecommendationEngine, RoutePlannerAnalytics
+│   ├── SaveSystem/       # SaveData, SaveManager, SaveIntegrityChecker, SaveMigrationSystem, CloudSyncManager, SaveConflictResolver, SaveExportImport, SaveSystemUI
+│   ├── Screenshot/       # ScreenshotController, ScreenshotUI
+│   ├── Settings/         # SettingsManager, SettingsUI, AccessibilitySettingsUI, AnalyticsSettings, MultiplayerSettings, WeatherSettings, XRSettingsUI
+│   ├── Social/           # SocialFeedManager, SocialFeedUI, SocialPost, SocialPostCard, PostComposerUI, ShareManager, SocialShareController, SocialNotificationHandler, PlayerProfileManager, PlayerProfileUI, LeaderboardManager, CommunityProfileManager, RegionHelper
+│   ├── SocialHub/        # SocialHubController, FriendManager, FriendListUI, PlayerProfile, PlayerProfileManager, PlayerSearchUI, ProfileCardUI, ProfileCustomizationUI, ActivityFeedUI, SocialActivityFeed, SocialNotificationSystem
+│   ├── Teleport/         # TeleportController, TeleportUI
+│   ├── Terrain/          # CesiumTerrainBridge, ProceduralTerrainGenerator, TerrainChunk, TerrainChunkPool, TerrainBiomeMapper, TerrainTextureManager
+│   ├── TimeCapsule/      # TimeCapsuleData, TimeCapsuleManager, TimeCapsuleAutoCapture, TimeCapsuleUI, TimeCapsuleMapOverlay, TimeCapsuleNotificationService
+│   ├── TimeOfDay/        # TimeOfDayData, SolarCalculator, TimeOfDayManager, LightingController, SeasonalLightingProfile, GoldenHourEffect, NightSkyRenderer, TimeOfDayMultiplayerSync, TimeOfDayUI, TimeOfDayAnalytics
+│   ├── Tutorial/         # TutorialManager, TutorialStepData, TutorialActionDetector, TutorialHighlight, TutorialTooltip, TutorialReplayButton, InteractiveTutorialManager
+│   ├── UI/               # HudBinder, AccessibilityController, OneHandedModeController, VoiceCommandManager, HudBinder, FlightPhysicsHUD, CompassHUD, SpeedIndicator, AltitudeMilestone, WeatherHUD, WeatherUI, MiniMap, MiniMapController, MultiplayerHUD, GhostRaceHUD, SplashScreen, LoadingScreen (see Core), StatsDashboard, LeaderboardUI, FlightJournalUI, CameraUI, InputRebinder, LocalizationManager, PhotoModeUI, ReplayBrowserUI, StoreUI, TimeOfDayUI, PremiumPromptUI, VoiceCommand, ColorblindMode, AccessibilityManager
+│   ├── Util/             # ExpSmoothing, PerformanceProfiler, SWEFTestHelpers
+│   ├── VoiceChat/        # VoiceChatData, VoiceChatManager, VoiceAudioProcessor, VoiceSpatialAudio, VoiceNetworkTransport, VoiceChannelManager, VoiceChatUI, VoiceChatSettings, VoiceRadioEffect, VoiceChatAnalytics
+│   ├── Weather/          # WeatherData, WeatherCondition, WeatherManager, WeatherAPIClient, WeatherDataService, WeatherStateManager, WeatherLightingController, WeatherSkyboxController, WeatherFogController, WeatherVFXController, WeatherAudioController, WeatherSoundController, WeatherFlightModifier, PrecipitationSystem, WindSystem, WeatherUI
 │   ├── WeatherChallenge/ # WeatherChallengeData, WeatherChallengeManager, DynamicRouteGenerator, WeatherChallengeUI, RouteVisualizationController, WeatherChallengeAnalyticsBridge
-│   ├── UI/          # HudBinder, AccessibilityController, OneHandedModeController, VoiceCommandManager
-│   ├── XR/          # XRPlatformDetector, XRRigManager, XRInputAdapter, XRHandTracker, XRComfortSettings, XRUIAdapter
-│   └── Util/        # ExpSmoothing
+│   └── XR/              # XRPlatformDetector, XRRigManager, XRInputAdapter, XRHandTracker, XRComfortSettings, XRUIAdapter
 └── README_SWEF_SETUP.md
 ```
 
