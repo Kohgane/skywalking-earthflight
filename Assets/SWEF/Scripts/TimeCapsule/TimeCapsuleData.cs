@@ -4,7 +4,198 @@ using UnityEngine;
 
 namespace SWEF.TimeCapsule
 {
-    // ── CapsuleType ───────────────────────────────────────────────────────────────
+    // ── TimeCapsuleType ───────────────────────────────────────────────────────────
+
+    /// <summary>Broad category describing the nature of a time capsule.</summary>
+    public enum TimeCapsuleType
+    {
+        /// <summary>A snapshot of a memorable in-flight moment.</summary>
+        FlightMoment,
+        /// <summary>A capsule marking a personal or game milestone.</summary>
+        Milestone,
+        /// <summary>A capsule created upon discovering a hidden gem or landmark.</summary>
+        Discovery,
+        /// <summary>A free-form personal note or reflection.</summary>
+        PersonalNote,
+        /// <summary>A capsule intended to be shared with or discovered by other players.</summary>
+        SharedMemory
+    }
+
+    // ── TimeCapsuleStatus ─────────────────────────────────────────────────────────
+
+    /// <summary>Lifecycle status of a <see cref="TimeCapsule"/>.</summary>
+    public enum TimeCapsuleStatus
+    {
+        /// <summary>Capsule has been sealed and is waiting to be opened after its delay.</summary>
+        Sealed,
+        /// <summary>Capsule has been opened by the player.</summary>
+        Opened,
+        /// <summary>Capsule's open date has passed without being opened.</summary>
+        Expired,
+        /// <summary>Capsule has been shared with other players.</summary>
+        Shared
+    }
+
+    // ── CapsuleLocation ───────────────────────────────────────────────────────────
+
+    /// <summary>Geographic location where a time capsule was created.</summary>
+    [Serializable]
+    public class CapsuleLocation
+    {
+        /// <summary>WGS-84 latitude in decimal degrees.</summary>
+        public float latitude;
+
+        /// <summary>WGS-84 longitude in decimal degrees.</summary>
+        public float longitude;
+
+        /// <summary>Altitude in metres above sea level.</summary>
+        public float altitude;
+
+        /// <summary>Human-readable name of this location (e.g. "Over the Alps").</summary>
+        public string locationName;
+    }
+
+    // ── CapsuleWeatherSnapshot ────────────────────────────────────────────────────
+
+    /// <summary>Weather conditions captured at the moment a time capsule was created.</summary>
+    [Serializable]
+    public class CapsuleWeatherSnapshot
+    {
+        /// <summary>Descriptive weather condition (e.g. "Clear", "Overcast", "Stormy").</summary>
+        public string weatherCondition;
+
+        /// <summary>Ambient temperature in degrees Celsius.</summary>
+        public float temperature;
+
+        /// <summary>Wind speed in metres per second.</summary>
+        public float windSpeed;
+
+        /// <summary>Horizontal visibility in kilometres.</summary>
+        public float visibility;
+
+        /// <summary>Cloud cover fraction from 0 (clear) to 1 (fully overcast).</summary>
+        public float cloudCover;
+    }
+
+    // ── CapsuleFlightSnapshot ─────────────────────────────────────────────────────
+
+    /// <summary>Flight state captured at the moment a time capsule was created.</summary>
+    [Serializable]
+    public class CapsuleFlightSnapshot
+    {
+        /// <summary>Identifier of the aircraft in use.</summary>
+        public string aircraftId;
+
+        /// <summary>Current airspeed in km/h.</summary>
+        public float speed;
+
+        /// <summary>Magnetic heading in degrees (0–360).</summary>
+        public float heading;
+
+        /// <summary>Total elapsed flight time in seconds at capture.</summary>
+        public float flightDuration;
+
+        /// <summary>Total distance traveled during the flight in metres.</summary>
+        public float distanceTraveled;
+    }
+
+    // ── TimeCapsule ───────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// A complete time capsule record — a snapshot of a memorable flight moment
+    /// that can be revisited in the future.
+    /// </summary>
+    [Serializable]
+    public class TimeCapsule
+    {
+        [Header("Identity")]
+        /// <summary>Globally unique identifier (GUID) for this capsule.</summary>
+        public string capsuleId;
+
+        /// <summary>Short display title chosen by the player.</summary>
+        public string title;
+
+        /// <summary>Optional longer description or reflection message.</summary>
+        public string description;
+
+        /// <summary>Broad category of this capsule.</summary>
+        public TimeCapsuleType type;
+
+        /// <summary>Current lifecycle status.</summary>
+        public TimeCapsuleStatus status;
+
+        [Header("Dates")]
+        /// <summary>ISO-8601 UTC string for when the capsule was created and sealed.</summary>
+        public string createdAt;
+
+        /// <summary>
+        /// ISO-8601 UTC string for the earliest date on which this capsule may be opened.
+        /// The capsule is ready when <c>DateTime.UtcNow &gt;= openAfter</c>.
+        /// </summary>
+        public string openAfter;
+
+        [Header("Context")]
+        /// <summary>Geographic location where the capsule was created.</summary>
+        public CapsuleLocation location;
+
+        /// <summary>Weather conditions at the time of creation.</summary>
+        public CapsuleWeatherSnapshot weather;
+
+        /// <summary>Flight state at the time of creation.</summary>
+        public CapsuleFlightSnapshot flight;
+
+        [Header("Content")]
+        /// <summary>Absolute path to an optional screenshot associated with this capsule.</summary>
+        public string screenshotPath;
+
+        /// <summary>User-defined tags for filtering and search (e.g. "sunset", "Alps").</summary>
+        public List<string> tags = new List<string>();
+
+        /// <summary>Free-form personal note written by the player.</summary>
+        public string personalNote;
+
+        /// <summary>Whether this capsule was created automatically by <see cref="TimeCapsuleAutoCapture"/>.</summary>
+        public bool isAutoGenerated;
+
+        // ── Helpers ───────────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Returns <c>true</c> when the current UTC time is on or after <see cref="openAfter"/>,
+        /// meaning this capsule is eligible to be opened.
+        /// </summary>
+        public bool IsReadyToOpen()
+        {
+            if (string.IsNullOrEmpty(openAfter)) return true;
+            if (!DateTime.TryParse(openAfter, null, System.Globalization.DateTimeStyles.RoundtripKind, out DateTime dt))
+                return true;
+            return DateTime.UtcNow >= dt;
+        }
+
+        /// <summary>
+        /// Returns a human-readable string describing how long ago this capsule was created,
+        /// e.g. "just now", "3 hours ago", "2 days ago", "1 month ago".
+        /// </summary>
+        public string FormattedAge()
+        {
+            if (string.IsNullOrEmpty(createdAt)) return string.Empty;
+            if (!DateTime.TryParse(createdAt, null, System.Globalization.DateTimeStyles.RoundtripKind, out DateTime created))
+                return string.Empty;
+
+            TimeSpan age = DateTime.UtcNow - created;
+            if (age.TotalSeconds < 60) return "just now";
+            if (age.TotalMinutes < 60) return $"{(int)age.TotalMinutes} minutes ago";
+            if (age.TotalHours < 24)   return $"{(int)age.TotalHours} hours ago";
+            if (age.TotalDays < 30)    return $"{(int)age.TotalDays} days ago";
+            if (age.TotalDays < 365)   return $"{(int)(age.TotalDays / 30)} months ago";
+            return $"{(int)(age.TotalDays / 365)} years ago";
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Legacy Phase 50 types kept below for backward compatibility.
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    // ── CapsuleType (Phase 50 legacy) ─────────────────────────────────────────────
 
     /// <summary>Broad category that describes the purpose or intent of a time capsule.</summary>
     public enum CapsuleType
