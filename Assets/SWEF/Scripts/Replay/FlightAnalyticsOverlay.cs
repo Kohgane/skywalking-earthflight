@@ -198,7 +198,7 @@ namespace SWEF.Replay
                 case "Altitude": if (altGraphPanel   != null) altGraphPanel.SetActive(visible);   break;
                 case "GForce":   if (gForcePanel     != null) gForcePanel.SetActive(visible);     break;
                 case "Controls": if (controlsPanel   != null) controlsPanel.SetActive(visible);   break;
-                case "Stats":    if (statsPanel       != null) statsPanel.SetActive(visible);     break;
+                case "Stats":    if (statsPanel      != null) statsPanel.SetActive(visible);     break;
             }
         }
 

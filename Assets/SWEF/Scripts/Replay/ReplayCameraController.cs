@@ -229,7 +229,6 @@ namespace SWEF.Replay
         private void UpdateFreeCam()
         {
             if (_cam == null) return;
-#if UNITY_EDITOR || !UNITY_EDITOR
             float h    = Input.GetAxis("Mouse X") * FreeCamSensitivity;
             float v    = Input.GetAxis("Mouse Y") * FreeCamSensitivity;
             _freeYaw  += h;
@@ -244,7 +243,6 @@ namespace SWEF.Replay
             _freePosition           += move;
             _cam.transform.position  = _freePosition;
             _cam.transform.rotation  = rot;
-#endif
         }
 
         private void UpdateCinematicCam()
