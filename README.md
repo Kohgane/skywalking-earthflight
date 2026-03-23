@@ -86,6 +86,7 @@ Assets/SWEF/
 │   ├── Weather/          # WeatherData, WeatherCondition, WeatherManager, WeatherAPIClient, WeatherDataService, WeatherStateManager, WeatherLightingController, WeatherSkyboxController, WeatherFogController, WeatherVFXController, WeatherAudioController, WeatherSoundController, WeatherFlightModifier, PrecipitationSystem, WindSystem, WeatherUI
 │   ├── WeatherChallenge/ # WeatherChallengeData, WeatherChallengeManager, DynamicRouteGenerator, WeatherChallengeUI, RouteVisualizationController, WeatherChallengeAnalyticsBridge
 │   ├── Wildlife/         # WildlifeData, WildlifeManager, AnimalGroupController, BirdFlockController, MarineLifeController, AnimalAnimationController, WildlifeSpawnSystem, WildlifeAudioController, WildlifeJournalIntegration, WildlifeDebugOverlay
+│   ├── WorldEvent/       # WorldEventType, WorldEventData, RewardData, WorldEventManager, ActiveWorldEvent, EventObjective, EventSpawnZone, QuestChain, EventNotificationUI, WorldEventConfig
 │   └── XR/              # XRPlatformDetector, XRRigManager, XRInputAdapter, XRHandTracker, XRComfortSettings, XRUIAdapter
 └── README_SWEF_SETUP.md
 ```
@@ -1602,3 +1603,68 @@ WeatherChallengeManager (Singleton, DontDestroyOnLoad)
 | `WeatherChallengeUI` | `UnityEngine.UI.Text`, `Button` — Unity UI |
 | `RouteVisualizationController` | `UnityEngine.LineRenderer`, `ParticleSystem` — Unity rendering |
 | `WeatherChallengeAnalyticsBridge` | `SWEF.Analytics.UserBehaviorTracker.TrackFeatureDiscovery()` |
+
+---
+
+## Phase 64 — Dynamic Event & World Quest System
+
+### New Scripts (10 files in `Assets/SWEF/Scripts/WorldEvent/`) — namespace `SWEF.WorldEvent`
+
+| # | File | Role |
+|---|------|------|
+| 1 | `WorldEventType.cs` | Enums — `EventCategory` (7 values), `EventPriority` (4), `EventStatus` (5), `QuestDifficulty` (4) |
+| 2 | `RewardData.cs` | Serialisable class — `experiencePoints`, `currency`, `unlockedItems`, `achievementId`, `reputationBonus` |
+| 3 | `WorldEventData.cs` | ScriptableObject template — identity, timing (`duration`/`cooldown`), spawn conditions (`minAltitude`/`maxAltitude`/`spawnRadius`/`minPlayerLevel`/`requiredBiomes`), `RewardData rewards` |
+| 4 | `EventObjective.cs` | Serialisable class — `ObjectiveType` enum (8 values), `description`, `requiredCount`/`currentCount`, `isCompleted`, `targetPosition`, `objectiveRadius`, `Increment()`/`Reset()` |
+| 5 | `WorldEventConfig.cs` | Static constants — `MaxConcurrentEvents`, `EventCheckInterval`, `BaseSpawnChance`, `MinEventDistance`, `MaxEventDistance`, `EventBeaconHeight`, `NearbyEventNotificationRange` |
+| 6 | `ActiveWorldEvent.cs` | MonoBehaviour runtime instance — lifecycle (`Activate`/`Complete`/`Fail`/`Expire`), `objectives`, `completionPercent`, pulsing beacon visuals, `OnStatusChanged` event |
+| 7 | `WorldEventManager.cs` | Singleton manager — coroutine spawn-check loop, altitude/biome/cooldown/level eligibility, `ForceSpawnEvent`, `CancelEvent`, `GetNearestEvent`, 4 public events |
+| 8 | `EventSpawnZone.cs` | MonoBehaviour trigger zone — `allowedCategories`, `biomeTag`, `spawnMultiplier`, `maxEventsInZone`, `AcceptsCategory`, `RegisterEvent`/`UnregisterEvent` |
+| 9 | `QuestChain.cs` | ScriptableObject quest line — ordered `List<WorldEventData>`, `currentStep`, `isCompleted`, `GetCurrentEvent()`, `AdvanceStep()`, `chainCompletionReward` |
+| 10 | `EventNotificationUI.cs` | MonoBehaviour HUD — animated slide-in popups, sequential queue, `ShowEventPopup`/`ShowEventComplete`/`ShowEventFailed`, `OnEventAccepted` event |
+
+### Architecture
+
+```
+WorldEventManager (Singleton, DontDestroyOnLoad)
+│   ├── SpawnCheckLoop (coroutine, every eventCheckInterval seconds)
+│   │       └── BuildCandidateList → altitude / biome / cooldown / level checks
+│   │           └── SpawnEvent → ActiveWorldEvent (Pending)
+│   ├── ForceSpawnEvent(data, position)  — scripted trigger
+│   ├── CancelEvent(eventId)
+│   ├── GetNearestEvent(position)
+│   └── Events: OnEventSpawned, OnEventCompleted, OnEventFailed, OnEventExpired
+│
+ActiveWorldEvent (per-event MonoBehaviour)
+│   ├── Activate()  → EventStatus.Active + ExpiryCountdown coroutine
+│   ├── Complete()  → EventStatus.Completed + NotifyEventCompleted
+│   ├── Fail()      → EventStatus.Failed    + NotifyEventFailed
+│   ├── Expire()    → EventStatus.Expired   + NotifyEventExpired
+│   ├── objectives  → List<EventObjective>  → completionPercent (0–1)
+│   └── Beacon visuals: pulsing Light + ParticleSystem
+│
+EventSpawnZone (scene trigger volumes)
+│   └── AcceptsCategory / RegisterEvent / UnregisterEvent
+│
+QuestChain (ScriptableObject)
+│   └── GetCurrentEvent / AdvanceStep → sequential WorldEventData steps
+│
+EventNotificationUI (Canvas MonoBehaviour)
+│   ├── Queue-based sequential popup display
+│   ├── slideInCurve animated slide-in/out
+│   └── OnEventAccepted — player clicks Track button
+│
+WorldEventConfig (static constants)
+```
+
+### Integration Points
+
+| Script | Integrates With |
+|--------|----------------|
+| `WorldEventManager` | `UnityEngine.GameObject.FindWithTag("Player")` — player transform |
+| `WorldEventManager` | `WorldEventData` assets in inspector `eventPool` list |
+| `ActiveWorldEvent` | `WorldEventManager.Instance` — lifecycle callbacks |
+| `EventNotificationUI` | `WorldEventManager.Instance` — subscribes to 3 events |
+| `EventNotificationUI` | `UnityEngine.UI.Text`, `Button`, `Image` — Unity UI |
+| `EventSpawnZone` | `UnityEngine.Collider` (RequireComponent) — trigger volume |
+| `QuestChain` | `WorldEventData` ScriptableObject assets — step list |
