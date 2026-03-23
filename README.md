@@ -56,6 +56,7 @@ Assets/SWEF/
 │   ├── Narration/        # NarrationData, LandmarkDatabase, NarrationManager, NarrationAudioController, NarrationSubtitleUI, NarrationHudPanel, LandmarkDiscoveryTracker, LandmarkMinimapIntegration, NarrationSettingsUI, NarrationAnalytics, Editor/LandmarkDatabaseEditorWindow
 │   ├── Notification/     # NotificationManager, NotificationSettings
 │   ├── Offline/          # OfflineManager, OfflineFallbackController, OfflineHUD, TileCacheManager, TilePrefetchController, RegionDownloadUI
+│   ├── OrbitalCamera/    # OrbitalCameraData, OrbitalCameraController, SpaceGroundTransition, OrbitalMechanicsSimulator, SatelliteViewRenderer, AltitudeEffectsManager, OrbitPathVisualizer, OrbitalCameraAnalytics
 │   ├── Performance/      # PerformanceProfiler, AdaptiveQualityController, RuntimeDiagnosticsHUD, MemoryPoolManager, GarbageCollectionTracker, DrawCallAnalyzer, AssetLoadProfiler, SceneLoadProfiler, TextureMemoryOptimizer
 │   ├── PhotoMode/        # PhotoModeData, PhotoModeUI, PhotoModeAnalytics, PhotoCameraController, PhotoCaptureManager, PhotoFilterSystem, PhotoFrameRenderer, PhotoGalleryManager, DroneCameraController, DroneVisualController
 │   ├── Progression/      # PilotRankData, ProgressionManager, XPSourceConfig, XPTracker, SkillTreeData, SkillTreeManager, CosmeticUnlockManager, ProgressionHUD, ProgressionProfileUI, ProgressionDefaultData
