@@ -29,6 +29,7 @@ Assets/SWEF/
 ├── Scripts/
 │   ├── Accessibility/    # AccessibilityManager, AdaptiveInputManager, ColorblindFilter, SubtitleSystem, UIScalingSystem, HapticAccessibility, CognitiveAssistSystem, ScreenReaderBridge
 │   ├── Achievement/      # AchievementDefinition, AchievementState, AchievementManager, AchievementTracker, AchievementNotificationUI, AchievementPanelUI, AchievementCardUI, AchievementShareController, MilestoneDefinition, MilestoneTracker, AchievementData, AchievementUI
+│   ├── AchievementNotification/ # AchievementNotificationData, NotificationQueueManager, ToastNotificationController, UnlockAnimationController, RewardDisplayManager, AchievementPopupUI, NotificationSoundController, AchievementNotificationAnalytics
 │   ├── Aircraft/         # AircraftData, AircraftSkinRegistry, AircraftCustomizationManager, AircraftUnlockEvaluator, AircraftVisualController, AircraftTrailController, AircraftHangarUI, AircraftSkinCardUI, AircraftPreviewController, AircraftMultiplayerSync, AircraftAchievementBridge, AircraftSettingsBridge
 │   ├── Analytics/        # TelemetryEvent, TelemetryDispatcher, FlightTelemetryCollector, PerformanceTelemetryCollector, UserBehaviorTracker, ABTestManager, PrivacyConsentManager, AnalyticsDashboardData
 │   ├── Atmosphere/       # AtmosphereController, CloudLayer, DayNightCycle, WeatherController, WindController, ComfortVignette, ReentryEffect
