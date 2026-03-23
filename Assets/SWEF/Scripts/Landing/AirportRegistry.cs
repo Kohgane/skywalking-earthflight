@@ -187,10 +187,12 @@ namespace SWEF.Landing
             if (airport.runways != null && airport.runways.Count > 0)
                 return Vector3.Distance(position, airport.runways[0].thresholdPosition);
 
-            // Approximate world position from geographic coordinates (simple flat-earth).
-            const float MetersPerDegree = 111320f;
-            float latDiff = (float)(airport.latitude)  * MetersPerDegree;
-            float lonDiff = (float)(airport.longitude) * MetersPerDegree;
+            // Approximate world position from geographic coordinates (flat-earth estimate).
+            // Longitude scaling is corrected for latitude to improve accuracy at higher latitudes.
+            const float MetersPerDegreeLat = 111320f;
+            float latRad  = (float)(airport.latitude * System.Math.PI / 180.0);
+            float latDiff = (float)(airport.latitude)  * MetersPerDegreeLat;
+            float lonDiff = (float)(airport.longitude) * MetersPerDegreeLat * Mathf.Cos(latRad);
             return Vector3.Distance(position, new Vector3(lonDiff, airport.elevation, latDiff));
         }
 

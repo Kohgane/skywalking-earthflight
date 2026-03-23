@@ -122,8 +122,10 @@ namespace SWEF.Landing
             Vector3 toAircraft  = aircraftPos - threshold;
 
             // ── Distance along runway axis ────────────────────────────────────
+            // 'along' is negative when the aircraft is in front of the threshold (on approach).
+            // DistanceToThreshold is always a non-negative value.
             float along = Vector3.Dot(toAircraft, runwayDir);
-            DistanceToThreshold = Mathf.Max(0f, -along); // negative = in front of threshold
+            DistanceToThreshold = Mathf.Max(0f, -along);
 
             // ── Localizer deviation ───────────────────────────────────────────
             // Cross-track distance; normalised to ±1 over ±localizer beam width (half = 2.5° at 10 NM ≈ 460 m)

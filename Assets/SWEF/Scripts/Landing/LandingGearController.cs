@@ -80,9 +80,20 @@ namespace SWEF.Landing
         // Animator parameter hash.
         private static readonly int DeployProgressHash = Animator.StringToHash("DeployProgress");
 
+#if SWEF_WARNINGSYSTEM_AVAILABLE
+        private SWEF.CockpitHUD.WarningSystem _warningSystem;
+#endif
+
         #endregion
 
         #region Unity Lifecycle
+
+        private void Awake()
+        {
+#if SWEF_WARNINGSYSTEM_AVAILABLE
+            _warningSystem = FindFirstObjectByType<SWEF.CockpitHUD.WarningSystem>();
+#endif
+        }
 
         private void Update()
         {
@@ -210,8 +221,7 @@ namespace SWEF.Landing
             if (hit.distance < autoDeployAltitude)
             {
 #if SWEF_WARNINGSYSTEM_AVAILABLE
-                var ws = FindFirstObjectByType<SWEF.CockpitHUD.WarningSystem>();
-                ws?.AddWarning("GEAR UP", "GEAR NOT DOWN", SWEF.CockpitHUD.WarningLevel.Warning);
+                _warningSystem?.AddWarning("GEAR UP", "GEAR NOT DOWN", SWEF.CockpitHUD.WarningLevel.Warning);
 #endif
             }
         }

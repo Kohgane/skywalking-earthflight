@@ -99,6 +99,10 @@ namespace SWEF.Landing
         private float _currentPitch;
         private float _currentRoll;
 
+#if SWEF_WEATHER_AVAILABLE
+        private SWEF.Weather.WeatherManager _weatherManager;
+#endif
+
         #endregion
 
         #region Unity Lifecycle
@@ -108,6 +112,9 @@ namespace SWEF.Landing
             if (approachGuidance == null) approachGuidance = GetComponent<ApproachGuidance>();
             if (landingDetector  == null) landingDetector  = GetComponent<LandingDetector>();
             if (aircraftRigidbody == null) aircraftRigidbody = GetComponent<Rigidbody>();
+#if SWEF_WEATHER_AVAILABLE
+            _weatherManager = FindFirstObjectByType<SWEF.Weather.WeatherManager>();
+#endif
         }
 
         private void FixedUpdate()
@@ -251,10 +258,9 @@ namespace SWEF.Landing
         {
             if (TargetRunway == null) return 0f;
 #if SWEF_WEATHER_AVAILABLE
-            var weather = FindFirstObjectByType<SWEF.Weather.WeatherManager>();
-            if (weather == null) return 0f;
-            float windDir   = weather.CurrentWindDirection * Mathf.Deg2Rad;
-            Vector3 windVec = new Vector3(Mathf.Sin(windDir), 0f, Mathf.Cos(windDir)) * weather.CurrentWindSpeed;
+            if (_weatherManager == null) return 0f;
+            float windDir   = _weatherManager.CurrentWindDirection * Mathf.Deg2Rad;
+            Vector3 windVec = new Vector3(Mathf.Sin(windDir), 0f, Mathf.Cos(windDir)) * _weatherManager.CurrentWindSpeed;
             Vector3 runDir  = TargetRunway.GetRunwayDirection();
             return Vector3.Cross(windVec, runDir).magnitude;
 #else

@@ -83,9 +83,10 @@ namespace SWEF.Landing
         }
 
         /// <summary>
-        /// Returns the Y (vertical) position of the runway centerline mid-point.
+        /// Returns the average elevation (Y axis) of the runway strip,
+        /// computed as the mean of the threshold and end position heights.
         /// </summary>
-        /// <returns>Average Y of threshold and end positions.</returns>
+        /// <returns>Mean Y elevation of the runway in world-space units.</returns>
         public float GetRunwayCenter()
         {
             return (thresholdPosition.y + endPosition.y) * 0.5f;
