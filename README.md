@@ -36,6 +36,7 @@ Assets/SWEF/
 │   ├── Audio/            # AudioManager, AudioMixerController, AudioEventTrigger, AltitudeAudioTrigger, AltitudeSoundscapeController, WindAudioGenerator, DopplerEffectController, SonicBoomController, EnvironmentReverbController, AudioOcclusionSystem, SpatialAudioManager, MusicLayerSystem, AudioVisualizerData
 │   ├── Biome/            # BiomeData, BiomeClassifier, BiomeVisualEffects, BiomeAudioManager, VegetationPlacementHints, TerrainTextureBlender, BiomeTransitionZone, BiomeAnalytics
 │   ├── Cinema/           # TimeOfDayController, PhotoModeController, CinematicCameraPath, CinematicCameraUI
+│   ├── CockpitHUD/       # HUDDashboard, HUDInstrument, FlightData, FlightDataProvider, Altimeter, Speedometer, CompassHeading, AttitudeIndicator, VerticalSpeedIndicator, GForceIndicator, ThrottleFuelGauge, WarningSystem, CockpitHUDConfig
 │   ├── CloudRendering/   # CloudRenderingManager, CloudSessionManager, StreamingClient, FrameDecoder, InputStreamEncoder, LatencyCompensator, NetworkQualityMonitor, AdaptiveBitrateController, HybridRenderingController, ServerDiscoveryService, CloudRenderingUI
 │   ├── Core/             # BootManager, SWEFSession, WorldBootstrap, AppLifecycleManager, SaveManager, AutoSaveController, CloudSaveController, DataMigrator, PerformanceManager, MemoryManager, QualityPresetManager, LoadingScreen, PauseManager, ErrorHandler, CrashReporter, AnalyticsLogger, AdManager, PremiumFeatureGate, SessionTracker, DeepLinkHandler, DebugConsole, DebugGizmoDrawer, FlightJournal, RatePromptManager, RatePromptUI
 │   ├── DailyChallenge/   # DailyChallengeDefinition, DailyChallengeDefaultData, DailyChallengeManager, DailyChallengeTracker, DailyChallengeHUD, ChallengeNotificationUI, ChallengeRewardController, WeeklyChallengeDefinition, WeeklyChallengeManager, SeasonDefinition, SeasonPassManager, SeasonPassUI
@@ -1606,65 +1607,63 @@ WeatherChallengeManager (Singleton, DontDestroyOnLoad)
 
 ---
 
-## Phase 64 — Dynamic Event & World Quest System
+## Phase 65 — Cockpit Instrument & HUD Dashboard System
 
-### New Scripts (10 files in `Assets/SWEF/Scripts/WorldEvent/`) — namespace `SWEF.WorldEvent`
+### New Scripts (13 files) — `Assets/SWEF/Scripts/CockpitHUD/` — namespace `SWEF.CockpitHUD`
 
-| # | File | Role |
-|---|------|------|
-| 1 | `WorldEventType.cs` | Enums — `EventCategory` (7 values), `EventPriority` (4), `EventStatus` (5), `QuestDifficulty` (4) |
-| 2 | `RewardData.cs` | Serialisable class — `experiencePoints`, `currency`, `unlockedItems`, `achievementId`, `reputationBonus` |
-| 3 | `WorldEventData.cs` | ScriptableObject template — identity, timing (`duration`/`cooldown`), spawn conditions (`minAltitude`/`maxAltitude`/`spawnRadius`/`minPlayerLevel`/`requiredBiomes`), `RewardData rewards` |
-| 4 | `EventObjective.cs` | Serialisable class — `ObjectiveType` enum (8 values), `description`, `requiredCount`/`currentCount`, `isCompleted`, `targetPosition`, `objectiveRadius`, `Increment()`/`Reset()` |
-| 5 | `WorldEventConfig.cs` | Static constants — `MaxConcurrentEvents`, `EventCheckInterval`, `BaseSpawnChance`, `MinEventDistance`, `MaxEventDistance`, `EventBeaconHeight`, `NearbyEventNotificationRange` |
-| 6 | `ActiveWorldEvent.cs` | MonoBehaviour runtime instance — lifecycle (`Activate`/`Complete`/`Fail`/`Expire`), `objectives`, `completionPercent`, pulsing beacon visuals, `OnStatusChanged` event |
-| 7 | `WorldEventManager.cs` | Singleton manager — coroutine spawn-check loop, altitude/biome/cooldown/level eligibility, `ForceSpawnEvent`, `CancelEvent`, `GetNearestEvent`, 4 public events |
-| 8 | `EventSpawnZone.cs` | MonoBehaviour trigger zone — `allowedCategories`, `biomeTag`, `spawnMultiplier`, `maxEventsInZone`, `AcceptsCategory`, `RegisterEvent`/`UnregisterEvent` |
-| 9 | `QuestChain.cs` | ScriptableObject quest line — ordered `List<WorldEventData>`, `currentStep`, `isCompleted`, `GetCurrentEvent()`, `AdvanceStep()`, `chainCompletionReward` |
-| 10 | `EventNotificationUI.cs` | MonoBehaviour HUD — animated slide-in popups, sequential queue, `ShowEventPopup`/`ShowEventComplete`/`ShowEventFailed`, `OnEventAccepted` event |
+| # | File | Description |
+|---|------|-------------|
+| 1 | `CockpitHUDConfig.cs` | Static config — unit conversions (`MetersToFeet`, `MsToKnots`, `MsToKph`), default thresholds, shared `Color` constants (`SafeColor`, `CautionColor`, `WarningColor`, `CriticalColor`) |
+| 2 | `FlightData.cs` | Data container — altitude ASL/AGL, speed (m/s / knots / Mach), vertical speed, heading, pitch, roll, yaw, G-force, throttle, fuel, velocity, position, stall/overspeed flags, OAT, wind |
+| 3 | `FlightDataProvider.cs` | MonoBehaviour — reads aircraft Rigidbody each `FixedUpdate`; computes altitude from Y position, heading from XZ-projected forward, pitch/roll from Euler angles, G-force from velocity delta, Mach from speed/343; AGL via downward raycast; `event Action<FlightData> OnFlightDataUpdated` |
+| 4 | `HUDInstrument.cs` | Abstract MonoBehaviour base class — `instrumentName`, `isVisible`, `minimumMode` (`HUDMode`), per-instrument `CanvasGroup` fade, `abstract UpdateInstrument(FlightData)`, virtual `Show()`/`Hide()`; auto-registers/unregisters with `HUDDashboard` on `OnEnable`/`OnDisable` |
+| 5 | `HUDDashboard.cs` | Singleton MonoBehaviour — `HUDMode` enum (Minimal/Standard/Full/CinematicOff), mode cycling with `ToggleHUD()`, `SetMode()`, global opacity via `CanvasGroup`, auto-hide after idle, per-frame `FlightData` distribution to all registered instruments, `event Action<HUDMode> OnModeChanged` |
+| 6 | `Altimeter.cs` | HUDInstrument — MSL & AGL readouts (meters or feet), scrolling tape, color coding (green/yellow/red by AGL threshold) |
+| 7 | `Speedometer.cs` | HUDInstrument — speed readout (m/s / knots / km/h), Mach overlay above 0.8M, scrolling tape, trend arrow indicating acceleration/deceleration, color coding |
+| 8 | `CompassHeading.cs` | HUDInstrument — numeric heading, 8-point cardinal direction, horizontal scrolling compass strip, heading bug for active waypoint; `GetCardinal(float)` helper |
+| 9 | `AttitudeIndicator.cs` | HUDInstrument — artificial horizon; rotates `horizonBar` by −roll, shifts vertically by pitch × `pitchPixelsPerDegree`; pitch ladder and bank angle arc follow the same transform |
+| 10 | `VerticalSpeedIndicator.cs` | HUDInstrument — smoothed numeric ±m/s readout, analog needle (±180° deflection), vertical bar graph; color: green (level ±2 m/s), blue (climb), orange (descent), red (>30 m/s descent) |
+| 11 | `GForceIndicator.cs` | HUDInstrument — numeric G readout, filled arc meter, peak-G tracking with configurable decay rate, color transitions (white/yellow/red by threshold) |
+| 12 | `ThrottleFuelGauge.cs` | HUDInstrument — vertical fill bars for throttle & fuel, percentage text, low-fuel blinking at configurable rate and threshold |
+| 13 | `WarningSystem.cs` | MonoBehaviour — `WarningLevel` enum (Info/Caution/Warning/Critical), `WarningMessage` struct (code/message/level/timestamp), auto-evaluates stall/overspeed/low-altitude/high-G/low-fuel/high-descent from `FlightData`, `AddWarning`/`ClearWarning`/`AcknowledgeWarning`, audio clips per level, most-critical warning displayed on panel, `OnWarningTriggered`/`OnWarningCleared` events |
 
 ### Architecture
 
 ```
-WorldEventManager (Singleton, DontDestroyOnLoad)
-│   ├── SpawnCheckLoop (coroutine, every eventCheckInterval seconds)
-│   │       └── BuildCandidateList → altitude / biome / cooldown / level checks
-│   │           └── SpawnEvent → ActiveWorldEvent (Pending)
-│   ├── ForceSpawnEvent(data, position)  — scripted trigger
-│   ├── CancelEvent(eventId)
-│   ├── GetNearestEvent(position)
-│   └── Events: OnEventSpawned, OnEventCompleted, OnEventFailed, OnEventExpired
+HUDDashboard (Singleton)
+│   ├── SetMode(HUDMode) → show/hide instruments by minimumMode
+│   ├── ToggleHUD() → cycles Minimal → Standard → Full → CinematicOff
+│   ├── Auto-hide via idle timer + CanvasGroup alpha fade
+│   └── Update: distributes FlightData to all registered HUDInstruments
 │
-ActiveWorldEvent (per-event MonoBehaviour)
-│   ├── Activate()  → EventStatus.Active + ExpiryCountdown coroutine
-│   ├── Complete()  → EventStatus.Completed + NotifyEventCompleted
-│   ├── Fail()      → EventStatus.Failed    + NotifyEventFailed
-│   ├── Expire()    → EventStatus.Expired   + NotifyEventExpired
-│   ├── objectives  → List<EventObjective>  → completionPercent (0–1)
-│   └── Beacon visuals: pulsing Light + ParticleSystem
+├── FlightDataProvider (FixedUpdate)
+│   ├── Computes altitude, speed, heading, pitch, roll, G-force, Mach
+│   ├── AGL via Physics.Raycast downward
+│   └── Fires OnFlightDataUpdated each physics step
 │
-EventSpawnZone (scene trigger volumes)
-│   └── AcceptsCategory / RegisterEvent / UnregisterEvent
+├── HUDInstrument (abstract base)
+│   ├── Auto-registers with HUDDashboard on OnEnable
+│   ├── Show() / Hide() with CanvasGroup fade
+│   └── abstract UpdateInstrument(FlightData)
 │
-QuestChain (ScriptableObject)
-│   └── GetCurrentEvent / AdvanceStep → sequential WorldEventData steps
-│
-EventNotificationUI (Canvas MonoBehaviour)
-│   ├── Queue-based sequential popup display
-│   ├── slideInCurve animated slide-in/out
-│   └── OnEventAccepted — player clicks Track button
-│
-WorldEventConfig (static constants)
+├── Altimeter          → MSL + AGL text, tape scroll, green/yellow/red by AGL
+├── Speedometer        → speed text, Mach overlay, tape, trend arrow
+├── CompassHeading     → heading text, cardinal, compass strip, heading bug
+├── AttitudeIndicator  → horizon rotation (roll) + shift (pitch), pitch ladder
+├── VerticalSpeedIndicator → smoothed VS, needle/bargraph, color by rate
+├── GForceIndicator    → G text, filled meter, peak G with decay
+├── ThrottleFuelGauge  → throttle/fuel bars, low-fuel blink
+└── WarningSystem      → stall/overspeed/altitude/G/fuel/descent checks, audio
 ```
 
 ### Integration Points
 
 | Script | Integrates With |
 |--------|----------------|
-| `WorldEventManager` | `UnityEngine.GameObject.FindWithTag("Player")` — player transform |
-| `WorldEventManager` | `WorldEventData` assets in inspector `eventPool` list |
-| `ActiveWorldEvent` | `WorldEventManager.Instance` — lifecycle callbacks |
-| `EventNotificationUI` | `WorldEventManager.Instance` — subscribes to 3 events |
-| `EventNotificationUI` | `UnityEngine.UI.Text`, `Button`, `Image` — Unity UI |
-| `EventSpawnZone` | `UnityEngine.Collider` (RequireComponent) — trigger volume |
-| `QuestChain` | `WorldEventData` ScriptableObject assets — step list |
+| `FlightDataProvider` | `UnityEngine.Rigidbody` — velocity, position |
+| `FlightDataProvider` | `Physics.Raycast` — AGL calculation |
+| `FlightDataProvider` | `SWEF.Flight.FlightController` — throttle/fuel (guarded by `#if SWEF_FLIGHTCONTROLLER_AVAILABLE`) |
+| `HUDDashboard` | `FlightDataProvider.CurrentData` — pulls snapshot each frame |
+| `WarningSystem` | `FlightDataProvider.OnFlightDataUpdated` — subscribes for real-time evaluation |
+| All instruments | `TMPro.TextMeshProUGUI` — all text rendering |
+| All instruments | `UnityEngine.UI.Image` — gauges, bars, tapes, meters |
