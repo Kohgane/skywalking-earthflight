@@ -40,6 +40,7 @@ Assets/SWEF/
 │   ├── CloudRendering/   # CloudRenderingManager, CloudSessionManager, StreamingClient, FrameDecoder, InputStreamEncoder, LatencyCompensator, NetworkQualityMonitor, AdaptiveBitrateController, HybridRenderingController, ServerDiscoveryService, CloudRenderingUI
 │   ├── Core/             # BootManager, SWEFSession, WorldBootstrap, AppLifecycleManager, SaveManager, AutoSaveController, CloudSaveController, DataMigrator, PerformanceManager, MemoryManager, QualityPresetManager, LoadingScreen, PauseManager, ErrorHandler, CrashReporter, AnalyticsLogger, AdManager, PremiumFeatureGate, SessionTracker, DeepLinkHandler, DebugConsole, DebugGizmoDrawer, FlightJournal, RatePromptManager, RatePromptUI
 │   ├── DailyChallenge/   # DailyChallengeDefinition, DailyChallengeDefaultData, DailyChallengeManager, DailyChallengeTracker, DailyChallengeHUD, ChallengeNotificationUI, ChallengeRewardController, WeeklyChallengeDefinition, WeeklyChallengeManager, SeasonDefinition, SeasonPassManager, SeasonPassUI
+│   ├── Damage/           # DamageType, DamageData, PartHealth, DamageModel, DamageEffect, RepairSystem, DamageIndicatorUI, DamageConfig
 │   ├── DebugOverlay/     # DebugOverlayData, FPSCounter, MemoryProfiler, DrawCallMonitor, DebugOverlayController, PerformanceLogger, DebugConsole, DebugOverlayAnalytics
 │   ├── Editor/           # SWEFEditorWindow, SWEFBuildPreprocessor, SWEFSceneValidator, AchievementEditorWindow, LocalizationEditorWindow, AnalyticsDebugWindow, CloudRenderingDebugWindow, MultiplayerDebugWindow, PerformanceProfilerWindow, SpatialAudioDebugWindow, TerrainDebugWindow, WeatherDebugWindow
 │   ├── Events/           # WorldEventData, WorldEventInstance, EventScheduler, EventParticipationTracker, EventVisualController, EventNotificationUI, EventCalendarUI, EventRewardController
@@ -1667,3 +1668,68 @@ HUDDashboard (Singleton)
 | `WarningSystem` | `FlightDataProvider.OnFlightDataUpdated` — subscribes for real-time evaluation |
 | All instruments | `TMPro.TextMeshProUGUI` — all text rendering |
 | All instruments | `UnityEngine.UI.Image` — gauges, bars, tapes, meters |
+
+---
+
+## Phase 66 — Damage & Repair System
+
+### New Scripts (8 files) — `Assets/SWEF/Scripts/Damage/` — namespace `SWEF.Damage`
+
+| # | File | Description |
+|---|------|-------------|
+| 1 | `DamageType.cs` | Enums: `DamageSource` (7 values), `DamageLevel` (6 values), `AircraftPart` (11 values), `RepairMode` (4 values) |
+| 2 | `DamageData.cs` | Serialisable data container for a single damage event — source, affected part, damage amount, impact point/normal/force, timestamp, description |
+| 3 | `PartHealth.cs` | Serialisable per-part health tracker — `currentHealth`, `damageLevel`, `healthPercent`, `isDestroyed`, `isFunctional`, `damageHistory`; `ApplyDamage()`, `Repair()`, `CalculateDamageLevel()` |
+| 4 | `DamageConfig.cs` | Static config — health thresholds (`MinorThreshold=0.9`, `ModerateThreshold=0.7`, `SevereThreshold=0.5`, `CriticalThreshold=0.25`), collision/overspeed/overG rates, repair constants, part importance weights, UI colours |
+| 5 | `DamageModel.cs` | Master damage controller (`RequireComponent(Rigidbody)`) — per-part `PartHealth` dictionary, `ApplyDamage()`, `ApplyAreaDamage()`, `GetOverallHealth()`, `IsFlightCapable()`, `GetEngineEfficiency()`, `GetWingEfficiency()`, `GetStabilityEfficiency()`; events `OnDamageReceived`, `OnPartDamageLevelChanged`, `OnAircraftDestroyed`; `OnCollisionEnter` auto-detection |
+| 6 | `DamageEffect.cs` | Visual/audio effects (`RequireComponent(AudioSource)`) — smoke, fire, spark, debris `ParticleSystem`s; impact/stress/alarm `AudioClip` pools; `PlayImpactEffect()`, `UpdateDamageVisuals()`, `PlayExplosion()`; subscribes to `DamageModel` events |
+| 7 | `RepairSystem.cs` | Repair mechanics — `StartEmergencyRepair()` (instant burst, cooldown + charge-limited), `StartFieldRepair()` (slow coroutine), `StartFullRepair()` (fast coroutine), `StopRepair()`; events `OnRepairStarted`, `OnRepairCompleted`, `OnPartRepaired` |
+| 8 | `DamageIndicatorUI.cs` | HUD damage display (`TMPro`) — per-part coloured overlays, overall health text + fill bar, repair cooldown indicator, repair charges, damage popup, pulse animation on recently damaged parts; subscribes to `DamageModel` and `RepairSystem` events |
+
+### Architecture
+
+```
+DamageModel (Rigidbody aircraft root)
+│   ├── Dictionary<AircraftPart, PartHealth>
+│   ├── ApplyDamage(DamageData) → scales by globalDamageMultiplier
+│   ├── ApplyAreaDamage(center, radius, damage, source) → linear falloff
+│   ├── OnCollisionEnter → auto DamageData creation + nearest-part detection
+│   ├── IsFlightCapable() → false if engine destroyed or both wings critical
+│   ├── GetEngineEfficiency() / GetWingEfficiency() / GetStabilityEfficiency()
+│   └── Events → DamageEffect + DamageIndicatorUI
+│
+PartHealth (per-part state)
+│   ├── ApplyDamage(amount, data?) → clamp to 0, update DamageLevel, append history
+│   ├── Repair(amount) → clamp to maxHealth, update DamageLevel
+│   └── CalculateDamageLevel() → threshold-based enum mapping
+│
+RepairSystem
+│   ├── StartEmergencyRepair() → instant heal, cooldown + charge check
+│   ├── StartFieldRepair() → coroutine at fieldRepairRate (10 HP/s)
+│   ├── StartFullRepair() → coroutine at fullRepairRate (25 HP/s)
+│   └── StopRepair() → cancel coroutine
+│
+DamageEffect
+│   ├── Subscribes: OnDamageReceived → PlayImpactEffect (sparks + sound)
+│   ├── Subscribes: OnPartDamageLevelChanged → UpdateDamageVisuals (smoke/fire)
+│   └── Subscribes: OnAircraftDestroyed → PlayExplosion
+│
+DamageIndicatorUI (TMPro + UI.Image)
+│   ├── Per-part coloured overlays (green/yellow/orange/red/black)
+│   ├── Overall health text + fill bar
+│   ├── Emergency repair cooldown fill + charges text
+│   ├── Damage popup (2.5 s auto-hide)
+│   └── Pulse animation on recently damaged parts
+```
+
+### Integration Points
+
+| Script | Integrates With |
+|--------|----------------|
+| `DamageModel` | `UnityEngine.Rigidbody` — collision velocity |
+| `DamageModel` | `UnityEngine.Collider` — contact point / normal |
+| `DamageEffect` | `UnityEngine.ParticleSystem` — smoke, fire, sparks, debris |
+| `DamageEffect` | `UnityEngine.AudioSource` — impact, stress, alarm clips |
+| `DamageIndicatorUI` | `TMPro.TextMeshProUGUI` — health % and repair charges text |
+| `DamageIndicatorUI` | `UnityEngine.UI.Image` — part overlays, health bar, cooldown ring |
+| `RepairSystem` | `DamageModel.GetPartHealth()` — reads and repairs per-part health |
