@@ -87,6 +87,7 @@ Assets/SWEF/
 │   ├── Weather/          # WeatherData, WeatherCondition, WeatherManager, WeatherAPIClient, WeatherDataService, WeatherStateManager, WeatherLightingController, WeatherSkyboxController, WeatherFogController, WeatherVFXController, WeatherAudioController, WeatherSoundController, WeatherFlightModifier, PrecipitationSystem, WindSystem, WeatherUI
 │   ├── WeatherChallenge/ # WeatherChallengeData, WeatherChallengeManager, DynamicRouteGenerator, WeatherChallengeUI, RouteVisualizationController, WeatherChallengeAnalyticsBridge
 │   ├── Wildlife/         # WildlifeData, WildlifeManager, AnimalGroupController, BirdFlockController, MarineLifeController, AnimalAnimationController, WildlifeSpawnSystem, WildlifeAudioController, WildlifeJournalIntegration, WildlifeDebugOverlay
+│   ├── WorldEvent/       # WorldEventType, WorldEventData, RewardData, WorldEventManager, ActiveWorldEvent, EventObjective, EventSpawnZone, QuestChain, EventNotificationUI, WorldEventConfig
 │   └── XR/              # XRPlatformDetector, XRRigManager, XRInputAdapter, XRHandTracker, XRComfortSettings, XRUIAdapter
 └── README_SWEF_SETUP.md
 ```
