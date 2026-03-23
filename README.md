@@ -64,6 +64,7 @@ Assets/SWEF/
 │   ├── Performance/      # PerformanceProfiler, AdaptiveQualityController, RuntimeDiagnosticsHUD, MemoryPoolManager, GarbageCollectionTracker, DrawCallAnalyzer, AssetLoadProfiler, SceneLoadProfiler, TextureMemoryOptimizer
 │   ├── PhotoMode/        # PhotoModeData, PhotoModeUI, PhotoModeAnalytics, PhotoCameraController, PhotoCaptureManager, PhotoFilterSystem, PhotoFrameRenderer, PhotoGalleryManager, DroneCameraController, DroneVisualController
 │   ├── Progression/      # PilotRankData, ProgressionManager, XPSourceConfig, XPTracker, SkillTreeData, SkillTreeManager, CosmeticUnlockManager, ProgressionHUD, ProgressionProfileUI, ProgressionDefaultData
+│   ├── Radar/            # RadarEnums, RadarContact, RadarSystem, IFFTransponder, ThreatDetector, RadarDisplay, MissileWarningReceiver, RadarJammer, RadarConfig
 │   ├── Racing/           # RacingData, BoostController, DriftController, BoostPadManager, SlipstreamController, StartBoostController, TrickBoostController, BoostVFXBridge, BoostAudioController, RacingAnalytics
 │   ├── Recorder/         # FlightRecorder, FlightPlayback, RecorderUI
 │   ├── Replay/           # ReplayData, ReplayFileManager, GhostRacer, FlightPathRenderer, ReplayShareManager
@@ -1667,3 +1668,74 @@ HUDDashboard (Singleton)
 | `WarningSystem` | `FlightDataProvider.OnFlightDataUpdated` — subscribes for real-time evaluation |
 | All instruments | `TMPro.TextMeshProUGUI` — all text rendering |
 | All instruments | `UnityEngine.UI.Image` — gauges, bars, tapes, meters |
+
+---
+
+## Phase 67 — Radar & Threat Detection System
+
+### New Scripts (9 files) — `Assets/SWEF/Scripts/Radar/` — namespace `SWEF.Radar`
+
+| # | File | Description |
+|---|------|-------------|
+| 1 | `RadarEnums.cs` | Enums — `ContactClassification` (Unknown/Friendly/Neutral/Hostile/Civilian/Landmark/Event), `ThreatLevel` (None/Low/Medium/High/Imminent), `RadarMode` (Off/Passive/Active/Search/Track), `BlipSize` (Small/Medium/Large/VeryLarge) |
+| 2 | `RadarContact.cs` | Data class — unique `contactId`, `trackedTransform`, classification, threat, size, position, velocity, distance, bearing, elevation, signal strength, first/last detected times, `isLocked`, `displayName`, `contactIcon` |
+| 3 | `RadarConfig.cs` | Static config — `DefaultRadarRange`, `ScanInterval`, `MaxContacts`, `ContactTimeout`, `SignalFalloffStart`, threat thresholds (`CloseRange`, `MediumRange`, `ClosingSpeedThreshold`), jammer defaults, zoom presets, display colors per classification with `GetClassificationColor()` helper |
+| 4 | `RadarSystem.cs` | Singleton MonoBehaviour — `Physics.OverlapSphere` scan coroutine, IFF classification via `IFFTransponder`, signal-strength falloff, contact create/update/expire, `LockTarget`/`UnlockTarget`/`CycleTargets`, `GetNearestHostile`/`GetNearestContact`/`GetContactsByClassification`, events `OnContactDetected`/`OnContactLost`/`OnTargetLocked`/`OnTargetUnlocked` |
+| 5 | `IFFTransponder.cs` | MonoBehaviour attached to detectable objects — `identity`, `transponderCode`, `displayName`, `radarSignature`, `radarIcon`, `isTransponderActive`, `signatureModifier`, `baseThreatLevel`; exposes `EffectiveIdentity` (returns Unknown when transponder is silent) |
+| 6 | `ThreatDetector.cs` | MonoBehaviour — periodic `EvaluateThreat()` for each contact based on classification, distance, closing speed, heading-toward-player; `prioritizedThreats` sorted by level, `GetHighestThreat()`, `hostileCount`, `imminentThreatCount`; events `OnThreatLevelChanged`/`OnImminentThreat`; Phase 65 WarningSystem integration via `#if SWEF_WARNINGSYSTEM_AVAILABLE` |
+| 7 | `RadarDisplay.cs` | MonoBehaviour UI — `RadarDisplayMode` (PlanPosition/BScope/ForwardLooking), rotating sweep line (PPI), blip pool keyed by contactId, per-classification color coding, locked-target blink ring, `CycleZoom()`/`SetDisplayMode()`, range rings label, heading indicator, north indicator |
+| 8 | `MissileWarningReceiver.cs` | MonoBehaviour — `Physics.OverlapSphere` projectile detection at configurable Hz, closing-vector filter, direction indicators (`incomingBearing`/`incomingElevation`), looping audio tones for missile/lock warnings, `NotifyRadarLock()`/`ClearRadarLock()`, events `OnMissileDetected`/`OnMissileLockDetected`/`OnThreatCleared` |
+| 9 | `RadarJammer.cs` | MonoBehaviour — `ToggleJammer()` with cooldown guard, `jamRange`/`jamEffectiveness`/`powerConsumption`, `DeployChaffs()`/`DeployFlares()` with particle effects, `chaffCount`/`flareCount` charges, `isOnCooldown`/`cooldownRemaining` state, events `OnJammerToggled`/`OnChaffDeployed`/`OnFlareDeployed` |
+
+### Architecture
+
+```
+RadarSystem (Singleton)
+│   ├── ScanRoutine (coroutine, every scanInterval)
+│   │       └── Physics.OverlapSphere → IFFTransponder read → create/update RadarContact
+│   ├── CleanupStaleContacts (Update, contactTimeout)
+│   ├── LockTarget / UnlockTarget / CycleTargets
+│   └── Events: OnContactDetected, OnContactLost, OnTargetLocked, OnTargetUnlocked
+│
+├── IFFTransponder   → attached to any detectable scene object
+│       identity, transponderCode, signatureModifier, baseThreatLevel
+│
+├── ThreatDetector   → subscribes to RadarSystem contacts
+│   ├── EvaluateThreat: classification + distance + closing speed + heading dot
+│   ├── prioritizedThreats[] sorted by ThreatLevel descending
+│   └── Events: OnThreatLevelChanged, OnImminentThreat
+│           └── #if SWEF_WARNINGSYSTEM_AVAILABLE → WarningSystem.AddWarning("THREAT", ...)
+│
+├── RadarDisplay     → reads RadarSystem.contacts each frame
+│   ├── PlanPosition: polar blip placement, rotating sweep line
+│   ├── BScope: azimuth/range grid
+│   ├── ForwardLooking: azimuth/elevation grid
+│   ├── Blip color ← RadarConfig.GetClassificationColor(classification)
+│   ├── Lock ring blink on lockedContact
+│   └── CycleZoom (2 km / 5 km / 10 km presets)
+│
+├── MissileWarningReceiver  → OverlapSphere on missileLayers
+│   ├── Closing-vector filter (dot product > 0.5)
+│   ├── incomingBearing / incomingElevation direction indicators
+│   └── Audio: missileWarningTone (loop) / lockWarningTone
+│
+└── RadarJammer
+    ├── ToggleJammer → isJamming, cooldown after deactivation
+    ├── DeployChaffs / DeployFlares (particle effects + counters)
+    └── powerConsumption drain while active
+```
+
+### Integration Points
+
+| Script | Integrates With |
+|--------|----------------|
+| `RadarSystem` | `Physics.OverlapSphere` — Unity physics for scan |
+| `RadarSystem` | `IFFTransponder` — reads identity, signature, display name |
+| `ThreatDetector` | `RadarSystem.contacts` — subscribes for periodic evaluation |
+| `ThreatDetector` | `SWEF.CockpitHUD.WarningSystem.AddWarning` — guarded by `#if SWEF_WARNINGSYSTEM_AVAILABLE` (Phase 65) |
+| `RadarDisplay` | `RadarSystem.contacts` — reads each frame for blip positions |
+| `RadarDisplay` | `TMPro.TextMeshProUGUI` — range and heading labels |
+| `RadarDisplay` | `UnityEngine.UI.Image` — blip and sweep-line rendering |
+| `MissileWarningReceiver` | `Physics.OverlapSphere` — missile layer detection |
+| `MissileWarningReceiver` | `Rigidbody.linearVelocity` — closing-speed calculation |
+| `RadarJammer` | `ParticleSystem` — chaff/flare visual effects |
