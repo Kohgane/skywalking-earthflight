@@ -79,7 +79,7 @@ namespace SWEF.Airshow
         private readonly float[] _gForceHistory = new float[60];
         private int _gForceIndex;
 
-        private Vector3 _previousVelocity;
+        private Vector3 _previousPosition;
         #endregion
 
         // ── Unity lifecycle ──────────────────────────────────────────────────
@@ -210,12 +210,14 @@ namespace SWEF.Airshow
 
         private void RecordGForce()
         {
-            Vector3 velocity = transform.position - _previousVelocity;
-            float acceleration = velocity.magnitude / Mathf.Max(Time.deltaTime, 0.001f);
+            Vector3 currentPosition = transform.position;
+            Vector3 displacement = currentPosition - _previousPosition;
+            float dt = Mathf.Max(Time.deltaTime, 0.001f);
+            float acceleration = displacement.magnitude / dt;
             float gForce = acceleration / 9.81f;
             _gForceHistory[_gForceIndex % _gForceHistory.Length] = gForce;
             _gForceIndex++;
-            _previousVelocity = transform.position;
+            _previousPosition = currentPosition;
         }
 
         private void UpdateScores()

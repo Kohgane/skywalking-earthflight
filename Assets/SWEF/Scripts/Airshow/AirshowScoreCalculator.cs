@@ -114,12 +114,12 @@ namespace SWEF.Airshow
 
         /// <summary>
         /// Combines the four component scores into a single weighted composite (0–100).
+        /// <paramref name="config"/> is reserved for future per-config weighting adjustments.
         /// </summary>
         public static float CalculateCompositeScore(
             float timing, float position, float smoothness, float formation,
             AirshowConfig config)
         {
-            _ = config; // reserved for future per-config weighting
             return timing     * WeightTiming
                  + position   * WeightPosition
                  + smoothness * WeightSmoothness

@@ -2,7 +2,6 @@
 // Assets/SWEF/Scripts/Airshow/AirshowAudienceSystem.cs
 using System;
 using UnityEngine;
-using SWEF.Audio;
 
 namespace SWEF.Airshow
 {
@@ -149,12 +148,7 @@ namespace SWEF.Airshow
         private void PlayClip(AudioClip clip)
         {
             if (clip == null) return;
-            // Prefer AudioManager if available, fall back to local AudioSource
-            AudioManager am = AudioManager.Instance;
-            if (am != null)
-                _audioSource.PlayOneShot(clip);
-            else
-                _audioSource.PlayOneShot(clip);
+            _audioSource.PlayOneShot(clip);
         }
 
         private void TriggerConfetti()
