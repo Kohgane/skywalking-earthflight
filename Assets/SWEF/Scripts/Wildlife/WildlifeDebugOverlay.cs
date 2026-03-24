@@ -15,7 +15,7 @@ namespace SWEF.Wildlife
         [Header("Gizmo Colors")]
         [SerializeField] private Color spawnRingColor   = new Color(0f, 1f, 0f, 0.3f);
         [SerializeField] private Color despawnRingColor = new Color(1f, 0f, 0f, 0.2f);
-        [SerializeField] private Color groupSphereSize  = Color.white;
+        [SerializeField] private Color groupSphereColor  = Color.white;
 
         [Header("Debug HUD")]
         [SerializeField] private bool showHUD = true;

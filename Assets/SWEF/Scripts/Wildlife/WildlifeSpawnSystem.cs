@@ -144,8 +144,10 @@ namespace SWEF.Wildlife
                 marineCtrl = root.GetComponent<MarineLifeController>()
                              ?? root.AddComponent<MarineLifeController>();
 
-            // Spawn individual boid children
+            // Spawn individual boid children (birds only; marine/land handled differently)
             var boidTransforms = new System.Collections.Generic.List<Transform>();
+            if (isBird)
+            {
             float spread = 10f;
             for (int i = 0; i < count; i++)
             {
@@ -154,6 +156,7 @@ namespace SWEF.Wildlife
                 boidGO.transform.position = center + UnityEngine.Random.insideUnitSphere * spread;
                 boidGO.AddComponent<AnimalAnimationController>();
                 boidTransforms.Add(boidGO.transform);
+            }
             }
 
             flockCtrl?.InitialiseBoids(boidTransforms, species.baseSpeed, species.fleeSpeed);

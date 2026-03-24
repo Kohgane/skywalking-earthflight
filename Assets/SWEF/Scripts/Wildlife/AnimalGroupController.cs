@@ -54,6 +54,9 @@ namespace SWEF.Wildlife
         private float _fleeTimer;
         private bool _wasAware;
 
+        private const float AlarmedDistanceRatio  = 0.6f;
+        private const float PanickedDistanceRatio = 0.3f;
+
         #endregion
 
         #region Unity Lifecycle
@@ -105,9 +108,9 @@ namespace SWEF.Wildlife
             WildlifeThreatLevel prev = state.threatLevel;
 
             if      (dist > state.species.awareDistance)  state.threatLevel = WildlifeThreatLevel.None;
-            else if (dist > state.species.fleeDistance)   state.threatLevel = WildlifeThreatLevel.Aware;
-            else if (dist > state.species.fleeDistance * 0.6f) state.threatLevel = WildlifeThreatLevel.Alarmed;
-            else if (dist > state.species.fleeDistance * 0.3f) state.threatLevel = WildlifeThreatLevel.Fleeing;
+            else if (dist > state.species.fleeDistance)                        state.threatLevel = WildlifeThreatLevel.Aware;
+            else if (dist > state.species.fleeDistance * AlarmedDistanceRatio)  state.threatLevel = WildlifeThreatLevel.Alarmed;
+            else if (dist > state.species.fleeDistance * PanickedDistanceRatio) state.threatLevel = WildlifeThreatLevel.Fleeing;
             else                                           state.threatLevel = WildlifeThreatLevel.Panicked;
 
             if (state.threatLevel != prev && state.threatLevel >= WildlifeThreatLevel.Fleeing)
@@ -192,7 +195,7 @@ namespace SWEF.Wildlife
         {
             if (Physics.Raycast(transform.position, Vector3.down, out RaycastHit hit, 200f))
             {
-                float targetY = hit.point.y + terrainClearance + state.species.minAltitude;
+                float targetY = hit.point.y + terrainClearance;
                 if (transform.position.y < targetY)
                 {
                     var pos = transform.position;

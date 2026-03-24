@@ -25,7 +25,7 @@ namespace SWEF.Wildlife
 
         #region Private State
 
-        private readonly Dictionary<string, AudioSource> _groupSources = new Dictionary<string, AudioSource>();
+        private const float VolumeScaleMemberCount = 20f;
         private float _masterVolume = 1f;
 
         #endregion
@@ -89,7 +89,7 @@ namespace SWEF.Wildlife
                 src.maxDistance   = audioMaxDistance;
                 src.loop          = true;
                 src.volume        = Mathf.Clamp01(
-                    maxGroupVolume * (group.memberCount / 20f) * _masterVolume);
+                    maxGroupVolume * (group.memberCount / VolumeScaleMemberCount) * _masterVolume);
                 _groupSources[group.groupId] = src;
             }
 

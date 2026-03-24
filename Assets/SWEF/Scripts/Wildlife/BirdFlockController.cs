@@ -120,13 +120,13 @@ namespace SWEF.Wildlife
             if (boid == null) return;
 
             float distToCamera = _playerTransform != null
-                ? Vector3.Distance(boid.position, _playerTransform.position)
+                ? (_playerTransform.position - boid.position).sqrMagnitude
                 : 0f;
 
             // Beyond billboard LOD — skip visual update
-            if (distToCamera > billboardLODDistance) return;
+            if (distToCamera > billboardLODDistance * billboardLODDistance) return;
 
-            bool simplified = distToCamera > simplifiedLODDistance;
+            bool simplified = distToCamera > simplifiedLODDistance * simplifiedLODDistance;
             Vector3 steer   = Vector3.zero;
 
             steer += Separation(idx, simplified) * flockParams.separationWeight;

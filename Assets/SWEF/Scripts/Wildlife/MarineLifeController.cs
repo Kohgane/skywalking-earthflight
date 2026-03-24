@@ -19,7 +19,7 @@ namespace SWEF.Wildlife
         [SerializeField] private float dolphinLeapHeight = 3f;
 
         [Tooltip("Whale breach height above water in metres.")]
-        [SerializeField] private float whalBreachHeight  = 8f;
+        [SerializeField] private float whaleBreachHeight  = 8f;
 
         [Tooltip("Interval in seconds between surfacing events.")]
         [SerializeField] private float surfacingInterval = 30f;
@@ -91,8 +91,8 @@ namespace SWEF.Wildlife
         private IEnumerator SurfacingEvent()
         {
             _isSurfacing = true;
-            float leapHeight = marineCategory == WildlifeCategory.MarineMammal
-                ? (marineCategory == WildlifeCategory.Fish ? 0.5f : dolphinLeapHeight)
+            float leapHeight = marineCategory == WildlifeCategory.Fish
+                ? 0.5f
                 : dolphinLeapHeight;
 
             // Rise to surface
@@ -128,7 +128,7 @@ namespace SWEF.Wildlife
         {
             _isSurfacing = true;
             Vector3 startPos = transform.position;
-            Vector3 apex     = new Vector3(startPos.x, _waterHeight + whalBreachHeight, startPos.z);
+            Vector3 apex     = new Vector3(startPos.x, _waterHeight + whaleBreachHeight, startPos.z);
 
             float t = 0f;
             while (t < 1f)
@@ -136,7 +136,7 @@ namespace SWEF.Wildlife
                 t += Time.deltaTime * 1.2f;
                 float parabola  = 4f * t * (1f - t); // parabolic arc
                 transform.position = Vector3.Lerp(startPos, apex, t) +
-                                     Vector3.up * parabola * whalBreachHeight * 0.2f;
+                                     Vector3.up * parabola * whaleBreachHeight * 0.2f;
                 yield return null;
             }
 
