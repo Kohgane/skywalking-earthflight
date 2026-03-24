@@ -1956,3 +1956,89 @@ AirshowManager (Singleton, DontDestroyOnLoad)
 | `AirshowHUD` | `SWEF.Social.ShareManager` — share score results |
 | `AirshowHUD` | `SWEF.Replay.ReplayFileManager` — replay link |
 | `AirshowAnalytics` | `SWEF.Analytics.TelemetryDispatcher` — telemetry events |
+
+---
+
+## Phase 74 — Water Interaction & Buoyancy System
+
+### New Scripts
+
+| # | File | Description |
+|---|------|-------------|
+| 1 | `WaterData.cs` | Pure data layer — enums (`WaterBodyType`, `WaterContactState`, `SplashType`, `UnderwaterZone`) and serializable classes (`WaterConfig`, `WaterSurfaceState`, `BuoyancyState`, `SplashEvent`) |
+| 2 | `WaterSurfaceManager.cs` | Singleton MonoBehaviour — Gerstner multi-octave wave simulation, water detection, surface height/normal sampling, water body type heuristics; null-safe `WeatherManager` wind-to-wave integration |
+| 3 | `BuoyancyController.cs` | Per-aircraft MonoBehaviour — state machine (Airborne → Skimming → Touching → Floating / Sinking → Submerged), Archimedes buoyancy, water drag, wave rocking torque, angular damping, controlled ditching, null-safe `DamageModel` integration |
+| 4 | `SplashEffectController.cs` | MonoBehaviour — pooled per-type `ParticleSystem` splash effects, `TrailRenderer` wake trail, null-safe `AudioManager` splash sounds, camera shake proportional to impact force |
+| 5 | `UnderwaterCameraTransition.cs` | MonoBehaviour — per-frame camera depth check, `UnderwaterZone` classification, smooth fog/lighting transitions by zone, caustics overlay, bubble particles, null-safe `AudioManager` low-pass filter |
+| 6 | `WaterRippleSystem.cs` | MonoBehaviour — pooled `RippleInstance` list with `LineRenderer` rings, ripple sources (flyover, splash, floating), quality-tier max cap, `SpawnRipple` / `ClearAllRipples` public API |
+| 7 | `WaterInteractionAnalytics.cs` | MonoBehaviour — null-safe `UserBehaviorTracker` bridge; tracks `water_contact`, `water_ditching`, `water_skim_duration`, `water_submersion`, `water_floating_duration`, `water_body_type_distribution`, `water_splash_count`, `water_photo_underwater`; session flush on `OnDestroy` |
+
+### Key Data Types
+
+| Type | Kind | Purpose |
+|------|------|---------|
+| `WaterBodyType` | enum | Ocean / Sea / Lake / River / Pond / Reservoir / Unknown |
+| `WaterContactState` | enum | Airborne / Skimming / Touching / Floating / Sinking / Submerged / Ditching |
+| `SplashType` | enum | LightSpray / MediumSplash / HeavySplash / Touchdown / Skip / DiveEntry / BellyFlop / WakeTrail |
+| `UnderwaterZone` | enum | Surface / Shallow / Mid / Deep / Abyss |
+| `WaterConfig` | class | 19 serialized fields: water level, wave amplitude/frequency/speed, density, drag, buoyancy, ripple, fog, depth colours |
+| `WaterSurfaceState` | class | Per-frame water surface snapshot: height, normal, phase, body type, temperature, clarity |
+| `BuoyancyState` | class | Live buoyancy snapshot: contact state, submersion depth, forces, time counters, stability flag |
+| `SplashEvent` | class | Immutable event payload: type, position, velocity, impact force, timestamp |
+
+### Architecture
+
+```
+WaterSurfaceManager (Singleton, DontDestroyOnLoad)
+│   ├── WaterConfig — serialized configuration
+│   ├── Gerstner wave model (multi-octave, wind-driven)
+│   ├── IsOverWater / GetWaterHeight / GetSurfaceNormal / DetectWaterBodyType
+│   └── Events: OnWaterDetected / OnWaterLost / OnWaveStateChanged
+│
+BuoyancyController (per-aircraft)
+│   ├── BuoyancyState — contact state machine
+│   ├── Archimedes buoyancy + water drag + wave rocking + angular damping
+│   ├── InitiateDitching() — controlled water landing
+│   ├── Damage integration: impact damage + water ingress (null-safe)
+│   └── Events: OnWaterContact / OnStateChanged / OnDitchingComplete / OnSinking
+│
+SplashEffectController
+│   ├── Pooled ParticleSystem per SplashType
+│   ├── Wake trail (TrailRenderer), width scales with speed
+│   ├── Audio: splash clips + continuous water rush (null-safe AudioManager)
+│   └── Events: OnSplashTriggered / OnWakeStarted / OnWakeStopped
+│
+UnderwaterCameraTransition
+│   ├── Per-frame camera Y vs water height check
+│   ├── UnderwaterZone classification by depth
+│   ├── Smooth fog/lighting/colour grading per zone
+│   ├── Caustics overlay (shallow only), bubble particles
+│   ├── Audio low-pass filter when submerged (null-safe)
+│   └── Events: OnSubmerged / OnSurfaced / OnZoneChanged
+│
+WaterRippleSystem
+│   ├── Pooled RippleInstance + LineRenderer rings
+│   ├── Ripple sources: flyover, splash, floating
+│   ├── Quality-tier max ripple count
+│   └── SpawnRipple / ClearAllRipples
+│
+WaterInteractionAnalytics → SWEF.Analytics.UserBehaviorTracker
+    ├── water_contact / water_ditching / water_skim_duration
+    ├── water_submersion / water_floating_duration
+    ├── water_body_type_distribution / water_splash_count
+    └── water_photo_underwater
+```
+
+### Integration Points
+
+| Script | Integrates With |
+|--------|----------------|
+| `WaterSurfaceManager` | `SWEF.Flight.FlightController` — player position for water detection (null-safe) |
+| `WaterSurfaceManager` | `SWEF.Weather.WeatherManager` — wind → wave intensity (null-safe) |
+| `BuoyancyController` | `SWEF.Damage.DamageModel` — impact damage + water ingress (null-safe) |
+| `BuoyancyController` | `SWEF.Landing.LandingDetector` — ditching touchdown detection (null-safe) |
+| `SplashEffectController` | `SWEF.Audio.AudioManager` — splash / wake sounds (null-safe) |
+| `SplashEffectController` | `SWEF.Contrail.ContrailManager` — wake trail rendering (null-safe) |
+| `UnderwaterCameraTransition` | `SWEF.Audio.AudioManager` — low-pass filter underwater (null-safe) |
+| `WaterRippleSystem` | `BuoyancyController` — ripple on contact events |
+| `WaterInteractionAnalytics` | `SWEF.Analytics.UserBehaviorTracker` — telemetry events (null-safe) |

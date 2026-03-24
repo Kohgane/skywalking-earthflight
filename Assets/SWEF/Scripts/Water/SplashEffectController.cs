@@ -1,70 +1,92 @@
-// SplashEffectController.cs — SWEF Ocean & Water Interaction System
+// SplashEffectController.cs — SWEF Phase 74: Water Interaction & Buoyancy System
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 namespace SWEF.Water
 {
     /// <summary>
-    /// Phase 55 — MonoBehaviour that triggers splash VFX and audio hooks whenever a
-    /// tracked object crosses the water surface (either entry or exit).
+    /// Phase 74 — Manages visual and audio splash / wake effects triggered by
+    /// <see cref="BuoyancyController"/> contact events.
     ///
-    /// <para>Particle instances are managed through a simple object-pool to avoid
-    /// runtime allocations.  Audio integration is handled via the
-    /// <see cref="OnSplashTriggered"/> event so that any audio backend can subscribe
-    /// without coupling this component to a specific audio system.</para>
-    ///
-    /// <para>Spray trails while skimming the surface are driven by a configurable
-    /// <see cref="sprayTrailObject"/> child GameObject that is enabled/disabled based
-    /// on skimming state detection.</para>
-    ///
-    /// <para>Analytics integration: each splash is forwarded to
-    /// <see cref="WaterInteractionAnalytics.RecordSplash"/>.</para>
+    /// <para>Null-safe integration points:</para>
+    /// <list type="bullet">
+    ///   <item><see cref="SWEF.Audio.AudioManager"/> — splash and wake sounds.</item>
+    ///   <item><see cref="SWEF.Contrail.ContrailManager"/> — wake trail rendering pipeline.</item>
+    /// </list>
     /// </summary>
+    [DisallowMultipleComponent]
     public class SplashEffectController : MonoBehaviour
     {
         #region Inspector
 
-        [Header("Interaction Profile")]
-        [Tooltip("WaterInteractionProfile containing SplashEffectConfig values.")]
-        [SerializeField] private WaterInteractionProfile profile;
+        [Header("Splash Prefabs")]
+        [Tooltip("Particle prefab for light spray (low-speed skim).")]
+        [SerializeField] private ParticleSystem lightSprayPrefab;
+        [Tooltip("Particle prefab for medium splash (normal contact).")]
+        [SerializeField] private ParticleSystem mediumSplashPrefab;
+        [Tooltip("Particle prefab for heavy splash (high-speed impact).")]
+        [SerializeField] private ParticleSystem heavySplashPrefab;
+        [Tooltip("Particle prefab for controlled touchdown.")]
+        [SerializeField] private ParticleSystem touchdownPrefab;
+        [Tooltip("Particle prefab for skip / bounce.")]
+        [SerializeField] private ParticleSystem skipPrefab;
+        [Tooltip("Particle prefab for nose-first dive entry.")]
+        [SerializeField] private ParticleSystem diveEntryPrefab;
+        [Tooltip("Particle prefab for belly-flop flat impact.")]
+        [SerializeField] private ParticleSystem bellyFlopPrefab;
+        [Tooltip("Particle prefab for the continuous wake trail.")]
+        [SerializeField] private ParticleSystem wakeTrailPrefab;
 
-        [Header("Spray Trail")]
-        [Tooltip("Optional child GameObject representing the spray trail while skimming. Enabled/disabled at runtime.")]
-        [SerializeField] private GameObject sprayTrailObject;
+        [Header("Pool")]
+        [Tooltip("Number of particle instances to pre-allocate per type.")]
+        [SerializeField] private int poolSizePerType = 4;
 
-        [Header("Skimming Detection")]
-        [Tooltip("Skim is active when the tracked point is within this distance above the water surface (m).")]
-        [SerializeField] private float skimHeightThreshold = 0.3f;
+        [Header("Wake")]
+        [Tooltip("Trail renderer used for the V-shaped surface wake.")]
+        [SerializeField] private TrailRenderer wakeTrailRenderer;
+        [Tooltip("Minimum wake trail width.")]
+        [SerializeField] private float wakeWidthMin = 0.5f;
+        [Tooltip("Maximum wake trail width at high speed.")]
+        [SerializeField] private float wakeWidthMax = 8f;
+        [Tooltip("Speed (m/s) at which wake reaches maximum width.")]
+        [SerializeField] private float wakeMaxSpeed = 60f;
 
-        [Tooltip("Minimum horizontal speed (m/s) required for skim trail activation.")]
-        [SerializeField] private float skimMinSpeed = 5f;
-
-        [Header("Debug")]
-        [Tooltip("Log splash events to the Unity console.")]
-        [SerializeField] private bool debugLog;
+        [Header("Camera Shake")]
+        [Tooltip("Shake magnitude per unit of impact force.")]
+        [SerializeField] private float shakePerForce = 0.0005f;
+        [Tooltip("Maximum camera shake magnitude.")]
+        [SerializeField] private float maxShakeMagnitude = 0.3f;
 
         #endregion
 
         #region Events
 
-        /// <summary>
-        /// Fired every time a splash (entry or exit) is triggered.
-        /// Subscribe to play audio, update UI, or feed analytics.
-        /// </summary>
-        public event Action<SplashEventData> OnSplashTriggered;
+        /// <summary>Fired each time a splash effect is triggered.</summary>
+        public event Action<SplashEvent> OnSplashTriggered;
+
+        /// <summary>Fired when the continuous wake trail begins.</summary>
+        public event Action OnWakeStarted;
+
+        /// <summary>Fired when the wake trail stops.</summary>
+        public event Action OnWakeStopped;
 
         #endregion
 
         #region Private State
 
-        private SplashEffectConfig _config;
-        private List<ParticleSystem> _pool;
-        private bool _wasUnderwater;
-        private float _lastSplashTime = -999f;
-        private bool _isSkimming;
+        private readonly Dictionary<SplashType, Queue<ParticleSystem>> _pool =
+            new Dictionary<SplashType, Queue<ParticleSystem>>();
+
+        private BuoyancyController _buoyancy;
         private Rigidbody _rb;
+        private bool _wakeActive;
+        private float _splashCooldown;
+        private WaterConfig _config;
+
+        // Null-safe cross-system references
+        private Component _audioManager;
+        private bool _crossSystemCacheDone;
 
         #endregion
 
@@ -72,31 +94,50 @@ namespace SWEF.Water
 
         private void Awake()
         {
-            _rb = GetComponent<Rigidbody>();
-            ResolveConfig();
-            BuildPool();
+            _buoyancy  = GetComponent<BuoyancyController>();
+            _rb        = GetComponent<Rigidbody>();
+        }
+
+        private void Start()
+        {
+            _config = WaterSurfaceManager.Instance != null
+                ? WaterSurfaceManager.Instance.Config
+                : new WaterConfig();
+
+            if (!_crossSystemCacheDone) CacheCrossSystemReferences();
+
+            InitPool(SplashType.LightSpray,   lightSprayPrefab);
+            InitPool(SplashType.MediumSplash, mediumSplashPrefab);
+            InitPool(SplashType.HeavySplash,  heavySplashPrefab);
+            InitPool(SplashType.Touchdown,    touchdownPrefab);
+            InitPool(SplashType.Skip,         skipPrefab);
+            InitPool(SplashType.DiveEntry,    diveEntryPrefab);
+            InitPool(SplashType.BellyFlop,    bellyFlopPrefab);
+            InitPool(SplashType.WakeTrail,    wakeTrailPrefab);
+
+            if (_buoyancy != null)
+            {
+                _buoyancy.OnWaterContact  += TriggerSplash;
+                _buoyancy.OnStateChanged  += HandleStateChanged;
+            }
+
+            if (wakeTrailRenderer != null)
+                wakeTrailRenderer.enabled = false;
         }
 
         private void Update()
         {
-            if (WaterSurfaceManager.Instance == null) return;
+            _splashCooldown -= Time.deltaTime;
+            UpdateWake();
+        }
 
-            float waterY = WaterSurfaceManager.Instance.GetWaterHeightAt(transform.position);
-            bool isUnderwater = transform.position.y < waterY;
-
-            // Entry / exit detection
-            if (isUnderwater != _wasUnderwater)
+        private void OnDestroy()
+        {
+            if (_buoyancy != null)
             {
-                if (Time.time - _lastSplashTime >= _config.cooldown)
-                {
-                    TriggerSplash(waterY, isUnderwater);
-                    _lastSplashTime = Time.time;
-                }
-                _wasUnderwater = isUnderwater;
+                _buoyancy.OnWaterContact -= TriggerSplash;
+                _buoyancy.OnStateChanged -= HandleStateChanged;
             }
-
-            // Skim detection
-            UpdateSkimState(waterY);
         }
 
         #endregion
@@ -104,139 +145,192 @@ namespace SWEF.Water
         #region Public API
 
         /// <summary>
-        /// Manually triggers a splash at a specific world position without waiting for
-        /// the automatic surface-crossing detection.  Bypasses the cooldown timer.
+        /// Spawns the appropriate splash particle effect at the event position,
+        /// scaled by impact force. Respects the splash cooldown.
         /// </summary>
-        /// <param name="worldPos">World-space origin of the splash.</param>
-        /// <param name="velocityMagnitude">Effective impact speed used to scale the VFX.</param>
-        /// <param name="isEntry"><c>true</c> = water entry; <c>false</c> = water exit.</param>
-        public void TriggerSplashManual(Vector3 worldPos, float velocityMagnitude, bool isEntry)
+        /// <param name="evt">Splash event payload from <see cref="BuoyancyController"/>.</param>
+        public void TriggerSplash(SplashEvent evt)
         {
-            SpawnSplashParticle(worldPos, velocityMagnitude);
+            if (_splashCooldown > 0f) return;
+            _splashCooldown = _config != null ? _config.splashCooldown : 0.3f;
 
-            var data = new SplashEventData
+            ParticleSystem ps = GetFromPool(evt.type);
+            if (ps != null)
             {
-                position          = worldPos,
-                velocityMagnitude = velocityMagnitude,
-                timestamp         = Time.time,
-                isEntry           = isEntry
-            };
+                ps.transform.position = evt.position;
+                // Align spray direction with incoming velocity
+                if (evt.velocity.sqrMagnitude > 0.01f)
+                    ps.transform.forward = evt.velocity.normalized;
 
-            OnSplashTriggered?.Invoke(data);
-            WaterInteractionAnalytics.RecordSplash(data);
+                // Scale by impact force
+                float scale = Mathf.Clamp(1f + evt.impactForce * 0.0005f, 0.5f, 4f);
+                ps.transform.localScale = Vector3.one * scale;
+                ps.Play();
+                StartCoroutine(ReturnToPoolAfterPlay(ps, evt.type));
+            }
 
-            if (debugLog)
-                Debug.Log($"[SplashEffect] Manual splash at {worldPos}, vel={velocityMagnitude:F1} m/s, entry={isEntry}");
+            PlaySplashAudio(evt);
+            ApplyCameraShake(evt.impactForce);
+            OnSplashTriggered?.Invoke(evt);
         }
 
         #endregion
 
-        #region Private Helpers
+        #region Wake
 
-        private void ResolveConfig()
+        private void UpdateWake()
         {
-            _config = profile != null ? profile.splash : new SplashEffectConfig();
-        }
+            if (_buoyancy == null) return;
+            WaterContactState state = _buoyancy.State.contactState;
+            bool shouldWake = state == WaterContactState.Floating || state == WaterContactState.Skimming;
 
-        private void BuildPool()
-        {
-            _pool = new List<ParticleSystem>(_config.poolSize);
-
-            if (string.IsNullOrEmpty(_config.splashParticlePrefabPath)) return;
-
-            var prefab = Resources.Load<GameObject>(_config.splashParticlePrefabPath);
-            if (prefab == null)
+            if (shouldWake && !_wakeActive)
             {
-                if (debugLog)
-                    Debug.LogWarning($"[SplashEffect] Prefab not found at Resources/{_config.splashParticlePrefabPath}");
-                return;
+                _wakeActive = true;
+                if (wakeTrailRenderer != null) wakeTrailRenderer.enabled = true;
+                OnWakeStarted?.Invoke();
+            }
+            else if (!shouldWake && _wakeActive)
+            {
+                _wakeActive = false;
+                if (wakeTrailRenderer != null) wakeTrailRenderer.enabled = false;
+                OnWakeStopped?.Invoke();
             }
 
-            for (int i = 0; i < _config.poolSize; i++)
+            if (_wakeActive && wakeTrailRenderer != null && _rb != null)
             {
-                var go = Instantiate(prefab);
-                go.SetActive(false);
-                var ps = go.GetComponent<ParticleSystem>();
-                if (ps != null) _pool.Add(ps);
+                float speed = _rb.linearVelocity.magnitude;
+                float width = Mathf.Lerp(wakeWidthMin, wakeWidthMax, speed / wakeMaxSpeed);
+                wakeTrailRenderer.startWidth = width;
+                wakeTrailRenderer.endWidth   = 0f;
             }
         }
 
-        private void TriggerSplash(float waterY, bool isEntry)
+        private void HandleStateChanged(WaterContactState state)
         {
-            Vector3 origin = new Vector3(transform.position.x, waterY, transform.position.z);
-            float vel = _rb != null ? _rb.velocity.magnitude : 0f;
-
-            SpawnSplashParticle(origin, vel);
-
-            var data = new SplashEventData
-            {
-                position          = origin,
-                velocityMagnitude = vel,
-                timestamp         = Time.time,
-                isEntry           = isEntry
-            };
-
-            OnSplashTriggered?.Invoke(data);
-            WaterInteractionAnalytics.RecordSplash(data);
-
-            if (debugLog)
-                Debug.Log($"[SplashEffect] Splash at {origin}, vel={vel:F1} m/s, entry={isEntry}");
+            // Mute or resume continuous water rush audio
+            PlayWaterRushAudio(state == WaterContactState.Floating || state == WaterContactState.Skimming);
         }
 
-        private void SpawnSplashParticle(Vector3 position, float velocityMagnitude)
-        {
-            if (_pool == null || _pool.Count == 0) return;
+        #endregion
 
-            // Find an inactive pooled instance
-            ParticleSystem ps = null;
-            for (int i = 0; i < _pool.Count; i++)
+        #region Pool
+
+        private void InitPool(SplashType type, ParticleSystem prefab)
+        {
+            var queue = new Queue<ParticleSystem>();
+            if (prefab != null)
             {
-                if (_pool[i] != null && !_pool[i].gameObject.activeInHierarchy)
+                for (int i = 0; i < poolSizePerType; i++)
                 {
-                    ps = _pool[i];
-                    break;
+                    var ps = Instantiate(prefab, transform);
+                    ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                    ps.gameObject.SetActive(false);
+                    queue.Enqueue(ps);
                 }
             }
-            if (ps == null) ps = _pool[0]; // Recycle oldest
-
-            ps.transform.position = position;
-            ps.transform.rotation = Quaternion.identity;
-            ps.gameObject.SetActive(true);
-
-            // Scale emission by velocity
-            float t = _config.maxEntrySpeed > 0f
-                ? Mathf.Clamp01(velocityMagnitude / _config.maxEntrySpeed)
-                : 0.5f;
-            float force = Mathf.Lerp(_config.splashForceMin, _config.splashForceMax, t);
-            var main = ps.main;
-            main.startSpeedMultiplier = force;
-
-            ps.Play();
-            StartCoroutine(ReturnToPoolAfterLifetime(ps));
+            _pool[type] = queue;
         }
 
-        private IEnumerator ReturnToPoolAfterLifetime(ParticleSystem ps)
+        private ParticleSystem GetFromPool(SplashType type)
         {
-            yield return new WaitUntil(() => !ps.IsAlive(true));
-            ps.gameObject.SetActive(false);
-        }
-
-        private void UpdateSkimState(float waterY)
-        {
-            float heightAboveWater = transform.position.y - waterY;
-            float horizontalSpeed = _rb != null
-                ? new Vector3(_rb.velocity.x, 0f, _rb.velocity.z).magnitude
-                : 0f;
-
-            bool shouldSkim = heightAboveWater >= 0f
-                           && heightAboveWater <= skimHeightThreshold
-                           && horizontalSpeed >= skimMinSpeed;
-
-            if (shouldSkim != _isSkimming)
+            if (_pool.TryGetValue(type, out var queue) && queue.Count > 0)
             {
-                _isSkimming = shouldSkim;
-                if (sprayTrailObject != null)
-                    sprayTrailObject.SetActive(_isSkimming);
+                var ps = queue.Dequeue();
+                ps.gameObject.SetActive(true);
+                return ps;
+            }
+            return null;
+        }
+
+        private System.Collections.IEnumerator ReturnToPoolAfterPlay(ParticleSystem ps, SplashType type)
+        {
+            yield return new WaitForSeconds(ps.main.duration + ps.main.startLifetime.constantMax);
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            ps.gameObject.SetActive(false);
+            if (_pool.TryGetValue(type, out var queue))
+                queue.Enqueue(ps);
+        }
+
+        #endregion
+
+        #region Audio
+
+        private void PlaySplashAudio(SplashEvent evt)
+        {
+            if (_audioManager == null) return;
+            try
+            {
+                string clipName = evt.type switch
+                {
+                    SplashType.LightSpray   => "SplashLight",
+                    SplashType.HeavySplash  => "SplashHeavy",
+                    SplashType.BellyFlop    => "SplashBellyFlop",
+                    SplashType.DiveEntry    => "SplashDive",
+                    _                       => "SplashMedium",
+                };
+                var method = _audioManager.GetType().GetMethod("PlayOneShot")
+                             ?? _audioManager.GetType().GetMethod("Play");
+                method?.Invoke(_audioManager, new object[] { clipName, evt.position });
+            }
+            catch { }
+        }
+
+        private void PlayWaterRushAudio(bool active)
+        {
+            if (_audioManager == null) return;
+            try
+            {
+                string methodName = active ? "PlayLoop" : "StopLoop";
+                var method = _audioManager.GetType().GetMethod(methodName);
+                method?.Invoke(_audioManager, new object[] { "WaterRush" });
+            }
+            catch { }
+        }
+
+        #endregion
+
+        #region Camera Shake
+
+        private void ApplyCameraShake(float impactForce)
+        {
+            float magnitude = Mathf.Min(impactForce * shakePerForce, maxShakeMagnitude);
+            if (magnitude < 0.01f) return;
+
+            Camera cam = Camera.main;
+            if (cam != null)
+                StartCoroutine(ShakeCamera(cam, magnitude, 0.3f));
+        }
+
+        private System.Collections.IEnumerator ShakeCamera(Camera cam, float magnitude, float duration)
+        {
+            Vector3 originalPos = cam.transform.localPosition;
+            float elapsed = 0f;
+            while (elapsed < duration)
+            {
+                float damping = 1f - (elapsed / duration);
+                cam.transform.localPosition = originalPos + UnityEngine.Random.insideUnitSphere * magnitude * damping;
+                elapsed += Time.deltaTime;
+                yield return null;
+            }
+            cam.transform.localPosition = originalPos;
+        }
+
+        #endregion
+
+        #region Cross-System Cache
+
+        private void CacheCrossSystemReferences()
+        {
+            _crossSystemCacheDone = true;
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                var amType = assembly.GetType("SWEF.Audio.AudioManager");
+                if (amType != null)
+                {
+                    _audioManager = FindObjectOfType(amType) as Component;
+                    if (_audioManager != null) break;
+                }
             }
         }
 

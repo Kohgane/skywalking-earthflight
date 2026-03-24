@@ -1,204 +1,312 @@
-// UnderwaterCameraTransition.cs — SWEF Ocean & Water Interaction System
+// UnderwaterCameraTransition.cs — SWEF Phase 74: Water Interaction & Buoyancy System
 using System;
-using System.Collections;
 using UnityEngine;
-using UnityEngine.Rendering;
 
 namespace SWEF.Water
 {
     /// <summary>
-    /// Phase 55 — MonoBehaviour that manages the visual transition when a camera
+    /// Phase 74 — Handles visual, audio, and particle transitions when the camera
     /// crosses the water surface boundary.
     ///
-    /// <para>Attach this component to the main camera or any camera that should
-    /// respond to water submersion.  All visual parameters are driven by
-    /// <see cref="UnderwaterSettings"/> from the assigned <see cref="profile"/>.</para>
-    ///
-    /// <para>Effects applied when underwater:
+    /// <para>Null-safe integration points:</para>
     /// <list type="bullet">
-    ///   <item>Scene fog colour and density.</item>
-    ///   <item>Ambient light tint shift.</item>
-    ///   <item>Post-processing Volume weight interpolation (requires a <see cref="Volume"/> component).</item>
-    ///   <item>Sinusoidal UV distortion via <c>Material.SetFloat</c> on an optional distortion material.</item>
-    ///   <item>Bubble particle system activation.</item>
-    ///   <item>Depth-based light attenuation via a directional light intensity reduction.</item>
+    ///   <item><see cref="SWEF.Audio.AudioManager"/> — low-pass filter + bubble sounds when submerged.</item>
+    ///   <item><see cref="SWEF.Flight.CameraController"/> — camera world position source.</item>
     /// </list>
-    /// </para>
-    ///
-    /// <para>Events:
-    /// <list type="bullet">
-    ///   <item><see cref="OnUnderwaterEnter"/> — fired when the camera first dips below the surface.</item>
-    ///   <item><see cref="OnUnderwaterExit"/> — fired when the camera returns above the surface.</item>
-    /// </list>
-    /// </para>
     /// </summary>
-    [RequireComponent(typeof(Camera))]
+    [DisallowMultipleComponent]
     public class UnderwaterCameraTransition : MonoBehaviour
     {
         #region Inspector
 
-        [Header("Interaction Profile")]
-        [Tooltip("Profile containing UnderwaterSettings values.")]
-        [SerializeField] private WaterInteractionProfile profile;
+        [Header("Zone Thresholds (metres below surface)")]
+        [SerializeField] private float shallowDepth  = 10f;
+        [SerializeField] private float midDepth       = 50f;
+        [SerializeField] private float deepDepth      = 200f;
 
-        [Header("References")]
-        [Tooltip("Post-processing Volume whose weight is interpolated during transitions. Optional.")]
-        [SerializeField] private Volume underwaterVolume;
+        [Header("Transition Zone")]
+        [Tooltip("Half-height of the surface blend zone in metres.")]
+        [SerializeField] private float surfaceBlendZone = 0.5f;
 
-        [Tooltip("Bubble particle system activated while underwater. Optional.")]
-        [SerializeField] private ParticleSystem bubbleSystem;
+        [Header("Visuals")]
+        [Tooltip("Particle system for floating debris and bubbles underwater.")]
+        [SerializeField] private ParticleSystem bubbleParticles;
+        [Tooltip("Animated caustic texture overlay GameObject.")]
+        [SerializeField] private GameObject causticsOverlay;
+        [Tooltip("Transition duration in seconds for fog/lighting changes.")]
+        [SerializeField] private float transitionDuration = 0.5f;
 
-        [Tooltip("Directional light whose intensity is attenuated by depth. Optional.")]
-        [SerializeField] private Light sunLight;
+        [Header("Fog Settings")]
+        [SerializeField] private Color surfaceFogColor  = new Color(0.1f, 0.4f, 0.5f);
+        [SerializeField] private Color shallowFogColor  = new Color(0.04f, 0.3f, 0.4f);
+        [SerializeField] private Color midFogColor      = new Color(0.02f, 0.1f, 0.25f);
+        [SerializeField] private Color deepFogColor     = new Color(0.01f, 0.03f, 0.1f);
+        [SerializeField] private Color abyssFogColor    = new Color(0.0f, 0.0f, 0.02f);
 
-        [Tooltip("Full-screen distortion material whose '_DistortionAmount' property is driven at runtime. Optional.")]
-        [SerializeField] private Material distortionMaterial;
-
-        [Header("Debug")]
-        [Tooltip("Log state transitions to the Unity console.")]
-        [SerializeField] private bool debugLog;
+        [SerializeField] private float surfaceFogDensity  = 0.05f;
+        [SerializeField] private float shallowFogDensity  = 0.08f;
+        [SerializeField] private float midFogDensity      = 0.12f;
+        [SerializeField] private float deepFogDensity     = 0.18f;
+        [SerializeField] private float abyssFogDensity    = 0.4f;
 
         #endregion
 
         #region Events
 
-        /// <summary>Fired the frame the camera crosses below the water surface.</summary>
-        public event Action OnUnderwaterEnter;
+        /// <summary>Fired when the camera transitions below the water surface.</summary>
+        public event Action<UnderwaterZone> OnSubmerged;
 
-        /// <summary>Fired the frame the camera crosses back above the water surface.</summary>
-        public event Action OnUnderwaterExit;
+        /// <summary>Fired when the camera returns above the water surface.</summary>
+        public event Action OnSurfaced;
+
+        /// <summary>Fired when the underwater zone classification changes.</summary>
+        public event Action<UnderwaterZone> OnZoneChanged;
+
+        #endregion
+
+        #region Public Properties
+
+        /// <summary>Returns <c>true</c> when the camera is below the water surface.</summary>
+        public bool IsUnderwater { get; private set; }
+
+        /// <summary>Returns the current depth below the water surface in metres (0 when above).</summary>
+        public float CurrentDepth { get; private set; }
+
+        /// <summary>Returns the current underwater zone classification.</summary>
+        public UnderwaterZone CurrentZone { get; private set; } = UnderwaterZone.Surface;
 
         #endregion
 
         #region Private State
 
-        private UnderwaterSettings _settings;
         private Camera _camera;
-        private bool _isUnderwater;
-        private float _transitionProgress; // 0 = air, 1 = fully underwater
-        private float _baseSunIntensity;
+        private WaterConfig _config;
+        private Light _directionalLight;
+        private UnderwaterZone _previousZone = UnderwaterZone.Surface;
+        private bool _wasUnderwater;
 
-        // Cached fog state to restore on surface
-        private bool   _airFogEnabled;
-        private Color  _airFogColor;
-        private float  _airFogDensity;
-        private Color  _airAmbientLight;
+        private Color _targetFogColor;
+        private float _targetFogDensity;
+        private Color _currentFogColor;
+        private float _currentFogDensity;
+        private bool _fogWasEnabled;
+        private FogMode _originalFogMode;
+        private Color _originalFogColor;
+        private float _originalFogDensity;
 
-        private static readonly int ShaderDistortionAmount = Shader.PropertyToID("_DistortionAmount");
-        private static readonly int ShaderDistortionTime   = Shader.PropertyToID("_DistortionTime");
+        // Null-safe cross-system references
+        private Component _audioManager;
+        private bool _crossSystemCacheDone;
 
         #endregion
 
         #region Unity Lifecycle
 
-        private void Awake()
+        private void Start()
         {
-            _camera = GetComponent<Camera>();
-            _settings = profile != null ? profile.underwater : new UnderwaterSettings();
+            _camera = Camera.main;
+            _config = WaterSurfaceManager.Instance != null
+                ? WaterSurfaceManager.Instance.Config
+                : new WaterConfig();
 
-            CacheAirState();
+            // Cache directional light for per-frame light falloff (avoids FindObjectsOfType in Update)
+            Light[] lights = FindObjectsOfType<Light>();
+            foreach (var light in lights)
+            {
+                if (light.type == LightType.Directional)
+                {
+                    _directionalLight = light;
+                    break;
+                }
+            }
 
-            if (sunLight != null)
-                _baseSunIntensity = sunLight.intensity;
+            // Cache original fog state
+            _fogWasEnabled   = RenderSettings.fog;
+            _originalFogMode = RenderSettings.fogMode;
+            _originalFogColor   = RenderSettings.fogColor;
+            _originalFogDensity = RenderSettings.fogDensity;
+            _currentFogColor    = _originalFogColor;
+            _currentFogDensity  = _originalFogDensity;
+
+            if (!_crossSystemCacheDone) CacheCrossSystemReferences();
         }
 
         private void Update()
         {
-            if (WaterSurfaceManager.Instance == null) return;
+            if (_camera == null) _camera = Camera.main;
+            if (_camera == null) return;
 
-            float waterY = WaterSurfaceManager.Instance.GetWaterHeightAt(transform.position);
-            bool shouldBeUnderwater = transform.position.y < waterY;
+            float waterHeight = WaterSurfaceManager.Instance != null
+                ? WaterSurfaceManager.Instance.GetWaterHeight(_camera.transform.position)
+                : (_config != null ? _config.waterLevel : 0f);
 
-            if (shouldBeUnderwater != _isUnderwater)
+            float depth = waterHeight - _camera.transform.position.y;
+            CurrentDepth = Mathf.Max(0f, depth);
+
+            // Determine if underwater
+            bool underwater = depth > -surfaceBlendZone;
+            if (underwater != _wasUnderwater)
             {
-                _isUnderwater = shouldBeUnderwater;
-
-                if (_isUnderwater)
+                if (underwater)
                 {
-                    OnUnderwaterEnter?.Invoke();
-                    WaterInteractionAnalytics.RecordUnderwaterEntry();
-                    if (debugLog) Debug.Log("[UnderwaterCamera] Entered water.");
+                    IsUnderwater = true;
+                    SaveAndEnableUnderwaterFog();
+                    PlayBubbles(true);
+                    SetAudioLowPass(true);
+                    OnSubmerged?.Invoke(ClassifyZone(CurrentDepth));
                 }
                 else
                 {
-                    OnUnderwaterExit?.Invoke();
-                    WaterInteractionAnalytics.RecordUnderwaterExit();
-                    if (debugLog) Debug.Log("[UnderwaterCamera] Exited water.");
+                    IsUnderwater = false;
+                    RestoreAboveWaterFog();
+                    PlayBubbles(false);
+                    SetAudioLowPass(false);
+                    OnSurfaced?.Invoke();
                 }
-
-                if (bubbleSystem != null)
-                {
-                    if (_isUnderwater) bubbleSystem.Play();
-                    else bubbleSystem.Stop();
-                }
+                _wasUnderwater = underwater;
             }
 
-            // Lerp transition progress
-            float targetProgress = _isUnderwater ? 1f : 0f;
-            float speed = _settings.transitionDuration > 0f ? 1f / _settings.transitionDuration : 1000f;
-            _transitionProgress = Mathf.MoveTowards(_transitionProgress, targetProgress, Time.deltaTime * speed);
+            UnderwaterZone zone = ClassifyZone(CurrentDepth);
+            if (zone != _previousZone)
+            {
+                CurrentZone = zone;
+                _previousZone = zone;
+                OnZoneChanged?.Invoke(zone);
+            }
 
-            ApplyVisualEffects(waterY);
+            if (IsUnderwater)
+            {
+                UpdateUnderwaterVisuals(depth);
+                UpdateCausticsOverlay();
+            }
+
+            // Smooth fog transitions
+            _currentFogColor   = Color.Lerp(_currentFogColor, _targetFogColor, Time.deltaTime / transitionDuration);
+            _currentFogDensity = Mathf.Lerp(_currentFogDensity, _targetFogDensity, Time.deltaTime / transitionDuration);
+            if (RenderSettings.fog)
+            {
+                RenderSettings.fogColor   = _currentFogColor;
+                RenderSettings.fogDensity = _currentFogDensity;
+            }
         }
 
         private void OnDestroy()
         {
-            // Restore fog state on destroy so the editor doesn't get stale values
-            RenderSettings.fog          = _airFogEnabled;
-            RenderSettings.fogColor     = _airFogColor;
-            RenderSettings.fogDensity   = _airFogDensity;
-            RenderSettings.ambientLight = _airAmbientLight;
+            // Restore fog on destroy
+            RenderSettings.fog        = _fogWasEnabled;
+            RenderSettings.fogMode    = _originalFogMode;
+            RenderSettings.fogColor   = _originalFogColor;
+            RenderSettings.fogDensity = _originalFogDensity;
         }
 
         #endregion
 
         #region Private Helpers
 
-        private void CacheAirState()
+        private UnderwaterZone ClassifyZone(float depth)
         {
-            _airFogEnabled  = RenderSettings.fog;
-            _airFogColor    = RenderSettings.fogColor;
-            _airFogDensity  = RenderSettings.fogDensity;
-            _airAmbientLight = RenderSettings.ambientLight;
+            if (depth <= 0f)              return UnderwaterZone.Surface;
+            if (depth < shallowDepth)     return UnderwaterZone.Shallow;
+            if (depth < midDepth)         return UnderwaterZone.Mid;
+            if (depth < deepDepth)        return UnderwaterZone.Deep;
+            return UnderwaterZone.Abyss;
         }
 
-        private void ApplyVisualEffects(float waterY)
+        private void UpdateUnderwaterVisuals(float depth)
         {
-            float t = _transitionProgress;
+            float lightFalloff = _config != null ? _config.underwaterLightFalloff : 0.02f;
+            float lightIntensity = Mathf.Exp(-CurrentDepth * lightFalloff);
 
-            // --- Fog ---
-            RenderSettings.fog        = t > 0f || _airFogEnabled;
-            RenderSettings.fogColor   = Color.Lerp(_airFogColor, _settings.fogColor, t);
-            RenderSettings.fogDensity = Mathf.Lerp(_airFogDensity, _settings.fogDensity, t);
-
-            // --- Ambient light ---
-            RenderSettings.ambientLight = _airAmbientLight + _settings.ambientLightShift * t;
-
-            // --- Post-processing volume ---
-            if (underwaterVolume != null)
-                underwaterVolume.weight = Mathf.Lerp(underwaterVolume.weight,
-                    _settings.postProcessingVolumeWeight * t, Time.deltaTime * 10f);
-
-            // --- Distortion material ---
-            if (distortionMaterial != null)
+            // Apply light falloff to cached directional light
+            if (_directionalLight != null)
             {
-                distortionMaterial.SetFloat(ShaderDistortionAmount, _settings.distortionAmplitude * t);
-                distortionMaterial.SetFloat(ShaderDistortionTime,
-                    Time.time * _settings.distortionSpeed);
+                _directionalLight.intensity = Mathf.Lerp(
+                    _directionalLight.intensity,
+                    _directionalLight.intensity * lightIntensity,
+                    Time.deltaTime * 2f);
             }
 
-            // --- Depth-based light attenuation ---
-            if (sunLight != null && _isUnderwater)
+            // Set fog targets by zone
+            switch (CurrentZone)
             {
-                float depth = waterY - transform.position.y;
-                float attenuationFactor = _settings.maxAttenuationDepth > 0f
-                    ? 1f - Mathf.Clamp01(depth / _settings.maxAttenuationDepth)
-                    : 1f;
-                sunLight.intensity = Mathf.Lerp(_baseSunIntensity, 0f, (1f - attenuationFactor) * t);
+                case UnderwaterZone.Surface:
+                    _targetFogColor   = surfaceFogColor;
+                    _targetFogDensity = surfaceFogDensity;
+                    break;
+                case UnderwaterZone.Shallow:
+                    _targetFogColor   = shallowFogColor;
+                    _targetFogDensity = shallowFogDensity;
+                    break;
+                case UnderwaterZone.Mid:
+                    _targetFogColor   = midFogColor;
+                    _targetFogDensity = midFogDensity;
+                    break;
+                case UnderwaterZone.Deep:
+                    _targetFogColor   = deepFogColor;
+                    _targetFogDensity = deepFogDensity;
+                    break;
+                case UnderwaterZone.Abyss:
+                    _targetFogColor   = abyssFogColor;
+                    _targetFogDensity = abyssFogDensity;
+                    break;
             }
-            else if (sunLight != null)
+        }
+
+        private void UpdateCausticsOverlay()
+        {
+            if (causticsOverlay == null) return;
+            bool showCaustics = CurrentZone == UnderwaterZone.Shallow || CurrentZone == UnderwaterZone.Surface;
+            if (causticsOverlay.activeSelf != showCaustics)
+                causticsOverlay.SetActive(showCaustics);
+        }
+
+        private void SaveAndEnableUnderwaterFog()
+        {
+            RenderSettings.fog     = true;
+            RenderSettings.fogMode = FogMode.Exponential;
+            _targetFogColor        = surfaceFogColor;
+            _targetFogDensity      = surfaceFogDensity;
+        }
+
+        private void RestoreAboveWaterFog()
+        {
+            RenderSettings.fog        = _fogWasEnabled;
+            RenderSettings.fogMode    = _originalFogMode;
+            _targetFogColor           = _originalFogColor;
+            _targetFogDensity         = _originalFogDensity;
+            if (causticsOverlay != null) causticsOverlay.SetActive(false);
+        }
+
+        private void PlayBubbles(bool active)
+        {
+            if (bubbleParticles == null) return;
+            if (active)  bubbleParticles.Play();
+            else         bubbleParticles.Stop();
+        }
+
+        private void SetAudioLowPass(bool active)
+        {
+            if (_audioManager == null) return;
+            try
             {
-                sunLight.intensity = Mathf.Lerp(sunLight.intensity, _baseSunIntensity, Time.deltaTime * 5f);
+                string methodName = active ? "SetLowPassFilter" : "ClearLowPassFilter";
+                var method = _audioManager.GetType().GetMethod(methodName);
+                method?.Invoke(_audioManager, active ? new object[] { 800f } : Array.Empty<object>());
+            }
+            catch { }
+        }
+
+        private void CacheCrossSystemReferences()
+        {
+            _crossSystemCacheDone = true;
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                var amType = assembly.GetType("SWEF.Audio.AudioManager");
+                if (amType != null)
+                {
+                    _audioManager = FindObjectOfType(amType) as Component;
+                    if (_audioManager != null) break;
+                }
             }
         }
 
