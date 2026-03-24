@@ -1,73 +1,104 @@
-// WaterRippleSystem.cs — SWEF Ocean & Water Interaction System
+// WaterRippleSystem.cs — SWEF Phase 74: Water Interaction & Buoyancy System
 using System;
 using System.Collections.Generic;
 using UnityEngine;
 
 namespace SWEF.Water
 {
-    #region Data
-
-    /// <summary>Runtime state of a single active ripple event.</summary>
-    internal class RippleEvent
+    /// <summary>Pooled data for a single active ripple ring.</summary>
+    [Serializable]
+    internal class RippleInstance
     {
-        /// <summary>World-space origin of the ripple.</summary>
-        public Vector3 origin;
-
-        /// <summary>Elapsed time since the ripple was spawned (s).</summary>
-        public float age;
-
-        /// <summary>Total lifetime of this ripple event (s).</summary>
+        public Vector3 position;
+        public float radius;
+        public float intensity;
         public float lifetime;
-
-        /// <summary>Whether this slot is currently in use.</summary>
+        public float elapsed;
+        public float expansionSpeed;
         public bool active;
-
-        /// <summary>LineRenderer ring instances for this event.</summary>
-        public LineRenderer[] rings;
     }
 
-    #endregion
-
     /// <summary>
-    /// Phase 55 — MonoBehaviour that generates dynamic ripple ring effects at
-    /// object-water contact points and propagates them outward with fade-over-time decay.
+    /// Phase 74 — Generates expanding surface ripple rings from aircraft proximity
+    /// and water contact events.
     ///
-    /// <para>Ripple rings are rendered using <see cref="LineRenderer"/> components so
-    /// they work across all render pipelines without custom shaders.  The pool of
-    /// <see cref="RippleEvent"/> slots is pre-allocated in <see cref="Awake"/> to
-    /// prevent runtime allocations.</para>
+    /// <para>Ripple sources:</para>
+    /// <list type="bullet">
+    ///   <item>Low-altitude flyover (&lt; skim threshold): circular ripple ring.</item>
+    ///   <item>Water contact (splash): expanding ring from impact point.</item>
+    ///   <item>Floating aircraft: continuous small ripples.</item>
+    ///   <item>Engine wash: directional cone behind aircraft (future).</item>
+    /// </list>
     ///
-    /// <para>Integration point: Call <see cref="SpawnRipple"/> from
-    /// <see cref="BuoyancyController"/>, <see cref="SplashEffectController"/>,
-    /// or any other component that needs wake/ripple effects.</para>
+    /// <para>Rendering is projector/decal-based or shader normal-displacement;
+    /// representation uses <see cref="LineRenderer"/> rings in this implementation.</para>
     /// </summary>
+    [DisallowMultipleComponent]
     public class WaterRippleSystem : MonoBehaviour
     {
         #region Inspector
 
-        [Header("Interaction Profile")]
-        [Tooltip("Profile containing RippleSettings values.")]
-        [SerializeField] private WaterInteractionProfile profile;
+        [Header("Quality")]
+        [Tooltip("Maximum simultaneous active ripple instances (performance cap).")]
+        [SerializeField] private int maxActiveRipples = 20;
+
+        [Header("Flyover Ripples")]
+        [Tooltip("Expansion speed (m/s) for flyover-triggered ripples.")]
+        [SerializeField] private float flyoverExpansionSpeed = 8f;
+        [Tooltip("Initial intensity of flyover ripples.")]
+        [SerializeField] private float flyoverIntensity = 0.7f;
+        [Tooltip("Interval (s) between flyover ripple spawns.")]
+        [SerializeField] private float flyoverSpawnInterval = 0.5f;
+
+        [Header("Contact Ripples")]
+        [Tooltip("Expansion speed (m/s) for impact-triggered ripples.")]
+        [SerializeField] private float contactExpansionSpeed = 12f;
+        [Tooltip("Initial intensity of contact ripples.")]
+        [SerializeField] private float contactIntensity = 1.0f;
+
+        [Header("Floating Ripples")]
+        [Tooltip("Interval (s) between small floating ripples.")]
+        [SerializeField] private float floatRippleInterval = 1.5f;
+        [Tooltip("Expansion speed (m/s) for floating ripples.")]
+        [SerializeField] private float floatExpansionSpeed = 3f;
+        [Tooltip("Initial intensity of floating ripples.")]
+        [SerializeField] private float floatIntensity = 0.3f;
 
         [Header("Rendering")]
-        [Tooltip("Material applied to all ripple ring LineRenderers.")]
-        [SerializeField] private Material rippleMaterial;
+        [Tooltip("Prefab with a LineRenderer used to render each ripple ring. Leave null to skip rendering.")]
+        [SerializeField] private LineRenderer rippleRingPrefab;
+        [Tooltip("Number of line segments per ripple ring.")]
+        [SerializeField] private int ringSegments = 32;
+        [Tooltip("Maximum camera distance (m) at which ripples are rendered.")]
+        [SerializeField] private float maxRenderDistance = 500f;
 
-        [Tooltip("Layer mask used when positioning ripple rings on the water surface.")]
-        [SerializeField] private LayerMask waterLayerMask;
+        #endregion
 
-        [Header("Debug")]
-        [Tooltip("Log ripple spawn events to the console.")]
-        [SerializeField] private bool debugLog;
+        #region Public Properties
+
+        /// <summary>Current number of active (non-expired) ripple instances.</summary>
+        public int ActiveRippleCount
+        {
+            get
+            {
+                int count = 0;
+                foreach (var r in _pool) if (r.active) count++;
+                return count;
+            }
+        }
 
         #endregion
 
         #region Private State
 
-        private RippleSettings _settings;
-        private RippleEvent[] _pool;
-        private int _nextSlot;
-        private const int CircleSegments = 32;
+        private readonly List<RippleInstance> _pool = new List<RippleInstance>();
+        private readonly List<LineRenderer>   _rings = new List<LineRenderer>();
+
+        private BuoyancyController _buoyancy;
+        private WaterConfig _config;
+        private float _flyoverTimer;
+        private float _floatTimer;
+        private Camera _cam;
 
         #endregion
 
@@ -75,13 +106,65 @@ namespace SWEF.Water
 
         private void Awake()
         {
-            _settings = profile != null ? profile.ripple : new RippleSettings();
-            BuildPool();
+            _buoyancy = GetComponent<BuoyancyController>();
+        }
+
+        private void Start()
+        {
+            _config = WaterSurfaceManager.Instance != null
+                ? WaterSurfaceManager.Instance.Config
+                : new WaterConfig();
+
+            _cam = Camera.main;
+
+            // Pre-allocate pool
+            for (int i = 0; i < maxActiveRipples; i++)
+            {
+                _pool.Add(new RippleInstance());
+                if (rippleRingPrefab != null)
+                {
+                    var lr = Instantiate(rippleRingPrefab, transform);
+                    lr.positionCount = ringSegments + 1;
+                    lr.enabled = false;
+                    _rings.Add(lr);
+                }
+                else
+                {
+                    _rings.Add(null);
+                }
+            }
+
+            if (_buoyancy != null)
+            {
+                _buoyancy.OnWaterContact += OnWaterContact;
+            }
+
+            if (WaterSurfaceManager.Instance != null)
+            {
+                WaterSurfaceManager.Instance.OnWaterDetected += OnWaterDetected;
+            }
         }
 
         private void Update()
         {
-            UpdateRipples();
+            if (_cam == null) _cam = Camera.main;
+
+            float dt = Time.deltaTime;
+            _flyoverTimer -= dt;
+            _floatTimer   -= dt;
+
+            HandleFlyoverRipples();
+            HandleFloatingRipples();
+            UpdateRipples(dt);
+        }
+
+        private void OnDestroy()
+        {
+            if (_buoyancy != null)
+                _buoyancy.OnWaterContact -= OnWaterContact;
+
+            if (WaterSurfaceManager.Instance != null)
+                WaterSurfaceManager.Instance.OnWaterDetected -= OnWaterDetected;
         }
 
         #endregion
@@ -89,125 +172,166 @@ namespace SWEF.Water
         #region Public API
 
         /// <summary>
-        /// Spawns a new ripple event at <paramref name="worldPos"/> with the given
-        /// impact <paramref name="velocityMagnitude"/> (used to scale initial ring opacity).
+        /// Spawns a new ripple at the specified world position.
+        /// Oldest active ripple is recycled if the pool is full.
         /// </summary>
-        /// <param name="worldPos">World-space contact point on or near the water surface.</param>
-        /// <param name="velocityMagnitude">Impact speed (m/s) — larger values produce brighter rings.</param>
-        public void SpawnRipple(Vector3 worldPos, float velocityMagnitude = 1f)
+        /// <param name="position">World-space spawn position (XZ used; Y snapped to water surface).</param>
+        /// <param name="initialIntensity">Starting intensity [0–1].</param>
+        /// <param name="expansionSpeed">Outward expansion speed in m/s.</param>
+        public void SpawnRipple(Vector3 position, float initialIntensity, float expansionSpeed)
         {
-            RippleEvent slot = AcquireSlot();
-            slot.origin   = new Vector3(worldPos.x, WaterSurfaceManager.Instance != null
-                                ? WaterSurfaceManager.Instance.GetWaterHeightAt(worldPos)
-                                : worldPos.y, worldPos.z);
-            slot.age      = 0f;
-            slot.lifetime = _settings.lifetime;
-            slot.active   = true;
+            float lifetime = _config != null ? _config.rippleLifetime : 3f;
 
-            if (debugLog)
-                Debug.Log($"[WaterRipple] Spawned ripple at {slot.origin}, vel={velocityMagnitude:F1}");
+            // Find a free slot or recycle the oldest
+            int slot = FindFreeSlot();
+            RippleInstance r = _pool[slot];
+            r.position       = SnapToWater(position);
+            r.radius         = 0f;
+            r.intensity      = initialIntensity;
+            r.lifetime       = lifetime;
+            r.elapsed        = 0f;
+            r.expansionSpeed = expansionSpeed;
+            r.active         = true;
+        }
+
+        /// <summary>Immediately deactivates all active ripple instances.</summary>
+        public void ClearAllRipples()
+        {
+            foreach (var r in _pool)
+                r.active = false;
+            foreach (var lr in _rings)
+                if (lr != null) lr.enabled = false;
         }
 
         #endregion
 
-        #region Private Helpers
+        #region Private — Ripple Sources
 
-        private void BuildPool()
+        private void HandleFlyoverRipples()
         {
-            _pool = new RippleEvent[_settings.maxActiveRipples];
-            for (int i = 0; i < _pool.Length; i++)
+            if (_buoyancy == null) return;
+            WaterContactState state = _buoyancy.State.contactState;
+            if (state != WaterContactState.Skimming && state != WaterContactState.Airborne) return;
+
+            float alt = transform.position.y
+                - (WaterSurfaceManager.Instance != null
+                    ? WaterSurfaceManager.Instance.GetWaterHeight(transform.position)
+                    : 0f);
+
+            float threshold = _config != null ? _config.skimAltitudeThreshold : 5f;
+            if (alt > threshold || alt < 0f) return;
+
+            if (_flyoverTimer <= 0f)
             {
-                _pool[i] = new RippleEvent
+                _flyoverTimer = flyoverSpawnInterval;
+                float intensity = flyoverIntensity * (1f - alt / threshold);
+                SpawnRipple(transform.position, intensity, flyoverExpansionSpeed);
+            }
+        }
+
+        private void HandleFloatingRipples()
+        {
+            if (_buoyancy == null) return;
+            if (_buoyancy.State.contactState != WaterContactState.Floating) return;
+
+            if (_floatTimer <= 0f)
+            {
+                _floatTimer = floatRippleInterval;
+                SpawnRipple(transform.position, floatIntensity, floatExpansionSpeed);
+            }
+        }
+
+        private void OnWaterContact(SplashEvent evt)
+        {
+            float intensity = Mathf.Clamp01(contactIntensity * (evt.impactForce / 5000f + 0.3f));
+            SpawnRipple(evt.position, intensity, contactExpansionSpeed);
+        }
+
+        private void OnWaterDetected(WaterBodyType _)
+        {
+            // Spawn a subtle ripple when we first detect water below
+            SpawnRipple(transform.position, 0.4f, flyoverExpansionSpeed * 0.5f);
+        }
+
+        #endregion
+
+        #region Private — Update & Render
+
+        private void UpdateRipples(float dt)
+        {
+            float maxRadius = _config != null ? _config.rippleMaxRadius : 50f;
+            bool tooFar = _cam != null
+                && Vector3.Distance(_cam.transform.position, transform.position) > maxRenderDistance;
+
+            for (int i = 0; i < _pool.Count; i++)
+            {
+                var r = _pool[i];
+                if (!r.active) continue;
+
+                r.elapsed += dt;
+                r.radius  += r.expansionSpeed * dt;
+                r.intensity = Mathf.Clamp01(1f - r.elapsed / r.lifetime);
+
+                if (r.elapsed >= r.lifetime || r.radius >= maxRadius)
                 {
-                    rings = CreateRingRenderers(_settings.ringCount),
-                    active = false
-                };
-                SetRingsVisible(_pool[i], false);
-            }
-        }
-
-        private LineRenderer[] CreateRingRenderers(int count)
-        {
-            var rings = new LineRenderer[count];
-            for (int i = 0; i < count; i++)
-            {
-                var go = new GameObject($"RippleRing_{i}");
-                go.transform.SetParent(transform, false);
-                var lr = go.AddComponent<LineRenderer>();
-                lr.loop         = true;
-                lr.useWorldSpace = true;
-                lr.positionCount = CircleSegments;
-                lr.startWidth    = _settings.ringWidth;
-                lr.endWidth      = _settings.ringWidth;
-                if (rippleMaterial != null) lr.material = rippleMaterial;
-                rings[i] = lr;
-            }
-            return rings;
-        }
-
-        private RippleEvent AcquireSlot()
-        {
-            // Prefer an inactive slot
-            for (int i = 0; i < _pool.Length; i++)
-            {
-                if (!_pool[i].active)
-                    return _pool[i];
-            }
-            // Recycle the oldest (round-robin)
-            _nextSlot = (_nextSlot + 1) % _pool.Length;
-            return _pool[_nextSlot];
-        }
-
-        private void UpdateRipples()
-        {
-            for (int i = 0; i < _pool.Length; i++)
-            {
-                var evt = _pool[i];
-                if (!evt.active) continue;
-
-                evt.age += Time.deltaTime;
-                float t = evt.age / evt.lifetime; // 0..1 age fraction
-
-                if (t >= 1f)
-                {
-                    evt.active = false;
-                    SetRingsVisible(evt, false);
+                    r.active = false;
+                    if (_rings[i] != null) _rings[i].enabled = false;
                     continue;
                 }
 
-                SetRingsVisible(evt, true);
+                if (tooFar) continue;
+                RenderRing(i, r);
+            }
+        }
 
-                for (int r = 0; r < evt.rings.Length; r++)
+        private void RenderRing(int index, RippleInstance r)
+        {
+            if (index >= _rings.Count || _rings[index] == null) return;
+            LineRenderer lr = _rings[index];
+            lr.enabled = true;
+
+            float alpha = r.intensity;
+            lr.startColor = new Color(1f, 1f, 1f, alpha);
+            lr.endColor   = new Color(1f, 1f, 1f, 0f);
+            lr.startWidth = 0.2f * r.intensity;
+            lr.endWidth   = 0.05f;
+
+            for (int s = 0; s <= ringSegments; s++)
+            {
+                float angle = (s / (float)ringSegments) * Mathf.PI * 2f;
+                Vector3 point = r.position + new Vector3(
+                    Mathf.Cos(angle) * r.radius,
+                    0.01f,
+                    Mathf.Sin(angle) * r.radius);
+                lr.SetPosition(s, point);
+            }
+        }
+
+        private int FindFreeSlot()
+        {
+            for (int i = 0; i < _pool.Count; i++)
+                if (!_pool[i].active) return i;
+
+            // Pool full — recycle the ripple with the highest elapsed time (oldest)
+            int oldestIndex = 0;
+            float maxElapsed = -1f;
+            for (int i = 0; i < _pool.Count; i++)
+            {
+                if (_pool[i].elapsed > maxElapsed)
                 {
-                    // Stagger ring phases so they fan outward
-                    float ringFrac = (float)r / Mathf.Max(1, evt.rings.Length - 1);
-                    float ringT = Mathf.Clamp01(t - ringFrac * 0.2f);
-                    float radius = ringT * _settings.maxRadius;
-                    float alpha  = Mathf.Clamp01(1f - ringT) * (1f - t);
-
-                    UpdateRingPositions(evt.rings[r], evt.origin, radius);
-
-                    Color c = evt.rings[r].startColor;
-                    c.a = alpha;
-                    evt.rings[r].startColor = c;
-                    evt.rings[r].endColor   = c;
+                    maxElapsed  = _pool[i].elapsed;
+                    oldestIndex = i;
                 }
             }
+            return oldestIndex;
         }
 
-        private static void UpdateRingPositions(LineRenderer lr, Vector3 centre, float radius)
+        private Vector3 SnapToWater(Vector3 pos)
         {
-            for (int s = 0; s < CircleSegments; s++)
-            {
-                float angle = s / (float)CircleSegments * Mathf.PI * 2f;
-                lr.SetPosition(s, centre + new Vector3(Mathf.Cos(angle) * radius, 0f, Mathf.Sin(angle) * radius));
-            }
-        }
-
-        private static void SetRingsVisible(RippleEvent evt, bool visible)
-        {
-            for (int r = 0; r < evt.rings.Length; r++)
-                evt.rings[r].enabled = visible;
+            float waterY = WaterSurfaceManager.Instance != null
+                ? WaterSurfaceManager.Instance.GetWaterHeight(pos)
+                : (_config != null ? _config.waterLevel : 0f);
+            return new Vector3(pos.x, waterY + 0.01f, pos.z);
         }
 
         #endregion
