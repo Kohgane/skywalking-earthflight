@@ -52,6 +52,7 @@ Assets/SWEF/
 │   ├── HiddenGems/       # HiddenGemData, HiddenGemDatabase, HiddenGemManager, GemDiscoveryUI, GemCollectionUI, GemRadarUI, GemMinimapIntegration, GemTourGenerator, GemStatisticsTracker, Editor/HiddenGemEditorWindow
 │   ├── IAP/              # IAPManager, IAPProductCatalog, IAPRestoreButton
 │   ├── Journal/          # JournalData, JournalManager, JournalAutoRecorder, JournalPanelUI, JournalDetailUI, JournalStatisticsUI, JournalShareController, JournalSearchEngine, JournalTagManager, JournalComparisonUI
+│   ├── Landing/          # LandingEnums, LandingConfig, RunwayData, AirportData, LandingDetector, ApproachGuidance, LandingGearController, AutoLandAssist, LandingUI, AirportRegistry
 │   ├── LOD/              # LODManager, LODTransitionBlender, OcclusionCullingHelper
 │   ├── Leaderboard/      # GlobalLeaderboardService, GlobalLeaderboardEntry, LeaderboardUI, LeaderboardEntryUI, LeaderboardCategory, LeaderboardTimeFilter, WeeklyChallengeManager, WeeklyChallengeUI
 │   ├── Localization/     # LocalizationManager, LanguageDatabase, LocalizationUI, LocalizedText, LocalizedImage, FontManager, PluralResolver, RTLTextHandler
@@ -1672,71 +1673,80 @@ HUDDashboard (Singleton)
 
 ---
 
-## Phase 67 — Radar & Threat Detection System
+## Phase 68 — Landing & Airport System
 
-### New Scripts (9 files) — `Assets/SWEF/Scripts/Radar/` — namespace `SWEF.Radar`
+### New Scripts (10 files) — `Assets/SWEF/Scripts/Landing/` — namespace `SWEF.Landing`
 
 | # | File | Description |
 |---|------|-------------|
-| 1 | `RadarEnums.cs` | Enums — `ContactClassification` (Unknown/Friendly/Neutral/Hostile/Civilian/Landmark/Event), `ThreatLevel` (None/Low/Medium/High/Imminent), `RadarMode` (Off/Passive/Active/Search/Track), `BlipSize` (Small/Medium/Large/VeryLarge) |
-| 2 | `RadarContact.cs` | Data class — unique `contactId`, `trackedTransform`, classification, threat, size, position, velocity, distance, bearing, elevation, signal strength, first/last detected times, `isLocked`, `displayName`, `contactIcon` |
-| 3 | `RadarConfig.cs` | Static config — `DefaultRadarRange`, `ScanInterval`, `MaxContacts`, `ContactTimeout`, `SignalFalloffStart`, threat thresholds (`CloseRange`, `MediumRange`, `ClosingSpeedThreshold`), jammer defaults, zoom presets, display colors per classification with `GetClassificationColor()` helper |
-| 4 | `RadarSystem.cs` | Singleton MonoBehaviour — `Physics.OverlapSphere` scan coroutine, IFF classification via `IFFTransponder`, signal-strength falloff, contact create/update/expire, `LockTarget`/`UnlockTarget`/`CycleTargets`, `GetNearestHostile`/`GetNearestContact`/`GetContactsByClassification`, events `OnContactDetected`/`OnContactLost`/`OnTargetLocked`/`OnTargetUnlocked` |
-| 5 | `IFFTransponder.cs` | MonoBehaviour attached to detectable objects — `identity`, `transponderCode`, `displayName`, `radarSignature`, `radarIcon`, `isTransponderActive`, `signatureModifier`, `baseThreatLevel`; exposes `EffectiveIdentity` (returns Unknown when transponder is silent) |
-| 6 | `ThreatDetector.cs` | MonoBehaviour — periodic `EvaluateThreat()` for each contact based on classification, distance, closing speed, heading-toward-player; `prioritizedThreats` sorted by level, `GetHighestThreat()`, `hostileCount`, `imminentThreatCount`; events `OnThreatLevelChanged`/`OnImminentThreat`; Phase 65 WarningSystem integration via `#if SWEF_WARNINGSYSTEM_AVAILABLE` |
-| 7 | `RadarDisplay.cs` | MonoBehaviour UI — `RadarDisplayMode` (PlanPosition/BScope/ForwardLooking), rotating sweep line (PPI), blip pool keyed by contactId, per-classification color coding, locked-target blink ring, `CycleZoom()`/`SetDisplayMode()`, range rings label, heading indicator, north indicator |
-| 8 | `MissileWarningReceiver.cs` | MonoBehaviour — `Physics.OverlapSphere` projectile detection at configurable Hz, closing-vector filter, direction indicators (`incomingBearing`/`incomingElevation`), looping audio tones for missile/lock warnings, `NotifyRadarLock()`/`ClearRadarLock()`, events `OnMissileDetected`/`OnMissileLockDetected`/`OnThreatCleared` |
-| 9 | `RadarJammer.cs` | MonoBehaviour — `ToggleJammer()` with cooldown guard, `jamRange`/`jamEffectiveness`/`powerConsumption`, `DeployChaffs()`/`DeployFlares()` with particle effects, `chaffCount`/`flareCount` charges, `isOnCooldown`/`cooldownRemaining` state, events `OnJammerToggled`/`OnChaffDeployed`/`OnFlareDeployed` |
+| 1 | `LandingEnums.cs` | Enums — `LandingState` (9 values: InFlight→Taxiing/Aborted), `GearState` (5 values), `ApproachType` (Visual/ILS/GPS/CircleToLand), `RunwayCondition` (Dry/Wet/Icy/Snow/Flooded), `AirportSize` (Small/Medium/Large/International) |
+| 2 | `LandingConfig.cs` | Static config — glide slope defaults, safe/survivable touchdown speeds, gear timing, auto-deploy altitude, auto-land capture altitude, max crosswind, flare altitude, approach speed factor, landing score weights (CenterlineWeight=0.3, VerticalSpeedWeight=0.4, SmoothnessWeight=0.3), grade thresholds |
+| 3 | `RunwayData.cs` | `[Serializable]` class — runway ID, heading, length/width, threshold & end world positions, surface condition, glide slope angle, decision altitude, ILS/lighting flags; `GetRunwayDirection()` (normalized threshold→end vector), `GetRunwayCenter()` (average Y) |
+| 4 | `AirportData.cs` | ScriptableObject — ICAO ID, display name, city/country, size, lat/lon/elevation, `List<RunwayData>`, repair facility, fuel station, service tags, ILS frequency, airport icon sprite |
+| 5 | `LandingDetector.cs` | MonoBehaviour — `LandingState` machine (InFlight→Approaching→OnFinal→Flaring→Touchdown→Rolling→Stopped), downward raycast ground detection, centreline deviation check, composite landing score (centerline + vertical speed + smoothness), `GetLandingGrade()`, events `OnLandingStateChanged`, `OnTouchdown`, `OnLandingScored` |
+| 6 | `ApproachGuidance.cs` | MonoBehaviour — ILS localizer deviation (cross-track / beam half-width), glide slope deviation (actual vs ideal altitude on tan slope), recommended speed (stallSpeed × 1.3), recommended altitude, `isEstablished` flag within tolerances, `SetTargetRunway` / `CancelApproach`, events `OnApproachEstablished` / `OnApproachDeviation` |
+| 7 | `LandingGearController.cs` | MonoBehaviour — `GearState` machine with deploy/retract coroutines, `DeployProgress` 0→1, per-leg `Animator` drive via `DeployProgress` parameter, audio cues (deploy/retract/locked), `ToggleGear()` / `DeployGear()` / `RetractGear()` / `DamageGear()`, auto-deploy altitude warning via CockpitHUD `WarningSystem` (guarded by `#if SWEF_WARNINGSYSTEM_AVAILABLE`), `OnGearStateChanged` event |
+| 8 | `AutoLandAssist.cs` | MonoBehaviour — `AutoLandMode` enum (Off/GuidanceOnly/SemiAuto/FullAuto), crosswind limit check, capture at altitude, SemiAuto applies roll (localizer) + pitch (glide slope) corrections, FullAuto adds throttle management and flare pitch-up, `Engage(runway, mode)` / `Disengage()`, weather crosswind via `#if SWEF_WEATHER_AVAILABLE`, events `OnAutoLandModeChanged`, `OnAutoLandCapture`, `OnAutoLandDisengage` |
+| 9 | `LandingUI.cs` | MonoBehaviour — localizer / glide slope `RectTransform` needles, combined crosshair, distance/state/gear text, gear icon color (green/red/yellow), 4-light PAPI display (`UpdatePAPI` maps −1…+1 deviation to red/white pattern), animated landing score popup coroutine, runway overlay, auto-land mode label; subscribes to `LandingDetector.OnLandingScored` and `LandingGearController.OnGearStateChanged` |
+| 10 | `AirportRegistry.cs` | Singleton MonoBehaviour — `RegisterAirport` / `UnregisterAirport`, `GetNearestAirport(pos)`, `GetNearestAirportWithService(pos, service)`, `GetAirportsInRange(pos, range)`, `GetAirportById(icao)`, `GetBestRunway(airport, windDir)` (headwind alignment score), built-in "repair"/"fuel" service flag shortcuts, `TotalAirports` property |
 
 ### Architecture
 
 ```
-RadarSystem (Singleton)
-│   ├── ScanRoutine (coroutine, every scanInterval)
-│   │       └── Physics.OverlapSphere → IFFTransponder read → create/update RadarContact
-│   ├── CleanupStaleContacts (Update, contactTimeout)
-│   ├── LockTarget / UnlockTarget / CycleTargets
-│   └── Events: OnContactDetected, OnContactLost, OnTargetLocked, OnTargetUnlocked
+AirportRegistry (Singleton)
+│   ├── RegisterAirport / UnregisterAirport
+│   ├── GetNearestAirport(pos) — min distance scan
+│   ├── GetNearestAirportWithService(pos, service) — repair/fuel/tag filter
+│   ├── GetAirportsInRange(pos, range)
+│   ├── GetAirportById(icao) — O(n) lookup
+│   └── GetBestRunway(airport, windDir) — headwind alignment score
 │
-├── IFFTransponder   → attached to any detectable scene object
-│       identity, transponderCode, signatureModifier, baseThreatLevel
+LandingDetector (MonoBehaviour)
+│   ├── State machine: InFlight → Approaching → OnFinal → Flaring → Touchdown → Rolling → Stopped
+│   ├── Downward raycast ground contact + centreline deviation check
+│   ├── Composite score: CenterlineWeight(0.3) + VerticalSpeedWeight(0.4) + SmoothnessWeight(0.3)
+│   └── Events: OnLandingStateChanged, OnTouchdown, OnLandingScored
 │
-├── ThreatDetector   → subscribes to RadarSystem contacts
-│   ├── EvaluateThreat: classification + distance + closing speed + heading dot
-│   ├── prioritizedThreats[] sorted by ThreatLevel descending
-│   └── Events: OnThreatLevelChanged, OnImminentThreat
-│           └── #if SWEF_WARNINGSYSTEM_AVAILABLE → WarningSystem.AddWarning("THREAT", ...)
+ApproachGuidance (MonoBehaviour)
+│   ├── LocalizerDeviation  — cross-track / beam half-width (±1)
+│   ├── GlideSlopeDeviation — altitude error / beam half-width (±1)
+│   ├── RecommendedSpeed    — stallSpeed × ApproachSpeedFactor
+│   ├── RecommendedAltitude — ideal altitude on glide slope
+│   └── Events: OnApproachEstablished, OnApproachDeviation
 │
-├── RadarDisplay     → reads RadarSystem.contacts each frame
-│   ├── PlanPosition: polar blip placement, rotating sweep line
-│   ├── BScope: azimuth/range grid
-│   ├── ForwardLooking: azimuth/elevation grid
-│   ├── Blip color ← RadarConfig.GetClassificationColor(classification)
-│   ├── Lock ring blink on lockedContact
-│   └── CycleZoom (2 km / 5 km / 10 km presets)
+LandingGearController (MonoBehaviour)
+│   ├── DeployGear() / RetractGear() / ToggleGear() / DamageGear()
+│   ├── Deploy/retract coroutine → DeployProgress 0→1
+│   ├── Animator drive + audio cues (deploy/retract/locked)
+│   └── Auto-deploy warning → SWEF.CockpitHUD.WarningSystem (#if SWEF_WARNINGSYSTEM_AVAILABLE)
 │
-├── MissileWarningReceiver  → OverlapSphere on missileLayers
-│   ├── Closing-vector filter (dot product > 0.5)
-│   ├── incomingBearing / incomingElevation direction indicators
-│   └── Audio: missileWarningTone (loop) / lockWarningTone
+AutoLandAssist (MonoBehaviour)
+│   ├── GuidanceOnly: display only
+│   ├── SemiAuto: roll (localizer) + pitch (glide slope) corrections
+│   ├── FullAuto: + throttle management + flare pitch-up
+│   ├── Crosswind check → SWEF.Weather.WeatherManager (#if SWEF_WEATHER_AVAILABLE)
+│   └── Events: OnAutoLandModeChanged, OnAutoLandCapture, OnAutoLandDisengage
 │
-└── RadarJammer
-    ├── ToggleJammer → isJamming, cooldown after deactivation
-    ├── DeployChaffs / DeployFlares (particle effects + counters)
-    └── powerConsumption drain while active
+LandingUI (MonoBehaviour)
+│   ├── ILS needles (localizer H bar, glide slope V bar, combined crosshair)
+│   ├── PAPI 4-light display (red/white by deviation)
+│   ├── Gear icon (green/yellow/red) + status text
+│   ├── Landing score popup (coroutine, configurable duration)
+│   └── Auto-land mode label
 ```
 
 ### Integration Points
 
 | Script | Integrates With |
 |--------|----------------|
-| `RadarSystem` | `Physics.OverlapSphere` — Unity physics for scan |
-| `RadarSystem` | `IFFTransponder` — reads identity, signature, display name |
-| `ThreatDetector` | `RadarSystem.contacts` — subscribes for periodic evaluation |
-| `ThreatDetector` | `SWEF.CockpitHUD.WarningSystem.AddWarning` — guarded by `#if SWEF_WARNINGSYSTEM_AVAILABLE` (Phase 65) |
-| `RadarDisplay` | `RadarSystem.contacts` — reads each frame for blip positions |
-| `RadarDisplay` | `TMPro.TextMeshProUGUI` — range and heading labels |
-| `RadarDisplay` | `UnityEngine.UI.Image` — blip and sweep-line rendering |
-| `MissileWarningReceiver` | `Physics.OverlapSphere` — missile layer detection |
-| `MissileWarningReceiver` | `Rigidbody.linearVelocity` — closing-speed calculation |
-| `RadarJammer` | `ParticleSystem` — chaff/flare visual effects |
+| `LandingDetector` | `UnityEngine.Physics.Raycast` — ground contact and AGL |
+| `LandingDetector` | `UnityEngine.Rigidbody` — vertical speed and position |
+| `LandingGearController` | `SWEF.CockpitHUD.WarningSystem.AddWarning()` — gear-up alert (guarded `#if SWEF_WARNINGSYSTEM_AVAILABLE`) |
+| `AutoLandAssist` | `SWEF.Weather.WeatherManager` — crosswind check (guarded `#if SWEF_WEATHER_AVAILABLE`) |
+| `AutoLandAssist` | `ApproachGuidance` — ILS deviations for flight-control corrections |
+| `AutoLandAssist` | `LandingDetector` — state for flare trigger |
+| `LandingUI` | `TMPro.TextMeshProUGUI` — all text elements |
+| `LandingUI` | `UnityEngine.UI.Image` — PAPI lights, gear icon |
+| `LandingUI` | `LandingDetector.OnLandingScored` — score popup |
+| `LandingUI` | `LandingGearController.OnGearStateChanged` — gear icon updates |
+| `AirportData` | `SWEF.Damage.RepairSystem` — `hasRepairFacility` flag (Phase 66) |
