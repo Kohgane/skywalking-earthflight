@@ -47,6 +47,7 @@ Assets/SWEF/
 │   ├── Favorites/        # FavoriteManager, FavoritesUI
 │   ├── Flight/           # FlightController, AltitudeController, TouchInputRouter, HoldButton, AeroPhysicsModel, AeroState, FlightPhysicsIntegrator, FlightPhysicsSnapshot, OrbitalMechanics, OrbitState, JetTrail, CameraController, StallWarningSystem
 │   ├── FlightSchool/     # FlightSchoolData, FlightSchoolManager, FlightInstructor, FlightSchoolUI, FlightSchoolAnalyticsBridge
+│   ├── Fuel/             # FuelEnums, FuelConfig, FuelTank, FuelConsumptionModel, FuelManager, RefuelStation, FuelGaugeUI, EmergencyFuelProtocol
 │   ├── GuidedTour/       # TourData, TourManager, WaypointNavigator, WaypointHUD, TourNarrationController, TourCatalogUI, TourProgressTracker, TourMinimapOverlay
 │   ├── Haptic/           # HapticManager, HapticPattern, HapticTriggerZone
 │   ├── HiddenGems/       # HiddenGemData, HiddenGemDatabase, HiddenGemManager, GemDiscoveryUI, GemCollectionUI, GemRadarUI, GemMinimapIntegration, GemTourGenerator, GemStatisticsTracker, Editor/HiddenGemEditorWindow
