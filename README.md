@@ -57,6 +57,7 @@ Assets/SWEF/
 │   ├── Leaderboard/      # GlobalLeaderboardService, GlobalLeaderboardEntry, LeaderboardUI, LeaderboardEntryUI, LeaderboardCategory, LeaderboardTimeFilter, WeeklyChallengeManager, WeeklyChallengeUI
 │   ├── Localization/     # LocalizationManager, LanguageDatabase, LocalizationUI, LocalizedText, LocalizedImage, FontManager, PluralResolver, RTLTextHandler
 │   ├── Minimap/          # MinimapData, MinimapManager, MinimapRenderer, MinimapIconConfig, MinimapBlipProvider, MinimapCompass, MinimapSettingsUI, RadarOverlay
+│   ├── Mission/          # MissionEnums, MissionConfig, MissionObjective, MissionCheckpoint, MissionReward, MissionResult, MissionData, MissionManager, MissionBriefingUI, MissionTrackerUI
 │   ├── Multiplayer/      # MultiplayerManager, NetworkManager2, PlayerSyncController, PlayerSyncSystem, FormationFlyingManager, CoopMissionSystem, MultiplayerWeatherSync, MultiplayerHUD, MultiplayerScoreboard, MultiplayerRace, RoomManager, PlayerAvatar, RemotePlayerRenderer, NetworkTransport, VoiceChatManager, ProximityChat
 │   ├── MusicPlayer/      # MusicPlayerData, MusicPlayerManager, MusicPlaylistController, MusicPlayerUI, MusicLibraryUI, MusicFlightSync, MusicWeatherMixer, MusicVisualizerEffect, MusicMultiplayerSync, MusicEQController, MusicCrossfadeController, MusicSleepTimer, LrcParser, LyricsDatabase, KaraokeController, LyricsDisplayUI, LyricsEditorUI
 │   ├── Narration/        # NarrationData, LandmarkDatabase, NarrationManager, NarrationAudioController, NarrationSubtitleUI, NarrationHudPanel, LandmarkDiscoveryTracker, LandmarkMinimapIntegration, NarrationSettingsUI, NarrationAnalytics, Editor/LandmarkDatabaseEditorWindow
@@ -1750,3 +1751,63 @@ LandingUI (MonoBehaviour)
 | `LandingUI` | `LandingDetector.OnLandingScored` — score popup |
 | `LandingUI` | `LandingGearController.OnGearStateChanged` — gear icon updates |
 | `AirportData` | `SWEF.Damage.RepairSystem` — `hasRepairFacility` flag (Phase 66) |
+
+---
+
+## Phase 70 — Mission Briefing & Objective System
+
+The Mission Briefing & Objective system provides structured missions with full-screen briefing screens, trackable objectives, ordered flight checkpoints, time-limit countdown, scoring, and rating evaluation. All scripts live in `Assets/SWEF/Scripts/Mission/` (namespace `SWEF.Mission`).
+
+### Scripts
+
+| # | File | Class | Description |
+|---|------|-------|-------------|
+| 1 | `MissionEnums.cs` | — | `MissionType`, `MissionStatus`, `ObjectiveStatus`, `MissionDifficulty`, `MissionRating` enums |
+| 2 | `MissionConfig.cs` | `MissionConfig` | Static constants: checkpoint radius, rating thresholds and multipliers, time-bonus rate, typewriter speed |
+| 3 | `MissionObjective.cs` | `MissionObjective` | Serializable objective with progress tracking, per-objective timer, `Advance()` / `Complete()` / `Fail()`, and `OnObjectiveStatusChanged` event |
+| 4 | `MissionCheckpoint.cs` | `MissionCheckpoint` | Serializable flight checkpoint with position, radius, heading/altitude/speed constraints, and ring-visual settings |
+| 5 | `MissionReward.cs` | `MissionReward` | Serializable reward bundle: base XP + currency, time bonus, optional bonus, per-rating multipliers, unlock lists, `CalculateFinalExperience` / `CalculateFinalCurrency` |
+| 6 | `MissionResult.cs` | `MissionResult` | Completed-run snapshot: rating, time, score, objective/checkpoint tallies, personal-best flags, `CalculateRating()`, `GetSummaryText()` |
+| 7 | `MissionData.cs` | `MissionData` | `ScriptableObject` mission template: identity, classification, visuals, timing, world placement, objective/checkpoint lists, reward, prerequisites |
+| 8 | `MissionManager.cs` | `MissionManager` | Singleton MonoBehaviour: full mission lifecycle (`LoadMission → StartMission → Complete/Fail/Abandon`), checkpoint proximity polling, per-objective timer ticking, time-limit enforcement, result generation |
+| 9 | `MissionBriefingUI.cs` | `MissionBriefingUI` | Full-screen briefing panel: banner/icon images, typewriter body text, objective list, reward preview, fade-in animation, narration playback |
+| 10 | `MissionTrackerUI.cs` | `MissionTrackerUI` | In-flight HUD: active objective + progress bar, timer, checkpoint counter, 3D→2D waypoint dot, edge-clamped directional arrow, distance label, objective mini-list with colour-coded status |
+
+### Architecture Overview
+
+```
+MissionManager (Singleton)
+│   ├── LoadMission(MissionData) → Briefing state
+│   ├── StartMission()           → InProgress, starts checkpoint coroutine
+│   ├── PauseMission() / ResumeMission()
+│   ├── CompleteMission()        → BuildResult → RecordAndBroadcast → Completed
+│   ├── FailMission(reason)      → BuildResult → RecordAndBroadcast → Failed
+│   ├── AbandonMission()         → Abandoned
+│   ├── RestartMission()         → reloads current MissionData
+│   ├── IsMissionAvailable()     → prerequisite check
+│   ├── Checkpoint polling (WaitForSeconds coroutine, configurable interval)
+│   ├── Objective timer ticking  (Update, per-objective timeLimit)
+│   └── Events: OnMissionStatusChanged, OnObjectiveCompleted, OnCheckpointReached, OnMissionResult
+
+MissionBriefingUI (MonoBehaviour)
+│   ├── ShowBriefing(MissionData) → populate, fade in, typewriter, narration
+│   └── HideBriefing()           → stop typewriter/narration, fade out
+
+MissionTrackerUI (MonoBehaviour)
+│   ├── Update → UpdateTracker each frame while InProgress
+│   ├── World-to-screen waypoint projection + edge-arrow clamping
+│   └── Event subscribers: OnCheckpointReached, OnObjectiveCompleted, OnMissionStatusChanged
+```
+
+### Integration Points
+
+| Script | Integrates With |
+|--------|----------------|
+| `MissionManager` | `SWEF.WorldEvent.WorldEventManager` — world events can call `LoadMission` to start dynamic missions |
+| `MissionManager` | `SWEF.Formation.EscortMission` — escort/formation missions drive objective progress via `Advance()` |
+| `MissionManager` | `SWEF.Landing.LandingDetector.OnTouchdown` — delivery missions complete on successful landing |
+| `MissionReward` | `SWEF.Progression` — apply `CalculateFinalExperience` / `CalculateFinalCurrency` to player progression |
+| `MissionBriefingUI` | `TMPro.TextMeshProUGUI` — all text elements |
+| `MissionBriefingUI` | `UnityEngine.UI.Image` — banner, icon, and progress-bar images |
+| `MissionTrackerUI` | `Camera.WorldToScreenPoint` — 3D checkpoint → 2D HUD projection |
+| `MissionTrackerUI` | `TMPro.TextMeshProUGUI` — objective, timer, checkpoint, distance labels |
