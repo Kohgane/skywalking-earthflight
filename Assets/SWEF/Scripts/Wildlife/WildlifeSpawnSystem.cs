@@ -148,15 +148,15 @@ namespace SWEF.Wildlife
             var boidTransforms = new System.Collections.Generic.List<Transform>();
             if (isBird)
             {
-            float spread = 10f;
-            for (int i = 0; i < count; i++)
-            {
-                var boidGO  = new GameObject($"Boid_{i}");
-                boidGO.transform.SetParent(root.transform);
-                boidGO.transform.position = center + UnityEngine.Random.insideUnitSphere * spread;
-                boidGO.AddComponent<AnimalAnimationController>();
-                boidTransforms.Add(boidGO.transform);
-            }
+                float spread = 10f;
+                for (int i = 0; i < count; i++)
+                {
+                    var boidGO  = new GameObject($"Boid_{i}");
+                    boidGO.transform.SetParent(root.transform);
+                    boidGO.transform.position = center + UnityEngine.Random.insideUnitSphere * spread;
+                    boidGO.AddComponent<AnimalAnimationController>();
+                    boidTransforms.Add(boidGO.transform);
+                }
             }
 
             flockCtrl?.InitialiseBoids(boidTransforms, species.baseSpeed, species.fleeSpeed);

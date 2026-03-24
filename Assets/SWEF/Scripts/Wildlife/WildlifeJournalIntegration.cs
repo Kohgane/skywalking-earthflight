@@ -38,10 +38,8 @@ namespace SWEF.Wildlife
             LoadCollection();
             SubscribeToManager();
 
-            if (WildlifeManager.Instance != null)
-                _totalSpeciesCount = ((System.Collections.ICollection)
-                    WildlifeManager.Instance.ActiveGroups)?.Count ?? 15;
-            _totalSpeciesCount = Mathf.Max(_totalSpeciesCount, 15);
+            // Total species count: 15 default species registered by WildlifeManager
+            _totalSpeciesCount = 15;
         }
 
         private void OnDestroy()

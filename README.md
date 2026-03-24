@@ -2042,3 +2042,107 @@ WaterInteractionAnalytics → SWEF.Analytics.UserBehaviorTracker
 | `UnderwaterCameraTransition` | `SWEF.Audio.AudioManager` — low-pass filter underwater (null-safe) |
 | `WaterRippleSystem` | `BuoyancyController` — ripple on contact events |
 | `WaterInteractionAnalytics` | `SWEF.Analytics.UserBehaviorTracker` — telemetry events (null-safe) |
+
+---
+
+## Phase 75 — Wildlife & Fauna Encounter System
+
+### New Scripts
+
+| # | File | Description |
+|---|------|-------------|
+| 1 | `WildlifeData.cs` | Pure data layer — enums (`WildlifeCategory`, `WildlifeBehavior`, `WildlifeThreatLevel`, `SpawnBiome`, `ActivityPattern`, `FormationType`) and serializable classes (`WildlifeSpecies`, `WildlifeGroupState`, `WildlifeEncounterRecord`, `WildlifeConfig`, `FlockParameters`) |
+| 2 | `WildlifeManager.cs` | Singleton MonoBehaviour — species database with 15 default species, coroutine spawn/despawn loop, quality-tier scaling, bird strike detection, discovery tracking, null-safe cross-system integration |
+| 3 | `AnimalGroupController.cs` | Per-group MonoBehaviour — `Idle/Roaming/Feeding/Fleeing/Migrating/Sleeping` state machine, aircraft threat reaction (`None→Aware→Alarmed→Fleeing→Panicked`), terrain following via raycast, discovery event reporting |
+| 4 | `BirdFlockController.cs` | Craig Reynolds boid algorithm — separation / alignment / cohesion / obstacle avoidance / leader following / aircraft avoidance; staggered per-frame updates; 5 formation types (V, murmuration, soaring circle, line, scatter); 3-tier LOD |
+| 5 | `MarineLifeController.cs` | Dolphin / whale / fish movement — surfacing coroutine, whale breach parabolic arc, swim depth management, null-safe `WaterSurfaceManager` + `SplashEffectController` integration |
+| 6 | `AnimalAnimationController.cs` | Procedural animation — bird wing flap (sinusoidal), marine tail oscillation, land animal body bob; 3-tier LOD (full skeletal → procedural → billboard) |
+| 7 | `WildlifeSpawnSystem.cs` | Ring placement with altitude/biome/water checks; per-`WildlifeCategory` `Queue<GameObject>` pool with pre-warm; boid child instantiation; `DespawnGroup` / `DespawnAllGroups`; migration path data |
+| 8 | `WildlifeAudioController.cs` | 3D spatial `AudioSource` per group — category-specific clip keys, behavioral audio triggers (flee alarm, bird strike), doppler; null-safe `AudioManager` + `AccessibilityManager` |
+| 9 | `WildlifeJournalIntegration.cs` | Encounter logging with cooldown + deduplication; `HashSet` species collection; JSON persistence; null-safe `JournalManager`, `AchievementManager`, `PhotoCaptureManager` bridge; `OnSpeciesCollected` / `OnCollectionComplete` events |
+| 10 | `WildlifeDebugOverlay.cs` | `#if UNITY_EDITOR \|\| DEVELOPMENT_BUILD` — gizmo rings, colour-coded group spheres, threat-level lines; OnGUI HUD (counts, event log); force-spawn / force-flee / clear-all controls |
+
+### Key Data Types
+
+| Type | Kind | Purpose |
+|------|------|---------|
+| `WildlifeCategory` | enum | Bird / Raptor / Seabird / Waterfowl / MigratoryBird / MarineMammal / Fish / LandMammal / Insect / Mythical |
+| `WildlifeBehavior` | enum | Idle / Roaming / Feeding / Migrating / Fleeing / Flocking / Circling / Diving / Surfacing / Sleeping |
+| `WildlifeThreatLevel` | enum | None / Aware / Alarmed / Fleeing / Panicked |
+| `SpawnBiome` | enum | Ocean / Coast / Lake / River / Forest / Grassland / Desert / Mountain / Arctic / Tropical / Urban / Wetland |
+| `ActivityPattern` | enum | Diurnal / Nocturnal / Crepuscular / AllDay |
+| `FormationType` | enum | VFormation / Murmuration / SoaringCircle / LineFormation / Scatter |
+| `WildlifeSpecies` | class | Species definition: id, biomes, altitude range, speeds, distances, group size, weight, rarity, migration |
+| `WildlifeGroupState` | class | Runtime group snapshot: position, velocity, behavior, threat, member count, lifetime, discovered flag |
+| `WildlifeEncounterRecord` | class | Immutable encounter log: species, position, altitude, time, group size, photographed, closest approach |
+| `WildlifeConfig` | class | Performance caps: maxActiveGroups, maxIndividualsTotal, spawn/despawn radii, intervals, bird strike config |
+| `FlockParameters` | class | Boid weights/radii: separation/alignment/cohesion, maxSteerForce, obstacle/terrain weights |
+
+### Architecture
+
+```
+WildlifeManager (Singleton, DontDestroyOnLoad)
+│   ├── WildlifeConfig — performance caps + tuning
+│   ├── speciesDatabase — 15 default species (RegisterDefaultSpecies)
+│   ├── activeGroups — currently spawned WildlifeGroupState list
+│   ├── Spawn/despawn coroutine loop (spawnInterval)
+│   ├── Bird strike detection per-frame
+│   └── Events: OnGroupSpawned / OnGroupDespawned / OnSpeciesDiscovered / OnBirdStrike / OnEncounterRecorded
+│
+WildlifeSpawnSystem
+│   ├── Ring spawn placement with biome/altitude/water checks
+│   ├── Per-WildlifeCategory Queue<GameObject> object pool (pre-warmed)
+│   ├── Group instantiation: root + boid children + controller components
+│   └── MigrationPath serializable data
+│
+AnimalGroupController (per-group)
+│   ├── State machine: Idle/Roaming/Feeding/Fleeing/Migrating/Sleeping
+│   ├── Aircraft threat detection: None→Aware→Alarmed→Fleeing→Panicked
+│   ├── Group center-of-mass movement + terrain raycast following
+│   └── Discovery tracking → WildlifeEncounterRecord
+│
+BirdFlockController (bird groups)           MarineLifeController (marine groups)
+│   ├── Boid: separation/alignment/          │   ├── Surfacing coroutine (sin arc)
+│   │   cohesion/obstacle/leader             │   ├── Whale breach (parabolic arc)
+│   ├── Staggered per-frame updates          │   ├── Swim depth management
+│   ├── 5 formation types                    │   └── WaterSurfaceManager integration
+│   └── 3-tier LOD (full/simplified/dot)
+│
+AnimalAnimationController (per-individual)
+│   ├── Bird: sinusoidal wing flap / glide / dive
+│   ├── Marine: tail oscillation
+│   ├── Land: body bob
+│   └── LOD: Animator → procedural → billboard
+│
+WildlifeAudioController
+│   ├── 3D AudioSource per group
+│   ├── Category + behavior clip key lookup
+│   └── Null-safe AudioManager + AccessibilityManager
+│
+WildlifeJournalIntegration
+│   ├── Cooldown + dedup encounter logging
+│   ├── HashSet species collection + JSON persistence
+│   └── Null-safe JournalManager / AchievementManager / PhotoCaptureManager
+│
+WildlifeDebugOverlay (#if EDITOR || DEV_BUILD)
+    ├── OnDrawGizmos: spawn/despawn rings, group spheres, threat lines
+    ├── OnGUI HUD: counts, event log (last 10)
+    └── Controls: force spawn / force flee / clear all
+```
+
+### Integration Points
+
+| Phase 75 Script | Integrates With |
+|----------------|----------------|
+| `WildlifeManager` | `SWEF.Biome.BiomeClassifier` — biome detection for spawn filtering (null-safe) |
+| `WildlifeManager` | `SWEF.TimeOfDay.TimeOfDayManager` — time-of-day activity filtering (null-safe) |
+| `WildlifeManager` | `SWEF.Damage.DamageModel` — bird strike damage to aircraft (null-safe) |
+| `MarineLifeController` | `SWEF.Water.WaterSurfaceManager` — water height for swim/surface (null-safe) |
+| `MarineLifeController` | `SWEF.Water.SplashEffectController` — breach/surface splash effects (null-safe) |
+| `WildlifeAudioController` | `SWEF.Audio.AudioManager` — spatial audio clip lookup and playback (null-safe) |
+| `WildlifeAudioController` | `SWEF.Accessibility.AccessibilityManager` — reduced-audio mode (null-safe) |
+| `WildlifeJournalIntegration` | `SWEF.Journal.JournalManager` — encounter journal entries (null-safe) |
+| `WildlifeJournalIntegration` | `SWEF.Achievement.AchievementManager` — wildlife milestones (null-safe) |
+| `WildlifeJournalIntegration` | `SWEF.PhotoMode.PhotoCaptureManager` — wildlife photography detection (null-safe) |
+| `WildlifeSpawnSystem` | `SWEF.Water.WaterSurfaceManager` — marine spawn water check (null-safe) |
+| `WildlifeDebugOverlay` | `SWEF.DebugOverlay.DebugOverlayController` — debug panel toggle (null-safe) |
