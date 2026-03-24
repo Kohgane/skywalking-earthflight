@@ -58,6 +58,7 @@ Assets/SWEF/
 │   ├── Leaderboard/      # GlobalLeaderboardService, GlobalLeaderboardEntry, LeaderboardUI, LeaderboardEntryUI, LeaderboardCategory, LeaderboardTimeFilter, WeeklyChallengeManager, WeeklyChallengeUI
 │   ├── Localization/     # LocalizationManager, LanguageDatabase, LocalizationUI, LocalizedText, LocalizedImage, FontManager, PluralResolver, RTLTextHandler
 │   ├── Minimap/          # MinimapData, MinimapManager, MinimapRenderer, MinimapIconConfig, MinimapBlipProvider, MinimapCompass, MinimapSettingsUI, RadarOverlay
+│   ├── Mission/          # MissionEnums, MissionConfig, MissionObjective, MissionCheckpoint, MissionReward, MissionResult, MissionData, MissionManager, MissionBriefingUI, MissionTrackerUI
 │   ├── Multiplayer/      # MultiplayerManager, NetworkManager2, PlayerSyncController, PlayerSyncSystem, FormationFlyingManager, CoopMissionSystem, MultiplayerWeatherSync, MultiplayerHUD, MultiplayerScoreboard, MultiplayerRace, RoomManager, PlayerAvatar, RemotePlayerRenderer, NetworkTransport, VoiceChatManager, ProximityChat
 │   ├── MusicPlayer/      # MusicPlayerData, MusicPlayerManager, MusicPlaylistController, MusicPlayerUI, MusicLibraryUI, MusicFlightSync, MusicWeatherMixer, MusicVisualizerEffect, MusicMultiplayerSync, MusicEQController, MusicCrossfadeController, MusicSleepTimer, LrcParser, LyricsDatabase, KaraokeController, LyricsDisplayUI, LyricsEditorUI
 │   ├── Narration/        # NarrationData, LandmarkDatabase, NarrationManager, NarrationAudioController, NarrationSubtitleUI, NarrationHudPanel, LandmarkDiscoveryTracker, LandmarkMinimapIntegration, NarrationSettingsUI, NarrationAnalytics, Editor/LandmarkDatabaseEditorWindow
@@ -1754,79 +1755,60 @@ LandingUI (MonoBehaviour)
 
 ---
 
-## Phase 69 — Fuel & Energy Management System
+## Phase 70 — Mission Briefing & Objective System
 
-### New Scripts (8 files) — `Assets/SWEF/Scripts/Fuel/` — namespace `SWEF.Fuel`
+The Mission Briefing & Objective system provides structured missions with full-screen briefing screens, trackable objectives, ordered flight checkpoints, time-limit countdown, scoring, and rating evaluation. All scripts live in `Assets/SWEF/Scripts/Mission/` (namespace `SWEF.Mission`).
 
-| # | File | Description |
-|---|------|-------------|
-| 1 | `FuelEnums.cs` | Enums — `FuelType` (Standard/HighOctane/Hydrogen/Electric), `TankState` (Normal/Leaking/Damaged/Empty/Sealed), `RefuelState` (Idle/Connecting/Refueling/Complete/Disconnected), `FuelWarningLevel` (Normal/Low/Critical/Empty) |
-| 2 | `FuelConfig.cs` | Static config — `FuelDensity=0.8`, consumption rates, warning thresholds (`LowFuelThreshold=0.25`, `CriticalFuelThreshold=0.10`), `FuelDumpRate=20`, `EmergencyReserve=50`, `EmergencyPowerReduction=0.5`, `GlideRatioDefault=15`, `MaxTanks=6`, UI color helpers |
-| 3 | `FuelTank.cs` | `[Serializable]` class — `tankId`, `fuelType`, `TankState`, `capacity`/`currentFuel`, computed `fuelPercent`/`isEmpty`/`weight`, `leakRate`, `Consume(amount)` / `Refuel(amount)` / `SetLeaking(rate)` / `SealLeak()`, events `OnTankEmpty`, `OnTankStateChanged` |
-| 4 | `FuelConsumptionModel.cs` | ScriptableObject — `throttleConsumptionCurve`, `altitudeEfficiencyCurve`, `speedEfficiencyCurve`, base/idle rates, `afterburnerMultiplier=3`, `coldStartPenalty=1.5`, `CalculateConsumption(throttle, altitude, speed, afterburner)` returns litres/s |
-| 5 | `FuelManager.cs` | Singleton MonoBehaviour — `List<FuelTank> tanks`, `ConsumptionModel`, `ActiveTank`, `autoSwitchTanks`, `TotalFuel`/`TotalCapacity`/`TotalFuelPercent`, `CurrentConsumptionRate`, `EstimatedFlightTime`, `FuelUsedThisFlight`, `WarningLevel`, `ConsumeFuel(dt, throttle, alt, speed, afterburner)`, `TransferFuel(from, to, amount)`, `DumpFuel(rate)` / `StopDump()`, `GetNextAvailableTank()`, `SetActiveTank(tank)`, events `OnFuelWarningChanged`, `OnFuelDepleted`, `OnTankSwitched`, `OnFuelConsumed` |
-| 6 | `RefuelStation.cs` | MonoBehaviour — `stationId`, `availableFuelType`, `refuelRate`, `maxFuelAvailable`, `costPerLiter`, `refuelRange`, `state`, `BeginRefuel(aircraft)` / `StopRefuel()` / `CanRefuel(aircraft)`, coroutine fills compatible tanks at `refuelRate` L/s, range + type compatibility checks, `Animator` hose trigger (`Connect`/`Disconnect`), events `OnRefuelStateChanged`, `OnFuelDelivered` |
-| 7 | `FuelGaugeUI.cs` | MonoBehaviour — `Image[] tankBars` (per-tank fill), `TextMeshProUGUI` for total fuel / estimated time / consumption rate / fuel used, `Image warningIcon` (blinks at Low/Critical), `normalColor`/`lowColor`/`criticalColor`, `RectTransform tankSelector`, `ShowRefuelPanel()` / `HideRefuelPanel()`, `Slider refuelProgressSlider`, pulse animation on warning change, subscribes to FuelManager events |
-| 8 | `EmergencyFuelProtocol.cs` | MonoBehaviour — `emergencyReserve`, `reserveTankId`, `enginePowerReduction=0.5`, `glideOptimization=15`, `IsEmergencyActive`, `ThrottleLimit`, `ActivateEmergencyProtocol()` / `DeactivateEmergencyProtocol()`, `CalculateGlideRange(altitude, ratio)`, nearest-airport resolution via `AirportRegistry` (guarded `#if SWEF_LANDING_AVAILABLE`), `NearestAirport`, `DistanceToNearest`, `CanReachAirport`, events `OnEmergencyProtocolChanged`, `OnDivertAirportSet` |
+### Scripts
 
-### Architecture
+| # | File | Class | Description |
+|---|------|-------|-------------|
+| 1 | `MissionEnums.cs` | — | `MissionType`, `MissionStatus`, `ObjectiveStatus`, `MissionDifficulty`, `MissionRating` enums |
+| 2 | `MissionConfig.cs` | `MissionConfig` | Static constants: checkpoint radius, rating thresholds and multipliers, time-bonus rate, typewriter speed |
+| 3 | `MissionObjective.cs` | `MissionObjective` | Serializable objective with progress tracking, per-objective timer, `Advance()` / `Complete()` / `Fail()`, and `OnObjectiveStatusChanged` event |
+| 4 | `MissionCheckpoint.cs` | `MissionCheckpoint` | Serializable flight checkpoint with position, radius, heading/altitude/speed constraints, and ring-visual settings |
+| 5 | `MissionReward.cs` | `MissionReward` | Serializable reward bundle: base XP + currency, time bonus, optional bonus, per-rating multipliers, unlock lists, `CalculateFinalExperience` / `CalculateFinalCurrency` |
+| 6 | `MissionResult.cs` | `MissionResult` | Completed-run snapshot: rating, time, score, objective/checkpoint tallies, personal-best flags, `CalculateRating()`, `GetSummaryText()` |
+| 7 | `MissionData.cs` | `MissionData` | `ScriptableObject` mission template: identity, classification, visuals, timing, world placement, objective/checkpoint lists, reward, prerequisites |
+| 8 | `MissionManager.cs` | `MissionManager` | Singleton MonoBehaviour: full mission lifecycle (`LoadMission → StartMission → Complete/Fail/Abandon`), checkpoint proximity polling, per-objective timer ticking, time-limit enforcement, result generation |
+| 9 | `MissionBriefingUI.cs` | `MissionBriefingUI` | Full-screen briefing panel: banner/icon images, typewriter body text, objective list, reward preview, fade-in animation, narration playback |
+| 10 | `MissionTrackerUI.cs` | `MissionTrackerUI` | In-flight HUD: active objective + progress bar, timer, checkpoint counter, 3D→2D waypoint dot, edge-clamped directional arrow, distance label, objective mini-list with colour-coded status |
+
+### Architecture Overview
 
 ```
-FuelManager (Singleton MonoBehaviour)
-│   ├── List<FuelTank> — all tanks; max 6 (FuelConfig.MaxTanks)
-│   ├── ActiveTank — currently feeding the engine
-│   ├── autoSwitchTanks — auto-select next non-empty tank on empty
-│   ├── ConsumeFuel(dt, throttle, alt, speed, afterburner)
-│   │       └── FuelConsumptionModel.CalculateConsumption(...)
-│   ├── TransferFuel(from, to, amount) — manual inter-tank transfer
-│   ├── DumpFuel(rate) / StopDump() — emergency weight reduction
-│   ├── GetNextAvailableTank() — for auto-switch logic
-│   └── Events: OnFuelWarningChanged, OnFuelDepleted, OnTankSwitched, OnFuelConsumed
-│
-FuelTank [Serializable]
-│   ├── Consume(amount) — deduct fuel, raise OnTankEmpty at 0
-│   ├── Refuel(amount)  — add fuel, clamp to capacity
-│   ├── SetLeaking(rate) — Damage system (Phase 66) integration
-│   ├── SealLeak()       — emergency partial fix → TankState.Sealed
-│   └── weight = currentFuel × FuelConfig.FuelDensity (kg)
-│
-FuelConsumptionModel (ScriptableObject)
-│   ├── throttleConsumptionCurve — fuel rate multiplier vs throttle
-│   ├── altitudeEfficiencyCurve  — thin air savings at high altitude
-│   ├── speedEfficiencyCurve     — cruise sweet-spot efficiency
-│   └── CalculateConsumption() → litres/s
-│
-RefuelStation (MonoBehaviour — placed at airports)
-│   ├── CanRefuel(aircraft) — range + type + availability check
-│   ├── BeginRefuel(aircraft) — starts coroutine, fires Connect anim
-│   ├── StopRefuel() — manual disconnect
-│   └── Coroutine: fills tanks at refuelRate L/s until full or empty
-│
-FuelGaugeUI (MonoBehaviour)
-│   ├── Per-tank fill bars (Image[]) + color by warning level
-│   ├── Total fuel / estimated time / rate / used text (TextMeshPro)
-│   ├── Warning icon pulse animation on level change
-│   ├── Tank selector RectTransform highlight
-│   └── Refuel panel + progress slider
-│
-EmergencyFuelProtocol (MonoBehaviour)
-│   ├── Activates on Critical/Empty warning (auto) or manual call
-│   ├── Switches to reserve tank, limits ThrottleLimit to 0.5
-│   ├── CalculateGlideRange(altitude, ratio) — metres from glide ratio
-│   ├── AirportRegistry.GetNearestAirport() (#if SWEF_LANDING_AVAILABLE)
-│   └── CanReachAirport = glideRange ≥ DistanceToNearest
+MissionManager (Singleton)
+│   ├── LoadMission(MissionData) → Briefing state
+│   ├── StartMission()           → InProgress, starts checkpoint coroutine
+│   ├── PauseMission() / ResumeMission()
+│   ├── CompleteMission()        → BuildResult → RecordAndBroadcast → Completed
+│   ├── FailMission(reason)      → BuildResult → RecordAndBroadcast → Failed
+│   ├── AbandonMission()         → Abandoned
+│   ├── RestartMission()         → reloads current MissionData
+│   ├── IsMissionAvailable()     → prerequisite check
+│   ├── Checkpoint polling (WaitForSeconds coroutine, configurable interval)
+│   ├── Objective timer ticking  (Update, per-objective timeLimit)
+│   └── Events: OnMissionStatusChanged, OnObjectiveCompleted, OnCheckpointReached, OnMissionResult
+
+MissionBriefingUI (MonoBehaviour)
+│   ├── ShowBriefing(MissionData) → populate, fade in, typewriter, narration
+│   └── HideBriefing()           → stop typewriter/narration, fade out
+
+MissionTrackerUI (MonoBehaviour)
+│   ├── Update → UpdateTracker each frame while InProgress
+│   ├── World-to-screen waypoint projection + edge-arrow clamping
+│   └── Event subscribers: OnCheckpointReached, OnObjectiveCompleted, OnMissionStatusChanged
 ```
 
 ### Integration Points
 
 | Script | Integrates With |
 |--------|----------------|
-| `FuelManager` | `FuelConsumptionModel` — burn-rate curves |
-| `FuelManager` | `FuelTank.OnTankEmpty` — auto-switch / depletion event |
-| `FuelTank.SetLeaking` | `SWEF.Damage.DamageModel` — fuel-tank puncture (Phase 66) |
-| `RefuelStation` | `SWEF.Landing.AirportData.hasFuelStation` — flag (Phase 68) |
-| `FuelGaugeUI` | `SWEF.CockpitHUD.ThrottleFuelGauge` — complements basic gauge (Phase 65) |
-| `FuelGaugeUI` | `TMPro.TextMeshProUGUI` — all text elements |
-| `FuelGaugeUI` | `UnityEngine.UI.Image` — tank bars, warning icon |
-| `EmergencyFuelProtocol` | `SWEF.Landing.AirportRegistry.GetNearestAirport()` (guarded `#if SWEF_LANDING_AVAILABLE`) |
-| `FuelConsumptionModel` | `UnityEngine.AnimationCurve` — throttle/altitude/speed efficiency |
+| `MissionManager` | `SWEF.WorldEvent.WorldEventManager` — world events can call `LoadMission` to start dynamic missions |
+| `MissionManager` | `SWEF.Formation.EscortMission` — escort/formation missions drive objective progress via `Advance()` |
+| `MissionManager` | `SWEF.Landing.LandingDetector.OnTouchdown` — delivery missions complete on successful landing |
+| `MissionReward` | `SWEF.Progression` — apply `CalculateFinalExperience` / `CalculateFinalCurrency` to player progression |
+| `MissionBriefingUI` | `TMPro.TextMeshProUGUI` — all text elements |
+| `MissionBriefingUI` | `UnityEngine.UI.Image` — banner, icon, and progress-bar images |
+| `MissionTrackerUI` | `Camera.WorldToScreenPoint` — 3D checkpoint → 2D HUD projection |
+| `MissionTrackerUI` | `TMPro.TextMeshProUGUI` — objective, timer, checkpoint, distance labels |
