@@ -32,6 +32,7 @@ Assets/SWEF/
 │   ├── AchievementNotification/ # AchievementNotificationData, NotificationQueueManager, ToastNotificationController, UnlockAnimationController, RewardDisplayManager, AchievementPopupUI, NotificationSoundController, AchievementNotificationAnalytics
 │   ├── Aircraft/         # AircraftData, AircraftSkinRegistry, AircraftCustomizationManager, AircraftUnlockEvaluator, AircraftVisualController, AircraftTrailController, AircraftHangarUI, AircraftSkinCardUI, AircraftPreviewController, AircraftMultiplayerSync, AircraftAchievementBridge, AircraftSettingsBridge
 │   ├── Analytics/        # TelemetryEvent, TelemetryDispatcher, FlightTelemetryCollector, PerformanceTelemetryCollector, UserBehaviorTracker, ABTestManager, PrivacyConsentManager, AnalyticsDashboardData
+│   ├── Airshow/          # AirshowEnums, AirshowRoutineData, AirshowManager, AirshowPerformer, AirshowSmokeSystem, AirshowScoreCalculator, SpectatorCameraController, AirshowAudienceSystem, AirshowHUD, AirshowAnalytics
 │   ├── Atmosphere/       # AtmosphereController, CloudLayer, DayNightCycle, WeatherController, WindController, ComfortVignette, ReentryEffect
 │   ├── Audio/            # AudioManager, AudioMixerController, AudioEventTrigger, AltitudeAudioTrigger, AltitudeSoundscapeController, WindAudioGenerator, DopplerEffectController, SonicBoomController, EnvironmentReverbController, AudioOcclusionSystem, SpatialAudioManager, MusicLayerSystem, AudioVisualizerData
 │   ├── Autopilot/        # AutopilotEnums, PIDController, AutopilotController, CruiseControlManager, AutopilotHUD, AutopilotInputHandler, AutopilotConfigSO, AutopilotAnalytics
@@ -1811,3 +1812,147 @@ TrailLifetimeController (companion component)
 | `WingTipVortex` | `UnityEngine.TrailRenderer` × 2 — left/right vortex ribbons |
 | `TrailLifetimeController` | `ContrailManager.Emitters` — lifetime propagation |
 | `TrailLifetimeController` | `ContrailManager.WingTipVortex` — vortex trail lifetime propagation |
+
+---
+
+## Phase 72 — Autopilot & Cruise Control System
+
+### New Scripts
+
+| # | File | Description |
+|---|------|-------------|
+| 1 | `AutopilotEnums.cs` | Enums — `AutopilotMode` (7 values), `CruiseControlState`, `ApproachPhase`; `AutopilotConfig` serializable config |
+| 2 | `PIDController.cs` | Reusable PID controller — anti-windup clamp, output range, deltaTime-safe |
+| 3 | `AutopilotController.cs` | Singleton MonoBehaviour — altitude hold, heading hold, speed hold, route follow, approach assist, full autopilot; 360° heading wrap; terrain/stall/fuel safety; manual override |
+| 4 | `CruiseControlManager.cs` | Cruise control — Economy/Normal/Sport profiles, range & fuel rate estimates; `FuelManager` integration |
+| 5 | `AutopilotHUD.cs` | HUD panel — mode color indicators, deviation bars, approach phase display, cruise badge, 5 quick-action buttons, warning banner |
+| 6 | `AutopilotInputHandler.cs` | Keyboard (Z/X/C/V/B) + double-tap touch + `AdaptiveInputManager` remapping; per-axis manual override detection |
+| 7 | `AutopilotConfigSO.cs` | `[CreateAssetMenu]` ScriptableObject — designer-tunable PID gains/limits |
+| 8 | `AutopilotAnalytics.cs` | `TelemetryDispatcher` integration — engaged/disengaged/warning/override/approach events |
+
+### Key Data Types
+
+| Type | Kind | Purpose |
+|------|------|---------|
+| `AutopilotMode` | enum | Off / AltitudeHold / HeadingHold / SpeedHold / RouteFollow / ApproachAssist / FullAutopilot |
+| `CruiseControlState` | enum | Disabled / Accelerating / Maintaining / Decelerating |
+| `ApproachPhase` | enum | None / Intercept / Glideslope / Flare / Rollout |
+| `AutopilotConfig` | class | PID gains, limits, approach parameters, safety thresholds |
+| `PIDController` | class | Proportional-integral-derivative controller with anti-windup |
+
+### Architecture
+
+```
+AutopilotController (Singleton)
+│   ├── PIDController × 3 (altitude / heading / speed)
+│   ├── AutopilotConfig (loaded from AutopilotConfigSO or PlayerPrefs)
+│   ├── CruiseControlManager — speed profile sub-system
+│   ├── AutopilotHUD — visual feedback overlay
+│   └── AutopilotInputHandler — key/touch/gamepad bindings
+```
+
+### Integration Points
+
+| Script | Integrates With |
+|--------|----------------|
+| `AutopilotController` | `SWEF.Flight.FlightController` — control input injection |
+| `AutopilotController` | `SWEF.RoutePlanner.RoutePlannerManager` — waypoint route following |
+| `AutopilotController` | `SWEF.Landing.AltitudeController` — approach glideslope reference |
+| `CruiseControlManager` | `SWEF.Fuel.FuelManager` — fuel consumption estimation |
+| `AutopilotHUD` | `SWEF.Localization.LocalizationManager` — UI text |
+| `AutopilotInputHandler` | `SWEF.InputSystem.AdaptiveInputManager` — rebinding |
+| `AutopilotAnalytics` | `SWEF.Analytics.TelemetryDispatcher` — telemetry events |
+
+---
+
+## Phase 73 — Flight Formation Display & Airshow System
+
+### New Scripts
+
+| # | File | Description |
+|---|------|-------------|
+| 1 | `AirshowEnums.cs` | Enums — `AirshowType` (6), `ManeuverType` (18), `AirshowState` (8), `SmokeColor` (10), `SpectatorCameraMode` (8), `PerformanceRating` (5); `AirshowConfig` serializable config |
+| 2 | `AirshowRoutineData.cs` | ScriptableObject — defines a full choreographed routine with `ManeuverSequence` acts and `ManeuverStep` steps; `CreateDefault()` factory for a basic 3-act routine |
+| 3 | `AirshowManager.cs` | Singleton MonoBehaviour — full show lifecycle (Idle → Briefing → Countdown → Performing → Intermission → Finale → Completed → Aborted); performer registry; real-time scoring; best-score PlayerPrefs persistence |
+| 4 | `AirshowPerformer.cs` | Per-aircraft MonoBehaviour — `ExecuteManeuver(step)` with parameterized paths; AI path following via `PIDController`; player HUD guidance; smoke control; per-maneuver timing/position/smoothness scoring |
+| 5 | `AirshowSmokeSystem.cs` | Colored smoke trail manager — pooled `ParticleSystem` per performer, wind drift via `WeatherManager`, density/lifetime from `AirshowConfig`, `EnableSmoke` / `DisableSmoke` / `PulseSmoke` / `ClearAllSmoke` |
+| 6 | `AirshowScoreCalculator.cs` | Pure static C# utility — `CalculateTimingScore`, `CalculatePositionScore`, `CalculateSmoothnessScore`, `CalculateFormationScore`, `CalculateCompositeScore`, `GetRating`, `BuildResult` |
+| 7 | `SpectatorCameraController.cs` | 8-mode spectator camera — GroundLevel (lerp between audience points), TowerCam, ChaseCamera (offset follow), CockpitCam (parent), BirdsEye (top-down), Cinematic (auto-switch on timer), FreeRoam (WASD), SlowMotion (0.25× time scale) |
+| 8 | `AirshowAudienceSystem.cs` | Crowd excitement simulation — excitement 0–100 driven by maneuver type; audio reactions (cheer/gasp/applause/ovation); confetti on finale; event subscriptions to `AirshowManager` |
+| 9 | `AirshowHUD.cs` | Dual-panel HUD — performer panel (maneuver name/progress, act counter, timing, formation meter, smoke indicator) + spectator panel (camera selector, excitement meter, elapsed time) + animated score overlay (count-up reveal, share/replay buttons) |
+| 10 | `AirshowAnalytics.cs` | `TelemetryDispatcher` bridge — tracks `airshow_started`, `airshow_completed`, `airshow_aborted`, `airshow_smoke_usage`, `airshow_audience_peak_excitement`, `airshow_spectator_mode`, `airshow_best_score` |
+
+### Key Data Types
+
+| Type | Kind | Purpose |
+|------|------|---------|
+| `AirshowType` | enum | FreeStyle / Choreographed / FormationDisplay / AeroBatic / SmokeTrailArt / Flyby |
+| `ManeuverType` | enum | 18 aerobatic maneuver types (BarrelRoll … DiamondRoll) |
+| `AirshowState` | enum | Idle / Briefing / Countdown / Performing / Intermission / Finale / Completed / Aborted |
+| `SmokeColor` | enum | 10 smoke color presets + Custom |
+| `SpectatorCameraMode` | enum | 8 camera modes including Cinematic and SlowMotion |
+| `PerformanceRating` | enum | Perfect / Excellent / Great / Good / NeedsWork |
+| `AirshowConfig` | class | Countdown/intermission durations, tolerances, smoke density, performer limits |
+| `AirshowRoutineData` | ScriptableObject | Full routine definition: acts → ManeuverSequence → ManeuverStep |
+| `ManeuverSequence` | class | Named act with ordered list of `ManeuverStep` |
+| `ManeuverStep` | class | Single timed maneuver: type, time offset, duration, position, smoke, performer slot |
+| `ManeuverScore` | struct | Per-maneuver breakdown: timing/position/smoothness/composite |
+| `AirshowResult` | struct | Final result: totalScore, rating, bestManeuver, worstManeuver, duration, timestamp |
+
+### Architecture
+
+```
+AirshowManager (Singleton, DontDestroyOnLoad)
+│   ├── AirshowRoutineData (ScriptableObject) ── choreography definition
+│   ├── List<AirshowPerformer>               ── registered performers (player + AI)
+│   ├── State machine: Idle → Briefing → Countdown → Performing → Intermission → Finale → Completed
+│   ├── Per-frame: distribute ManeuverStep to performers, collect scores
+│   └── Events: OnAirshowStateChanged, OnActStarted, OnManeuverTriggered, OnPerformanceScored, OnAirshowCompleted
+│
+├── AirshowPerformer (per-aircraft)
+│   ├── ExecuteManeuver(step) ── parameterized flight path
+│   ├── AI: PID path following via SWEF.Autopilot.PIDController
+│   ├── Player: HUD guidance indicators
+│   └── Per-maneuver scoring: timing + position + smoothness
+│
+├── AirshowSmokeSystem
+│   ├── Per-performer colored smoke trails (pooled ParticleSystem)
+│   ├── Wind drift integration (WeatherManager, null-safe)
+│   └── EnableSmoke / DisableSmoke / PulseSmoke / ClearAllSmoke
+│
+├── AirshowScoreCalculator (static utility)
+│   ├── CalculateTimingScore / CalculatePositionScore / CalculateSmoothnessScore
+│   ├── CalculateFormationScore / CalculateCompositeScore
+│   └── BuildResult → AirshowResult
+│
+├── SpectatorCameraController
+│   ├── 8 camera modes (Ground/Tower/Chase/Cockpit/BirdsEye/Cinematic/FreeRoam/SlowMotion)
+│   └── Auto-switch in Cinematic mode (cinematicSwitchInterval)
+│
+├── AirshowAudienceSystem
+│   ├── Excitement 0-100 driven by maneuver type difficulty
+│   ├── Audio reactions (cheers/gasps/applause/ovation) via AudioManager
+│   └── Confetti particles on finale completion
+│
+├── AirshowHUD
+│   ├── Performer HUD: maneuver guidance, timing color coding, formation meter
+│   ├── Spectator HUD: camera selector, excitement meter
+│   └── Score overlay: animated count-up, share/replay buttons
+│
+└── AirshowAnalytics → SWEF.Analytics.TelemetryDispatcher
+```
+
+### Integration Points
+
+| Script | Integrates With |
+|--------|----------------|
+| `AirshowManager` | `SWEF.Flight.FlightController` — player flight control |
+| `AirshowPerformer` | `SWEF.Autopilot.PIDController` — AI path following |
+| `AirshowPerformer` | `SWEF.Contrail.ContrailEmitter` — per-nozzle smoke emission |
+| `AirshowSmokeSystem` | `SWEF.Weather.WeatherManager` — wind drift (null-safe) |
+| `AirshowSmokeSystem` | `SWEF.Contrail.ContrailManager` — trail rendering pipeline |
+| `AirshowAudienceSystem` | `SWEF.Audio.AudioManager` — crowd reaction sounds (null-safe) |
+| `AirshowHUD` | `SWEF.Localization.LocalizationManager` — all UI text |
+| `AirshowHUD` | `SWEF.Social.ShareManager` — share score results |
+| `AirshowHUD` | `SWEF.Replay.ReplayFileManager` — replay link |
+| `AirshowAnalytics` | `SWEF.Analytics.TelemetryDispatcher` — telemetry events |
