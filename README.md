@@ -37,6 +37,7 @@ Assets/SWEF/
 │   ├── Biome/            # BiomeData, BiomeClassifier, BiomeVisualEffects, BiomeAudioManager, VegetationPlacementHints, TerrainTextureBlender, BiomeTransitionZone, BiomeAnalytics
 │   ├── Cinema/           # TimeOfDayController, PhotoModeController, CinematicCameraPath, CinematicCameraUI
 │   ├── CockpitHUD/       # HUDDashboard, HUDInstrument, FlightData, FlightDataProvider, Altimeter, Speedometer, CompassHeading, AttitudeIndicator, VerticalSpeedIndicator, GForceIndicator, ThrottleFuelGauge, WarningSystem, CockpitHUDConfig
+│   ├── Contrail/         # ContrailEnums, ContrailConfig, ContrailConditions, ContrailEmitter, ExhaustEffect, WingTipVortex, TrailPersistence, ContrailManager
 │   ├── CloudRendering/   # CloudRenderingManager, CloudSessionManager, StreamingClient, FrameDecoder, InputStreamEncoder, LatencyCompensator, NetworkQualityMonitor, AdaptiveBitrateController, HybridRenderingController, ServerDiscoveryService, CloudRenderingUI
 │   ├── Core/             # BootManager, SWEFSession, WorldBootstrap, AppLifecycleManager, SaveManager, AutoSaveController, CloudSaveController, DataMigrator, PerformanceManager, MemoryManager, QualityPresetManager, LoadingScreen, PauseManager, ErrorHandler, CrashReporter, AnalyticsLogger, AdManager, PremiumFeatureGate, SessionTracker, DeepLinkHandler, DebugConsole, DebugGizmoDrawer, FlightJournal, RatePromptManager, RatePromptUI
 │   ├── DailyChallenge/   # DailyChallengeDefinition, DailyChallengeDefaultData, DailyChallengeManager, DailyChallengeTracker, DailyChallengeHUD, ChallengeNotificationUI, ChallengeRewardController, WeeklyChallengeDefinition, WeeklyChallengeManager, SeasonDefinition, SeasonPassManager, SeasonPassUI
@@ -1750,3 +1751,60 @@ LandingUI (MonoBehaviour)
 | `LandingUI` | `LandingDetector.OnLandingScored` — score popup |
 | `LandingUI` | `LandingGearController.OnGearStateChanged` — gear icon updates |
 | `AirportData` | `SWEF.Damage.RepairSystem` — `hasRepairFacility` flag (Phase 66) |
+
+---
+
+## Phase 71 — Contrail & Exhaust Trail System
+
+### New Scripts (8 files) — `Assets/SWEF/Scripts/Contrail/` — namespace `SWEF.Contrail`
+
+| # | File | Description |
+|---|------|-------------|
+| 1 | `ContrailEnums.cs` | Enums — `ContrailType` (Condensation/Exhaust/WingtipVortex/Smoke/AfterburnerFlame), `TrailIntensity` (None/Light/Medium/Heavy/Maximum), `TrailPersistence` (Short/Medium/Long/Permanent) |
+| 2 | `ContrailConfig.cs` | Static config — altitude thresholds (`MinContrailAltitude=8000`, `MaxContrailAltitude=15000`), `ContrailTempThreshold=-40`, `ContrailHumidityThreshold=0.6`, `FormationDelay=0.5`, speed thresholds (`MinTrailSpeed=50`, `VortexMinSpeed=80`), G-force (`VortexGForceThreshold=2`), trail widths (`BaseContrailWidth=1`, `MaxContrailWidth=8`, `MaxVortexWidth=3`), persistence durations, exhaust lengths, `GetParticleMultiplier(TrailIntensity)`, default color constants |
+| 3 | `ContrailConditions.cs` | ScriptableObject — `AnimationCurve temperatureByAltitude`, `AnimationCurve humidityByAltitude`, formation thresholds (`contrailMinAltitude`, `contrailMaxAltitude`, `contrailTemperatureThreshold`, `humidityThreshold`), `contrailFormationDelay`; `ShouldFormContrail(altitude, temperature, humidity)`, `GetContrailIntensity(altitude, temperature, humidity)` — weighted altitude×temperature×humidity factor; `GetTemperatureAtAltitude`, `GetHumidityAtAltitude` curve samplers |
+| 4 | `ContrailEmitter.cs` | MonoBehaviour — `ContrailType trailType`, `Transform emitPoint`, `TrailRenderer trailRenderer`, `ParticleSystem trailParticles`; trail width scales with speed (`widthBySpeedMultiplier`), opacity/emission rate scales with throttle; `StartEmitting()` / `StopEmitting()`, `UpdateEmission(speed, throttle, altitude, temperature)`; auto-registers/unregisters with `ContrailManager` via `OnEnable`/`OnDisable`; built-in default `normalGradient` (white→transparent) and `exhaustGradient` (orange→grey→transparent) |
+| 5 | `ExhaustEffect.cs` | MonoBehaviour — `Transform[] exhaustNozzles`, `ParticleSystem exhaustParticles` / `afterburnerParticles` / `heatDistortion`, `Light afterburnerLight`; plume length scales between `baseExhaustLength` and `maxExhaustLength` via throttle, ×`afterburnerLengthMultiplier` during AB; color blends `idleExhaustColor→fullThrottleColor→afterburnerColor`; heat distortion fades at high altitude (`altitudeFade = 1 − altitude/MinContrailAltitude`); `UpdateExhaust(throttle, afterburner, altitude)`, `isAfterburnerActive` |
+| 6 | `WingTipVortex.cs` | MonoBehaviour — `Transform leftWingTip/rightWingTip`, `ParticleSystem leftVortex/rightVortex`, `TrailRenderer leftTrail/rightTrail`; G-force × speed base intensity, `humidityInfluence` amplifier; bank angle distributes load (outer wing gets ×1.5 intensity during turns); per-wing `leftIntensity` / `rightIntensity` properties; `UpdateVortices(gForce, speed, humidity, bankAngle)` |
+| 7 | `TrailPersistence.cs` | MonoBehaviour (`TrailLifetimeController`) — duration presets (`shortDuration=5`, `mediumDuration=30`, `longDuration=120`, `permanentDuration=600`), `windDissipation=0.1`, `turbulenceDissipation=0.2`, `AnimationCurve fadeCurve`; `SetPersistence(level)` propagates `TrailRenderer.time` and `ParticleSystem.startLifetime` to all managed emitters and vortex trails; `ApplyWindEffect(windSpeed, windDirection)` reduces duration and shifts particle `velocityOverLifetime`; `ApplyTurbulenceEffect(turbulenceIntensity)` |
+| 8 | `ContrailManager.cs` | Singleton MonoBehaviour — `ContrailConditions conditions`, `List<ContrailEmitter> emitters`, `ExhaustEffect exhaustEffect`, `WingTipVortex wingTipVortex`; master toggles (`contrailsEnabled`, `exhaustEnabled`, `vorticesEnabled`), `TrailIntensity globalIntensity`, `float updateInterval=0.1`; coroutine update loop samples atmospheric conditions and distributes to all subsystems; `RegisterEmitter`/`UnregisterEmitter`, `SetGlobalIntensity`, `DisableAllTrails`/`EnableAllTrails`, `SetFlightState(altitude, speed, throttle, gForce, bankAngle, afterburner)`, `event Action<TrailIntensity> OnIntensityChanged` |
+
+### Architecture
+
+```
+ContrailManager (Singleton)
+│   ├── ContrailConditions (ScriptableObject) ── atmospheric curves
+│   ├── List<ContrailEmitter>                 ── per-nozzle trails
+│   │     ├── TrailRenderer                  ── ribbon trail
+│   │     └── ParticleSystem                 ── volumetric trail
+│   ├── ExhaustEffect
+│   │     ├── exhaustParticles               ── main plume
+│   │     ├── afterburnerParticles           ── AB flame
+│   │     ├── heatDistortion                 ── heat shimmer
+│   │     └── afterburnerLight               ── point light glow
+│   └── WingTipVortex
+│         ├── leftVortex / rightVortex       ── vortex particles
+│         └── leftTrail  / rightTrail        ── vortex ribbons
+│
+TrailLifetimeController (companion component)
+│   ├── SetPersistence(level)               ── duration propagation
+│   ├── ApplyWindEffect(speed, direction)   ── drift + dissipation
+│   └── ApplyTurbulenceEffect(intensity)    ── breakup dissipation
+```
+
+### Integration Points
+
+| Script | Integrates With |
+|--------|----------------|
+| `ContrailManager` | `ContrailConditions` — altitude/temperature/humidity sampling |
+| `ContrailManager` | `ContrailEmitter.UpdateEmission` — per-emitter condition distribution |
+| `ContrailManager` | `ExhaustEffect.UpdateExhaust` — throttle/afterburner/altitude |
+| `ContrailManager` | `WingTipVortex.UpdateVortices` — G-force/speed/humidity/bank |
+| `ContrailEmitter` | `UnityEngine.TrailRenderer` — ribbon trail width, color, lifetime |
+| `ContrailEmitter` | `UnityEngine.ParticleSystem` — volumetric trail particles |
+| `ExhaustEffect` | `UnityEngine.ParticleSystem` × 3 — exhaust, afterburner, heat distortion |
+| `ExhaustEffect` | `UnityEngine.Light` — afterburner point light |
+| `WingTipVortex` | `UnityEngine.ParticleSystem` × 2 — left/right vortex clouds |
+| `WingTipVortex` | `UnityEngine.TrailRenderer` × 2 — left/right vortex ribbons |
+| `TrailLifetimeController` | `ContrailManager.Emitters` — lifetime propagation |
+| `TrailLifetimeController` | `ContrailManager.WingTipVortex` — vortex trail lifetime propagation |
