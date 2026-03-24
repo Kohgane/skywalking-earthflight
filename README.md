@@ -40,6 +40,7 @@ Assets/SWEF/
 │   ├── CloudRendering/   # CloudRenderingManager, CloudSessionManager, StreamingClient, FrameDecoder, InputStreamEncoder, LatencyCompensator, NetworkQualityMonitor, AdaptiveBitrateController, HybridRenderingController, ServerDiscoveryService, CloudRenderingUI
 │   ├── Core/             # BootManager, SWEFSession, WorldBootstrap, AppLifecycleManager, SaveManager, AutoSaveController, CloudSaveController, DataMigrator, PerformanceManager, MemoryManager, QualityPresetManager, LoadingScreen, PauseManager, ErrorHandler, CrashReporter, AnalyticsLogger, AdManager, PremiumFeatureGate, SessionTracker, DeepLinkHandler, DebugConsole, DebugGizmoDrawer, FlightJournal, RatePromptManager, RatePromptUI
 │   ├── DailyChallenge/   # DailyChallengeDefinition, DailyChallengeDefaultData, DailyChallengeManager, DailyChallengeTracker, DailyChallengeHUD, ChallengeNotificationUI, ChallengeRewardController, WeeklyChallengeDefinition, WeeklyChallengeManager, SeasonDefinition, SeasonPassManager, SeasonPassUI
+│   ├── Damage/           # DamageType, DamageData, PartHealth, DamageModel, DamageEffect, RepairSystem, DamageIndicatorUI, DamageConfig
 │   ├── DebugOverlay/     # DebugOverlayData, FPSCounter, MemoryProfiler, DrawCallMonitor, DebugOverlayController, PerformanceLogger, DebugConsole, DebugOverlayAnalytics
 │   ├── Editor/           # SWEFEditorWindow, SWEFBuildPreprocessor, SWEFSceneValidator, AchievementEditorWindow, LocalizationEditorWindow, AnalyticsDebugWindow, CloudRenderingDebugWindow, MultiplayerDebugWindow, PerformanceProfilerWindow, SpatialAudioDebugWindow, TerrainDebugWindow, WeatherDebugWindow
 │   ├── Events/           # WorldEventData, WorldEventInstance, EventScheduler, EventParticipationTracker, EventVisualController, EventNotificationUI, EventCalendarUI, EventRewardController
@@ -65,6 +66,7 @@ Assets/SWEF/
 │   ├── Performance/      # PerformanceProfiler, AdaptiveQualityController, RuntimeDiagnosticsHUD, MemoryPoolManager, GarbageCollectionTracker, DrawCallAnalyzer, AssetLoadProfiler, SceneLoadProfiler, TextureMemoryOptimizer
 │   ├── PhotoMode/        # PhotoModeData, PhotoModeUI, PhotoModeAnalytics, PhotoCameraController, PhotoCaptureManager, PhotoFilterSystem, PhotoFrameRenderer, PhotoGalleryManager, DroneCameraController, DroneVisualController
 │   ├── Progression/      # PilotRankData, ProgressionManager, XPSourceConfig, XPTracker, SkillTreeData, SkillTreeManager, CosmeticUnlockManager, ProgressionHUD, ProgressionProfileUI, ProgressionDefaultData
+│   ├── Radar/            # RadarEnums, RadarContact, RadarSystem, IFFTransponder, ThreatDetector, RadarDisplay, MissileWarningReceiver, RadarJammer, RadarConfig
 │   ├── Racing/           # RacingData, BoostController, DriftController, BoostPadManager, SlipstreamController, StartBoostController, TrickBoostController, BoostVFXBridge, BoostAudioController, RacingAnalytics
 │   ├── Recorder/         # FlightRecorder, FlightPlayback, RecorderUI
 │   ├── Replay/           # ReplayData, ReplayFileManager, GhostRacer, FlightPathRenderer, ReplayShareManager
