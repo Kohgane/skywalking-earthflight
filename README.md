@@ -47,6 +47,7 @@ Assets/SWEF/
 │   ├── Favorites/        # FavoriteManager, FavoritesUI
 │   ├── Flight/           # FlightController, AltitudeController, TouchInputRouter, HoldButton, AeroPhysicsModel, AeroState, FlightPhysicsIntegrator, FlightPhysicsSnapshot, OrbitalMechanics, OrbitState, JetTrail, CameraController, StallWarningSystem
 │   ├── FlightSchool/     # FlightSchoolData, FlightSchoolManager, FlightInstructor, FlightSchoolUI, FlightSchoolAnalyticsBridge
+│   ├── Fuel/             # FuelEnums, FuelConfig, FuelTank, FuelConsumptionModel, FuelManager, RefuelStation, FuelGaugeUI, EmergencyFuelProtocol
 │   ├── GuidedTour/       # TourData, TourManager, WaypointNavigator, WaypointHUD, TourNarrationController, TourCatalogUI, TourProgressTracker, TourMinimapOverlay
 │   ├── Haptic/           # HapticManager, HapticPattern, HapticTriggerZone
 │   ├── HiddenGems/       # HiddenGemData, HiddenGemDatabase, HiddenGemManager, GemDiscoveryUI, GemCollectionUI, GemRadarUI, GemMinimapIntegration, GemTourGenerator, GemStatisticsTracker, Editor/HiddenGemEditorWindow
@@ -1750,3 +1751,82 @@ LandingUI (MonoBehaviour)
 | `LandingUI` | `LandingDetector.OnLandingScored` — score popup |
 | `LandingUI` | `LandingGearController.OnGearStateChanged` — gear icon updates |
 | `AirportData` | `SWEF.Damage.RepairSystem` — `hasRepairFacility` flag (Phase 66) |
+
+---
+
+## Phase 69 — Fuel & Energy Management System
+
+### New Scripts (8 files) — `Assets/SWEF/Scripts/Fuel/` — namespace `SWEF.Fuel`
+
+| # | File | Description |
+|---|------|-------------|
+| 1 | `FuelEnums.cs` | Enums — `FuelType` (Standard/HighOctane/Hydrogen/Electric), `TankState` (Normal/Leaking/Damaged/Empty/Sealed), `RefuelState` (Idle/Connecting/Refueling/Complete/Disconnected), `FuelWarningLevel` (Normal/Low/Critical/Empty) |
+| 2 | `FuelConfig.cs` | Static config — `FuelDensity=0.8`, consumption rates, warning thresholds (`LowFuelThreshold=0.25`, `CriticalFuelThreshold=0.10`), `FuelDumpRate=20`, `EmergencyReserve=50`, `EmergencyPowerReduction=0.5`, `GlideRatioDefault=15`, `MaxTanks=6`, UI color helpers |
+| 3 | `FuelTank.cs` | `[Serializable]` class — `tankId`, `fuelType`, `TankState`, `capacity`/`currentFuel`, computed `fuelPercent`/`isEmpty`/`weight`, `leakRate`, `Consume(amount)` / `Refuel(amount)` / `SetLeaking(rate)` / `SealLeak()`, events `OnTankEmpty`, `OnTankStateChanged` |
+| 4 | `FuelConsumptionModel.cs` | ScriptableObject — `throttleConsumptionCurve`, `altitudeEfficiencyCurve`, `speedEfficiencyCurve`, base/idle rates, `afterburnerMultiplier=3`, `coldStartPenalty=1.5`, `CalculateConsumption(throttle, altitude, speed, afterburner)` returns litres/s |
+| 5 | `FuelManager.cs` | Singleton MonoBehaviour — `List<FuelTank> tanks`, `ConsumptionModel`, `ActiveTank`, `autoSwitchTanks`, `TotalFuel`/`TotalCapacity`/`TotalFuelPercent`, `CurrentConsumptionRate`, `EstimatedFlightTime`, `FuelUsedThisFlight`, `WarningLevel`, `ConsumeFuel(dt, throttle, alt, speed, afterburner)`, `TransferFuel(from, to, amount)`, `DumpFuel(rate)` / `StopDump()`, `GetNextAvailableTank()`, `SetActiveTank(tank)`, events `OnFuelWarningChanged`, `OnFuelDepleted`, `OnTankSwitched`, `OnFuelConsumed` |
+| 6 | `RefuelStation.cs` | MonoBehaviour — `stationId`, `availableFuelType`, `refuelRate`, `maxFuelAvailable`, `costPerLiter`, `refuelRange`, `state`, `BeginRefuel(aircraft)` / `StopRefuel()` / `CanRefuel(aircraft)`, coroutine fills compatible tanks at `refuelRate` L/s, range + type compatibility checks, `Animator` hose trigger (`Connect`/`Disconnect`), events `OnRefuelStateChanged`, `OnFuelDelivered` |
+| 7 | `FuelGaugeUI.cs` | MonoBehaviour — `Image[] tankBars` (per-tank fill), `TextMeshProUGUI` for total fuel / estimated time / consumption rate / fuel used, `Image warningIcon` (blinks at Low/Critical), `normalColor`/`lowColor`/`criticalColor`, `RectTransform tankSelector`, `ShowRefuelPanel()` / `HideRefuelPanel()`, `Slider refuelProgressSlider`, pulse animation on warning change, subscribes to FuelManager events |
+| 8 | `EmergencyFuelProtocol.cs` | MonoBehaviour — `emergencyReserve`, `reserveTankId`, `enginePowerReduction=0.5`, `glideOptimization=15`, `IsEmergencyActive`, `ThrottleLimit`, `ActivateEmergencyProtocol()` / `DeactivateEmergencyProtocol()`, `CalculateGlideRange(altitude, ratio)`, nearest-airport resolution via `AirportRegistry` (guarded `#if SWEF_LANDING_AVAILABLE`), `NearestAirport`, `DistanceToNearest`, `CanReachAirport`, events `OnEmergencyProtocolChanged`, `OnDivertAirportSet` |
+
+### Architecture
+
+```
+FuelManager (Singleton MonoBehaviour)
+│   ├── List<FuelTank> — all tanks; max 6 (FuelConfig.MaxTanks)
+│   ├── ActiveTank — currently feeding the engine
+│   ├── autoSwitchTanks — auto-select next non-empty tank on empty
+│   ├── ConsumeFuel(dt, throttle, alt, speed, afterburner)
+│   │       └── FuelConsumptionModel.CalculateConsumption(...)
+│   ├── TransferFuel(from, to, amount) — manual inter-tank transfer
+│   ├── DumpFuel(rate) / StopDump() — emergency weight reduction
+│   ├── GetNextAvailableTank() — for auto-switch logic
+│   └── Events: OnFuelWarningChanged, OnFuelDepleted, OnTankSwitched, OnFuelConsumed
+│
+FuelTank [Serializable]
+│   ├── Consume(amount) — deduct fuel, raise OnTankEmpty at 0
+│   ├── Refuel(amount)  — add fuel, clamp to capacity
+│   ├── SetLeaking(rate) — Damage system (Phase 66) integration
+│   ├── SealLeak()       — emergency partial fix → TankState.Sealed
+│   └── weight = currentFuel × FuelConfig.FuelDensity (kg)
+│
+FuelConsumptionModel (ScriptableObject)
+│   ├── throttleConsumptionCurve — fuel rate multiplier vs throttle
+│   ├── altitudeEfficiencyCurve  — thin air savings at high altitude
+│   ├── speedEfficiencyCurve     — cruise sweet-spot efficiency
+│   └── CalculateConsumption() → litres/s
+│
+RefuelStation (MonoBehaviour — placed at airports)
+│   ├── CanRefuel(aircraft) — range + type + availability check
+│   ├── BeginRefuel(aircraft) — starts coroutine, fires Connect anim
+│   ├── StopRefuel() — manual disconnect
+│   └── Coroutine: fills tanks at refuelRate L/s until full or empty
+│
+FuelGaugeUI (MonoBehaviour)
+│   ├── Per-tank fill bars (Image[]) + color by warning level
+│   ├── Total fuel / estimated time / rate / used text (TextMeshPro)
+│   ├── Warning icon pulse animation on level change
+│   ├── Tank selector RectTransform highlight
+│   └── Refuel panel + progress slider
+│
+EmergencyFuelProtocol (MonoBehaviour)
+│   ├── Activates on Critical/Empty warning (auto) or manual call
+│   ├── Switches to reserve tank, limits ThrottleLimit to 0.5
+│   ├── CalculateGlideRange(altitude, ratio) — metres from glide ratio
+│   ├── AirportRegistry.GetNearestAirport() (#if SWEF_LANDING_AVAILABLE)
+│   └── CanReachAirport = glideRange ≥ DistanceToNearest
+```
+
+### Integration Points
+
+| Script | Integrates With |
+|--------|----------------|
+| `FuelManager` | `FuelConsumptionModel` — burn-rate curves |
+| `FuelManager` | `FuelTank.OnTankEmpty` — auto-switch / depletion event |
+| `FuelTank.SetLeaking` | `SWEF.Damage.DamageModel` — fuel-tank puncture (Phase 66) |
+| `RefuelStation` | `SWEF.Landing.AirportData.hasFuelStation` — flag (Phase 68) |
+| `FuelGaugeUI` | `SWEF.CockpitHUD.ThrottleFuelGauge` — complements basic gauge (Phase 65) |
+| `FuelGaugeUI` | `TMPro.TextMeshProUGUI` — all text elements |
+| `FuelGaugeUI` | `UnityEngine.UI.Image` — tank bars, warning icon |
+| `EmergencyFuelProtocol` | `SWEF.Landing.AirportRegistry.GetNearestAirport()` (guarded `#if SWEF_LANDING_AVAILABLE`) |
+| `FuelConsumptionModel` | `UnityEngine.AnimationCurve` — throttle/altitude/speed efficiency |
