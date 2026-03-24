@@ -1,298 +1,216 @@
-using System;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 
 namespace SWEF.Wildlife
 {
     /// <summary>
-    /// Phase 53 — Connects wildlife encounters to the Journal and collection systems.
-    ///
-    /// <para>Maintains the Wildlife Codex (catalogue of all discoverable species),
-    /// tracks first-discovery events, integrates with PhotoMode for photo bonuses,
-    /// generates journal entries, awards biome-completion achievements, and
-    /// saves/loads discovery data.</para>
-    ///
-    /// <para>Integration points:
-    /// <list type="bullet">
-    ///   <item><c>SWEF.Journal.JournalManager</c> — auto-creates journal entries.</item>
-    ///   <item><c>SWEF.Achievement.AchievementManager</c> — unlocks collection achievements.</item>
-    ///   <item><c>SWEF.Narration.NarrationManager</c> — triggers first-discovery narration.</item>
-    ///   <item><c>SWEF.PhotoMode.PhotoCaptureManager</c> — photo bonus on species capture.</item>
-    /// </list>
-    /// </para>
+    /// Phase 75 — Connects wildlife encounters to the flight journal and achievement systems.
+    /// Tracks species collection, handles cooldowns and deduplication,
+    /// and persists the collection to disk.
     /// </summary>
     public class WildlifeJournalIntegration : MonoBehaviour
     {
-        #region Constants
-
-        private const string SaveKey              = "SWEF_WildlifeDiscoveries";
-        private const string PhotoBonusAchievement= "wildlife_photographer";
-        private const int    PhotoBonusThreshold  = 10;  // distinct species photographed
-
-        #endregion
-
-        #region Inspector
-
-        [Header("Codex Configuration")]
-        [Tooltip("Complete list of species available for discovery.")]
-        [SerializeField] private List<AnimalSpecies> allSpecies = new List<AnimalSpecies>();
-
-        [Header("References")]
-        [Tooltip("WildlifeManager to subscribe to encounter events. Resolved at runtime if null.")]
-        [SerializeField] private WildlifeManager wildlifeManager;
-
-        #endregion
-
         #region Events
 
-        /// <summary>Fired the first time a species is encountered.</summary>
-        public event Action<AnimalSpecies> OnSpeciesDiscovered;
+        /// <summary>Fired when a species is added to the collection.</summary>
+        public event System.Action<string, int> OnSpeciesCollected;
 
-        /// <summary>Fired when a biome's species collection is complete.</summary>
-        public event Action<BiomeHabitat> OnBiomeCompleted;
-
-        #endregion
-
-        #region Public Properties
-
-        /// <summary>Total number of species the player has discovered.</summary>
-        public int DiscoveredCount => _discovered.Count;
-
-        /// <summary>Total number of species in the codex.</summary>
-        public int TotalSpecies => allSpecies.Count;
-
-        /// <summary>Completion percentage across all species (0–1).</summary>
-        public float CompletionRatio =>
-            TotalSpecies == 0 ? 0f : (float)DiscoveredCount / TotalSpecies;
+        /// <summary>Fired when all species have been discovered.</summary>
+        public event System.Action OnCollectionComplete;
 
         #endregion
 
         #region Private State
 
-        private readonly HashSet<string>            _discovered       = new HashSet<string>();
-        private readonly HashSet<string>            _photographed     = new HashSet<string>();
-        private readonly List<WildlifeEncounter>    _encounterHistory = new List<WildlifeEncounter>();
-
-        // Cross-system references (guarded by conditional compilation)
-        private Component _journalManager;
-        private Component _achievementManager;
-        private Component _narrationManager;
-        private Component _photoCaptureManager;
+        private readonly Dictionary<string, int>   _encounterCount     = new Dictionary<string, int>();
+        private readonly HashSet<string>            _discoveredSpecies  = new HashSet<string>();
+        private readonly Dictionary<string, float>  _lastReportTime     = new Dictionary<string, float>();
+        private int _totalSpeciesCount;
+        private const string SaveFileName = "wildlife_collection.json";
 
         #endregion
 
         #region Unity Lifecycle
 
-        private void Awake()
-        {
-            ResolveReferences();
-            LoadDiscoveries();
-        }
-
         private void Start()
         {
-            if (wildlifeManager == null)
-                wildlifeManager = FindFirstObjectByType<WildlifeManager>();
+            LoadCollection();
+            SubscribeToManager();
 
-            if (wildlifeManager != null)
-            {
-                wildlifeManager.OnWildlifeEncounter += HandleEncounter;
-                wildlifeManager.OnRareAnimalFound   += HandleRareAnimal;
-            }
+            if (WildlifeManager.Instance != null)
+                _totalSpeciesCount = ((System.Collections.ICollection)
+                    WildlifeManager.Instance.ActiveGroups)?.Count ?? 15;
+            _totalSpeciesCount = Mathf.Max(_totalSpeciesCount, 15);
         }
 
         private void OnDestroy()
         {
-            if (wildlifeManager != null)
-            {
-                wildlifeManager.OnWildlifeEncounter -= HandleEncounter;
-                wildlifeManager.OnRareAnimalFound   -= HandleRareAnimal;
-            }
+            UnsubscribeFromManager();
+            SaveCollection();
         }
 
         #endregion
 
-        #region Public API
+        #region Manager Subscriptions
 
-        /// <summary>Returns true if the species with the given name has been discovered.</summary>
-        public bool IsDiscovered(string speciesName) => _discovered.Contains(speciesName);
-
-        /// <summary>Returns true if the species has been photographed.</summary>
-        public bool IsPhotographed(string speciesName) => _photographed.Contains(speciesName);
-
-        /// <summary>Marks a species as photographed (called by PhotoMode integration).</summary>
-        public void RecordPhotograph(string speciesName)
+        private void SubscribeToManager()
         {
-            if (string.IsNullOrEmpty(speciesName)) return;
-            _photographed.Add(speciesName);
-            SaveDiscoveries();
-
-            if (_photographed.Count >= PhotoBonusThreshold)
-                AwardAchievement(PhotoBonusAchievement);
+            var mgr = WildlifeManager.Instance;
+            if (mgr == null) return;
+            mgr.OnEncounterRecorded += HandleEncounter;
+            mgr.OnSpeciesDiscovered += HandleDiscovery;
         }
 
-        /// <summary>Calculates the discovery completion percentage for a given biome (0–1).</summary>
-        public float GetBiomeCompletion(BiomeHabitat biome)
+        private void UnsubscribeFromManager()
         {
-            int total = 0, found = 0;
-            foreach (var s in allSpecies)
-            {
-                if (!s.habitats.Contains(biome)) continue;
-                total++;
-                if (_discovered.Contains(s.speciesName)) found++;
-            }
-            return total == 0 ? 0f : (float)found / total;
+            var mgr = WildlifeManager.Instance;
+            if (mgr == null) return;
+            mgr.OnEncounterRecorded -= HandleEncounter;
+            mgr.OnSpeciesDiscovered -= HandleDiscovery;
         }
-
-        /// <summary>Returns rarity badge text for a given rarity tier.</summary>
-        public static string GetRarityBadge(AnimalRarity rarity)
-        {
-            switch (rarity)
-            {
-                case AnimalRarity.Common:    return "★";
-                case AnimalRarity.Uncommon:  return "★★";
-                case AnimalRarity.Rare:      return "★★★";
-                case AnimalRarity.Legendary: return "★★★★";
-                default:                     return "★";
-            }
-        }
-
-        /// <summary>Returns the full encounter history.</summary>
-        public IReadOnlyList<WildlifeEncounter> GetEncounterHistory() => _encounterHistory;
 
         #endregion
 
-        #region Event Handlers
+        #region Encounter Handling
 
-        private void HandleEncounter(WildlifeEncounter encounter)
+        private void HandleEncounter(WildlifeEncounterRecord record)
         {
-            _encounterHistory.Add(encounter);
-            bool firstTime = _discovered.Add(encounter.speciesName);
+            if (record == null) return;
 
-            if (!firstTime) return;
+            // Cooldown check
+            float now = Time.time;
+            float cooldown = WildlifeManager.Instance?.Config?.detectionReportCooldown ?? 10f;
+            if (_lastReportTime.TryGetValue(record.speciesId, out float last) &&
+                (now - last) < cooldown) return;
+            _lastReportTime[record.speciesId] = now;
 
-            AnimalSpecies species = FindSpecies(encounter.speciesName);
-            if (species != null)
-            {
-                OnSpeciesDiscovered?.Invoke(species);
-                CreateJournalEntry(species, encounter);
-                TriggerNarration(species);
-                CheckBiomeCompletion(species);
-                AwardAchievement("wildlife_species_" + _discovered.Count);
-            }
+            // Count encounters
+            if (!_encounterCount.ContainsKey(record.speciesId))
+                _encounterCount[record.speciesId] = 0;
+            _encounterCount[record.speciesId]++;
 
-            SaveDiscoveries();
+            // Push to journal (null-safe)
+#if SWEF_JOURNAL_AVAILABLE
+            var jm = SWEF.Journal.JournalManager.Instance;
+            jm?.LogWildlifeEncounter(record);
+#endif
+
+            SaveCollection();
         }
 
-        private void HandleRareAnimal(AnimalSpecies species)
+        private void HandleDiscovery(WildlifeSpecies species)
         {
             if (species == null) return;
-            AwardAchievement("wildlife_rare_found");
+            bool isNew = _discoveredSpecies.Add(species.speciesId);
+            if (!isNew) return;
+
+            int total = _discoveredSpecies.Count;
+            OnSpeciesCollected?.Invoke(species.speciesId, total);
+
+            // Achievement bridge (null-safe)
+            ReportAchievementProgress(total);
+
+            if (total >= _totalSpeciesCount)
+                OnCollectionComplete?.Invoke();
+
+            SaveCollection();
         }
 
         #endregion
 
-        #region Journal Entry
+        #region Photo Mode Integration
 
-        private void CreateJournalEntry(AnimalSpecies species, WildlifeEncounter encounter)
+        /// <summary>Marks an encounter as photographed (call from PhotoCaptureManager).</summary>
+        public void MarkPhotographed(string speciesId)
         {
 #if SWEF_JOURNAL_AVAILABLE
-            var jm = _journalManager as SWEF.Journal.JournalManager;
-            if (jm == null) return;
-            string text = $"Discovered {species.speciesName} " +
-                          $"({GetRarityBadge(species.rarity)}) " +
-                          $"at altitude {encounter.position.y:F0}m. " +
-                          $"{species.description}";
-            jm.AddAutoEntry(text);
+            var jm = SWEF.Journal.JournalManager.Instance;
+            jm?.MarkWildlifePhotographed(speciesId);
 #endif
-        }
-
-        private void TriggerNarration(AnimalSpecies species)
-        {
-#if SWEF_NARRATION_AVAILABLE
-            var nm = _narrationManager as SWEF.Narration.NarrationManager;
-            nm?.TriggerNarration("wildlife_" + species.speciesName.ToLower().Replace(" ", "_"));
-#endif
+            ReportPhotoAchievement();
         }
 
         #endregion
 
-        #region Achievement
+        #region Achievement Bridge
 
-        private void AwardAchievement(string key)
+        private void ReportAchievementProgress(int discovered)
         {
 #if SWEF_ACHIEVEMENT_AVAILABLE
-            var am = _achievementManager as SWEF.Achievement.AchievementManager;
-            am?.RecordProgress(key, 1);
+            var am = SWEF.Achievement.AchievementManager.Instance;
+            if (am == null) return;
+            if (discovered >= 1)  am.ReportProgress("wildlife_first_encounter", 1);
+            if (discovered >= 10) am.ReportProgress("wildlife_bird_watcher", discovered);
 #endif
         }
 
-        #endregion
-
-        #region Biome Completion
-
-        private void CheckBiomeCompletion(AnimalSpecies species)
+        private void ReportPhotoAchievement()
         {
-            foreach (var biome in species.habitats)
-            {
-                if (Mathf.Approximately(GetBiomeCompletion(biome), 1f))
-                    OnBiomeCompleted?.Invoke(biome);
-            }
+#if SWEF_ACHIEVEMENT_AVAILABLE
+            var am = SWEF.Achievement.AchievementManager.Instance;
+            am?.ReportProgress("wildlife_photographer", 1);
+#endif
         }
 
         #endregion
 
         #region Persistence
 
-        private void SaveDiscoveries()
+        private string SavePath => Path.Combine(Application.persistentDataPath, SaveFileName);
+
+        private void SaveCollection()
         {
-            string data = string.Join(",", _discovered) + "|" + string.Join(",", _photographed);
-            PlayerPrefs.SetString(SaveKey, data);
-            PlayerPrefs.Save();
+            try
+            {
+                var data = new CollectionSaveData
+                {
+                    discovered = new System.Collections.Generic.List<string>(_discoveredSpecies)
+                };
+                File.WriteAllText(SavePath, JsonUtility.ToJson(data));
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning($"[WildlifeJournal] Save failed: {e.Message}");
+            }
         }
 
-        private void LoadDiscoveries()
+        private void LoadCollection()
         {
-            if (!PlayerPrefs.HasKey(SaveKey)) return;
-            string raw = PlayerPrefs.GetString(SaveKey);
-            if (string.IsNullOrEmpty(raw)) return;
+            try
+            {
+                if (!File.Exists(SavePath)) return;
+                var data = JsonUtility.FromJson<CollectionSaveData>(
+                    File.ReadAllText(SavePath));
+                if (data?.discovered == null) return;
+                foreach (var id in data.discovered)
+                    _discoveredSpecies.Add(id);
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning($"[WildlifeJournal] Load failed: {e.Message}");
+            }
+        }
 
-            string[] parts = raw.Split('|');
-            if (parts.Length >= 1 && !string.IsNullOrEmpty(parts[0]))
-                foreach (string s in parts[0].Split(','))
-                    if (!string.IsNullOrEmpty(s)) _discovered.Add(s);
-
-            if (parts.Length >= 2 && !string.IsNullOrEmpty(parts[1]))
-                foreach (string s in parts[1].Split(','))
-                    if (!string.IsNullOrEmpty(s)) _photographed.Add(s);
+        [System.Serializable]
+        private class CollectionSaveData
+        {
+            public List<string> discovered = new List<string>();
         }
 
         #endregion
 
-        #region Helpers
+        #region Public API
 
-        private AnimalSpecies FindSpecies(string name)
-        {
-            foreach (var s in allSpecies)
-                if (s.speciesName == name) return s;
-            return null;
-        }
+        /// <summary>Returns how many times the given species has been encountered.</summary>
+        public int GetEncounterCount(string speciesId) =>
+            _encounterCount.TryGetValue(speciesId, out int c) ? c : 0;
 
-        private void ResolveReferences()
-        {
-#if SWEF_JOURNAL_AVAILABLE
-            _journalManager = FindFirstObjectByType<SWEF.Journal.JournalManager>();
-#endif
-#if SWEF_ACHIEVEMENT_AVAILABLE
-            _achievementManager = FindFirstObjectByType<SWEF.Achievement.AchievementManager>();
-#endif
-#if SWEF_NARRATION_AVAILABLE
-            _narrationManager = FindFirstObjectByType<SWEF.Narration.NarrationManager>();
-#endif
-#if SWEF_PHOTOMODE_AVAILABLE
-            _photoCaptureManager = FindFirstObjectByType<SWEF.PhotoMode.PhotoCaptureManager>();
-#endif
-        }
+        /// <summary>Returns the set of discovered species IDs.</summary>
+        public IReadOnlyCollection<string> DiscoveredSpecies => _discoveredSpecies;
+
+        /// <summary>Total number of discovered species.</summary>
+        public int DiscoveredCount => _discoveredSpecies.Count;
 
         #endregion
     }

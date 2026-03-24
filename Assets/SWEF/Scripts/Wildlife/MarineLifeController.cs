@@ -1,84 +1,41 @@
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace SWEF.Wildlife
 {
     /// <summary>
-    /// Phase 53 — Specialized controller for underwater and ocean-surface animals.
-    ///
-    /// <para>Supports whale breaching/spouting/diving, dolphin pod leaping and
-    /// bow-riding, fish schooling with bait-ball formation, shark patrol, sea turtle
-    /// gentle gliding, and jellyfish passive drift.  Ocean-current influence and
-    /// depth-based movement are included.</para>
+    /// Phase 75 — Manages marine wildlife movement, surfacing, breaching,
+    /// and water-surface integration.
     /// </summary>
     public class MarineLifeController : MonoBehaviour
     {
-        #region Constants
-
-        private const float BreachCooldown      = 45f;   // seconds between whale breaches
-        private const float DolphinLeapInterval = 4f;
-        private const float SharkCruiseSpeed    = 4f;
-        private const float JellyfishDriftSpeed = 0.5f;
-        private const float BaitBallRadius      = 25f;
-        private const float SurfaceY            = 0f;    // world-space sea level
-        private const float SplashParticleLife  = 3f;
-
-        #endregion
-
         #region Inspector
 
-        [Header("Marine Group Data")]
-        [SerializeField] private AnimalGroup groupData = new AnimalGroup();
+        [Header("Movement")]
+        [Tooltip("Default swim depth below water surface in metres.")]
+        [SerializeField] private float swimDepth = 5f;
 
-        [Header("Marine Behavior")]
-        [Tooltip("Current high-level marine behavior mode.")]
-        [SerializeField] private MarineMode mode = MarineMode.Schooling;
+        [Tooltip("Dolphin leap height above water in metres.")]
+        [SerializeField] private float dolphinLeapHeight = 3f;
 
-        [Tooltip("Depth below sea level at which this group normally swims.")]
-        [SerializeField] private float swimDepth = -10f;
+        [Tooltip("Whale breach height above water in metres.")]
+        [SerializeField] private float whalBreachHeight  = 8f;
 
-        [Tooltip("Ocean current direction and magnitude.")]
-        [SerializeField] private Vector3 currentDirection = new Vector3(0.3f, 0f, 0.1f);
+        [Tooltip("Interval in seconds between surfacing events.")]
+        [SerializeField] private float surfacingInterval = 30f;
 
-        [Header("Effects")]
-        [Tooltip("Particle system instantiated on whale breach. Optional.")]
-        [SerializeField] private GameObject splashPrefab;
-
-        #endregion
-
-        #region Enumerations
-
-        /// <summary>High-level marine locomotion mode.</summary>
-        public enum MarineMode
-        {
-            Schooling,
-            WhalePatrol,
-            DolphinPod,
-            SharkCruise,
-            TurtleGlide,
-            JellyfishDrift,
-            CoralReef
-        }
-
-        #endregion
-
-        #region Public Properties
-
-        /// <summary>The data object describing this marine group.</summary>
-        public AnimalGroup GroupData => groupData;
+        [Header("Species")]
+        [SerializeField] private WildlifeCategory marineCategory = WildlifeCategory.MarineMammal;
 
         #endregion
 
         #region Private State
 
-        private readonly List<Transform> _members = new List<Transform>();
-        private Transform _playerTransform;
-
-        private float _breachTimer;
-        private float _dolphinLeapTimer;
-        private float _schoolAngle;
-        private bool  _isBreaching;
+        private WildlifeBehavior _currentBehavior = WildlifeBehavior.Roaming;
+        private float _waterHeight;
+        private float _surfaceTimer;
+        private bool _isSurfacing;
+        private Coroutine _surfacingCoroutine;
 
         #endregion
 
@@ -86,233 +43,161 @@ namespace SWEF.Wildlife
 
         private void Start()
         {
-            _playerTransform = Camera.main != null ? Camera.main.transform : null;
-            StartCoroutine(MarineBehaviorRoutine());
+            _surfaceTimer = surfacingInterval;
+            UpdateWaterHeight();
         }
+
+        private void Update()
+        {
+            UpdateWaterHeight();
+            ApplySwimDepth();
+
+            _surfaceTimer -= Time.deltaTime;
+            if (_surfaceTimer <= 0f && !_isSurfacing &&
+                _currentBehavior != WildlifeBehavior.Fleeing)
+            {
+                _surfaceTimer = surfacingInterval;
+                _surfacingCoroutine = StartCoroutine(SurfacingEvent());
+            }
+        }
+
+        #endregion
+
+        #region Water Integration
+
+        private void UpdateWaterHeight()
+        {
+            _waterHeight = 0f;
+#if SWEF_WATER_AVAILABLE
+            var wsm = SWEF.Water.WaterSurfaceManager.Instance;
+            if (wsm != null)
+                _waterHeight = wsm.GetWaterHeight(transform.position);
+#endif
+        }
+
+        private void ApplySwimDepth()
+        {
+            if (_isSurfacing) return;
+            float targetY = _waterHeight - swimDepth;
+            Vector3 pos   = transform.position;
+            pos.y         = Mathf.Lerp(pos.y, targetY, 5f * Time.deltaTime);
+            transform.position = pos;
+        }
+
+        #endregion
+
+        #region Surfacing / Breach
+
+        private IEnumerator SurfacingEvent()
+        {
+            _isSurfacing = true;
+            float leapHeight = marineCategory == WildlifeCategory.MarineMammal
+                ? (marineCategory == WildlifeCategory.Fish ? 0.5f : dolphinLeapHeight)
+                : dolphinLeapHeight;
+
+            // Rise to surface
+            float t = 0f;
+            Vector3 startPos = transform.position;
+            Vector3 surfacePos = new Vector3(startPos.x, _waterHeight + leapHeight * 0.1f, startPos.z);
+            while (t < 1f)
+            {
+                t += Time.deltaTime * 2f;
+                transform.position = Vector3.Lerp(startPos, surfacePos, t);
+                yield return null;
+            }
+
+            // Brief surface
+            TriggerSplash(SplashSize.Medium);
+            yield return new WaitForSeconds(1.5f);
+
+            // Return to swim depth
+            t = 0f;
+            startPos = transform.position;
+            Vector3 divePos = new Vector3(startPos.x, _waterHeight - swimDepth, startPos.z);
+            while (t < 1f)
+            {
+                t += Time.deltaTime * 1.5f;
+                transform.position = Vector3.Lerp(startPos, divePos, t);
+                yield return null;
+            }
+
+            _isSurfacing = false;
+        }
+
+        private IEnumerator BreachCoroutine()
+        {
+            _isSurfacing = true;
+            Vector3 startPos = transform.position;
+            Vector3 apex     = new Vector3(startPos.x, _waterHeight + whalBreachHeight, startPos.z);
+
+            float t = 0f;
+            while (t < 1f)
+            {
+                t += Time.deltaTime * 1.2f;
+                float parabola  = 4f * t * (1f - t); // parabolic arc
+                transform.position = Vector3.Lerp(startPos, apex, t) +
+                                     Vector3.up * parabola * whalBreachHeight * 0.2f;
+                yield return null;
+            }
+
+            TriggerSplash(SplashSize.Large);
+            yield return new WaitForSeconds(0.5f);
+
+            t = 0f;
+            startPos = transform.position;
+            Vector3 endPos = new Vector3(startPos.x, _waterHeight - swimDepth, startPos.z);
+            while (t < 1f)
+            {
+                t += Time.deltaTime;
+                transform.position = Vector3.Lerp(startPos, endPos, t);
+                yield return null;
+            }
+
+            _isSurfacing = false;
+        }
+
+        private void TriggerSplash(SplashSize size)
+        {
+#if SWEF_WATER_AVAILABLE
+            var splash = SWEF.Water.SplashEffectController.Instance;
+            splash?.SpawnSplash(transform.position, size == SplashSize.Large ? 3f : 1f);
+#endif
+        }
+
+        private enum SplashSize { Medium, Large }
 
         #endregion
 
         #region Public API
 
-        /// <summary>Initialises the controller with group data and member transforms.</summary>
-        public void Initialise(AnimalGroup data, List<Transform> marineMembers, MarineMode marineMode)
+        /// <summary>Forces a whale breach animation.</summary>
+        public void TriggerBreach()
         {
-            groupData = data;
-            mode      = marineMode;
-            _members.Clear();
-            _members.AddRange(marineMembers);
+            if (!_isSurfacing)
+                _surfacingCoroutine = StartCoroutine(BreachCoroutine());
         }
 
-        #endregion
-
-        #region Marine Behavior Routine
-
-        private IEnumerator MarineBehaviorRoutine()
+        /// <summary>Adjusts the default swim depth.</summary>
+        public void SetSwimDepth(float depth)
         {
-            while (true)
+            swimDepth = Mathf.Max(0f, depth);
+        }
+
+        /// <summary>Called by AnimalGroupController when behavior changes.</summary>
+        public void OnBehaviorChanged(WildlifeBehavior behavior)
+        {
+            _currentBehavior = behavior;
+            if (behavior == WildlifeBehavior.Fleeing)
             {
-                switch (mode)
-                {
-                    case MarineMode.Schooling:     UpdateSchool();    break;
-                    case MarineMode.WhalePatrol:   UpdateWhale();     break;
-                    case MarineMode.DolphinPod:    UpdateDolphins();  break;
-                    case MarineMode.SharkCruise:   UpdateShark();     break;
-                    case MarineMode.TurtleGlide:   UpdateTurtle();    break;
-                    case MarineMode.JellyfishDrift:UpdateJellyfish(); break;
-                    case MarineMode.CoralReef:                        break; // stationary
-                }
-
-                ApplyOceanCurrent();
-                yield return new WaitForSeconds(0.05f);
+                if (_surfacingCoroutine != null) StopCoroutine(_surfacingCoroutine);
+                _isSurfacing  = false;
+                swimDepth     = 20f;   // dive deep
+                _surfaceTimer = surfacingInterval * 2f;
             }
-        }
-
-        #endregion
-
-        #region Species-Specific Behaviors
-
-        // ── Fish School ───────────────────────────────────────────────────────────
-
-        private void UpdateSchool()
-        {
-            _schoolAngle += Time.deltaTime * 0.5f;
-            Vector3 center = groupData.centerPosition;
-            float   radius = groupData.groupRadius;
-
-            bool baitBall = IsPlayerNearby(100f);
-
-            for (int i = 0; i < _members.Count; i++)
+            else if (behavior == WildlifeBehavior.Roaming)
             {
-                if (_members[i] == null) continue;
-                float r   = baitBall ? BaitBallRadius : radius;
-                float ang = _schoolAngle + i * (Mathf.PI * 2f / Mathf.Max(1, _members.Count));
-                Vector3 target = center + new Vector3(Mathf.Cos(ang) * r, 0f, Mathf.Sin(ang) * r);
-                target.y = swimDepth + Mathf.Sin(ang * 2f) * 3f;
-                _members[i].position = Vector3.Lerp(_members[i].position, target, Time.deltaTime * 2f);
+                swimDepth = 5f;
             }
-
-            // Drift center slowly
-            groupData.centerPosition += currentDirection * Time.deltaTime;
-        }
-
-        // ── Whale ─────────────────────────────────────────────────────────────────
-
-        private void UpdateWhale()
-        {
-            if (_members.Count == 0) return;
-            Transform whale = _members[0];
-            if (whale == null) return;
-
-            float speed = groupData.species != null ? groupData.species.baseSpeed : 3f;
-            whale.position += whale.forward * speed * Time.deltaTime;
-            whale.position = new Vector3(whale.position.x, swimDepth, whale.position.z);
-
-            _breachTimer += Time.deltaTime;
-            if (!_isBreaching && _breachTimer >= BreachCooldown)
-            {
-                _breachTimer = 0f;
-                StartCoroutine(WhaleBreach(whale));
-            }
-
-            groupData.centerPosition = whale.position;
-        }
-
-        private IEnumerator WhaleBreach(Transform whale)
-        {
-            _isBreaching = true;
-            float elapsed = 0f;
-            float duration = 4f;
-            Vector3 startPos = whale.position;
-            Vector3 peakPos  = startPos + Vector3.up * 25f;
-
-            // Rise
-            while (elapsed < duration * 0.4f)
-            {
-                elapsed += Time.deltaTime;
-                whale.position = Vector3.Lerp(startPos, peakPos, elapsed / (duration * 0.4f));
-                yield return null;
-            }
-
-            SpawnSplash(whale.position);
-
-            // Fall
-            elapsed = 0f;
-            while (elapsed < duration * 0.6f)
-            {
-                elapsed += Time.deltaTime;
-                whale.position = Vector3.Lerp(peakPos, startPos, elapsed / (duration * 0.6f));
-                yield return null;
-            }
-
-            _isBreaching = false;
-        }
-
-        // ── Dolphins ──────────────────────────────────────────────────────────────
-
-        private void UpdateDolphins()
-        {
-            float speed = groupData.species != null ? groupData.species.baseSpeed : 8f;
-            _dolphinLeapTimer += Time.deltaTime;
-
-            for (int i = 0; i < _members.Count; i++)
-            {
-                if (_members[i] == null) continue;
-                _members[i].position += _members[i].forward * speed * Time.deltaTime;
-                _members[i].position = new Vector3(_members[i].position.x,
-                    swimDepth + Mathf.Sin(Time.time * 2f + i) * 3f, _members[i].position.z);
-            }
-
-            if (_dolphinLeapTimer >= DolphinLeapInterval)
-            {
-                _dolphinLeapTimer = 0f;
-                if (_members.Count > 0 && _members[0] != null)
-                    StartCoroutine(DolphinLeap(_members[Random.Range(0, _members.Count)]));
-            }
-        }
-
-        private IEnumerator DolphinLeap(Transform dolphin)
-        {
-            if (dolphin == null) yield break;
-            float elapsed = 0f;
-            float apex    = SurfaceY + 5f;
-            while (elapsed < 1f)
-            {
-                elapsed += Time.deltaTime;
-                float t  = elapsed;
-                float y  = Mathf.Lerp(swimDepth, apex, Mathf.Sin(t * Mathf.PI));
-                dolphin.position = new Vector3(dolphin.position.x, y, dolphin.position.z);
-                yield return null;
-            }
-            dolphin.position = new Vector3(dolphin.position.x, swimDepth, dolphin.position.z);
-        }
-
-        // ── Shark ─────────────────────────────────────────────────────────────────
-
-        private void UpdateShark()
-        {
-            if (_members.Count == 0) return;
-            Transform shark = _members[0];
-            if (shark == null) return;
-
-            shark.position += shark.forward * SharkCruiseSpeed * Time.deltaTime;
-            shark.position = new Vector3(shark.position.x, swimDepth, shark.position.z);
-
-            // Slow, wide turns
-            shark.Rotate(0f, Time.deltaTime * 5f, 0f);
-            groupData.centerPosition = shark.position;
-        }
-
-        // ── Sea Turtle ────────────────────────────────────────────────────────────
-
-        private void UpdateTurtle()
-        {
-            float speed = groupData.species != null ? groupData.species.baseSpeed : 1.5f;
-            foreach (var m in _members)
-            {
-                if (m == null) continue;
-                m.position += m.forward * speed * Time.deltaTime;
-                m.position  = new Vector3(m.position.x, swimDepth + Mathf.Sin(Time.time * 0.3f),
-                    m.position.z);
-            }
-        }
-
-        // ── Jellyfish ─────────────────────────────────────────────────────────────
-
-        private void UpdateJellyfish()
-        {
-            for (int i = 0; i < _members.Count; i++)
-            {
-                if (_members[i] == null) continue;
-                _members[i].position += currentDirection * JellyfishDriftSpeed * Time.deltaTime;
-                _members[i].position += Vector3.up * Mathf.Sin(Time.time * 0.5f + i * 0.7f) * 0.01f;
-            }
-        }
-
-        #endregion
-
-        #region Ocean Current
-
-        private void ApplyOceanCurrent()
-        {
-            if (mode == MarineMode.CoralReef) return;
-            groupData.centerPosition += currentDirection * Time.deltaTime * 0.2f;
-        }
-
-        #endregion
-
-        #region Helpers
-
-        private bool IsPlayerNearby(float radius)
-        {
-            if (_playerTransform == null) return false;
-            return Vector3.Distance(groupData.centerPosition, _playerTransform.position) < radius;
-        }
-
-        private void SpawnSplash(Vector3 position)
-        {
-            if (splashPrefab == null) return;
-            GameObject splash = Instantiate(splashPrefab, position, Quaternion.identity);
-            Destroy(splash, SplashParticleLife);
         }
 
         #endregion
