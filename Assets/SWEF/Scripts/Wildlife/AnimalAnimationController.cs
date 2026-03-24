@@ -1,66 +1,52 @@
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace SWEF.Wildlife
 {
     /// <summary>
-    /// Phase 53 — Manages animations for wildlife members.
-    ///
-    /// <para>Provides procedural animation fallbacks (walk/fly/swim cycles),
-    /// speed-based blending, idle variation, behavior-specific clips, and
-    /// LOD-aware animation reduction.  Designed to be attached to the same
-    /// GameObject as <see cref="AnimalGroupController"/>.</para>
+    /// Phase 75 — Handles procedural and keyframe animation for wildlife entities.
+    /// Supports birds, marine life, and land animals with LOD-aware switching.
     /// </summary>
     public class AnimalAnimationController : MonoBehaviour
     {
-        #region Constants
-
-        private const float WingFlapFrequencySmall  = 8f;   // Hz
-        private const float WingFlapFrequencyLarge  = 2f;
-        private const float TailWagFrequency        = 3f;
-        private const float IdleVariationInterval   = 4f;
-        private const float ScaleVariationMax       = 0.15f; // ±15 %
-        private const float AnimationLOD0Distance   = 150f;
-        private const float AnimationLOD1Distance   = 600f;
-
-        #endregion
-
         #region Inspector
 
-        [Header("Animation Settings")]
-        [Tooltip("Animator on the root model. If null, procedural animation is used exclusively.")]
-        [SerializeField] private Animator modelAnimator;
+        [Header("Wing Animation")]
+        [Tooltip("Transform of the left wing bone (optional).")]
+        [SerializeField] private Transform leftWingBone;
 
-        [Tooltip("Transforms representing wing bones for procedural flap.")]
-        [SerializeField] private List<Transform> wingBones = new List<Transform>();
+        [Tooltip("Transform of the right wing bone (optional).")]
+        [SerializeField] private Transform rightWingBone;
 
-        [Tooltip("Transform representing the tail bone for procedural wag.")]
+        [Header("Tail Animation")]
+        [Tooltip("Transform of the tail bone for marine life (optional).")]
         [SerializeField] private Transform tailBone;
 
-        [Tooltip("Species reference used to select animation parameters.")]
-        [SerializeField] private AnimalSpecies species;
-
         [Header("LOD")]
-        [Tooltip("Camera used for LOD distance checks. Resolved at runtime if null.")]
-        [SerializeField] private Camera lodCamera;
+        [Tooltip("Distance at which full skeletal animation switches to procedural.")]
+        [SerializeField] private float fullAnimDistance  = 150f;
+
+        [Tooltip("Distance at which procedural animation switches to billboard.")]
+        [SerializeField] private float proceduralDistance = 500f;
+
+        [Header("Category")]
+        [SerializeField] private WildlifeCategory animalCategory = WildlifeCategory.Bird;
 
         #endregion
 
-        #region Animator Parameter Hashes
+        #region Properties
 
-        private static readonly int _hashSpeed    = Animator.StringToHash("Speed");
-        private static readonly int _hashBehavior = Animator.StringToHash("Behavior");
-        private static readonly int _hashIdle      = Animator.StringToHash("IdleVariant");
+        /// <summary>Wing flap frequency in cycles per second.</summary>
+        public float WingFlapFrequency { get; set; } = 3f;
 
         #endregion
 
         #region Private State
 
-        private float _idleTimer;
-        private float _flapPhase;
-        private float _tailPhase;
-        private float _scaleMultiplier = 1f;
-        private int   _currentLOD;       // 0 = full, 1 = simplified, 2 = static
+        private Animator _animator;
+        private WildlifeBehavior _currentBehavior = WildlifeBehavior.Roaming;
+        private float _speed;
+        private float _time;
+        private Transform _playerTransform;
 
         #endregion
 
@@ -68,130 +54,128 @@ namespace SWEF.Wildlife
 
         private void Awake()
         {
-            // Apply per-instance scale variation
-            _scaleMultiplier = 1f + Random.Range(-ScaleVariationMax, ScaleVariationMax);
-            transform.localScale *= _scaleMultiplier;
+            _animator = GetComponent<Animator>();
+        }
 
-            if (lodCamera == null) lodCamera = Camera.main;
+        private void Start()
+        {
+            var cam = Camera.main;
+            if (cam != null) _playerTransform = cam.transform;
         }
 
         private void Update()
         {
-            UpdateLOD();
+            _time += Time.deltaTime;
+            float distToPlayer = _playerTransform != null
+                ? Vector3.Distance(transform.position, _playerTransform.position)
+                : 0f;
 
-            if (_currentLOD >= 2) return;  // no animation at LOD2+
+            if (distToPlayer < fullAnimDistance)
+                AnimateFull();
+            else if (distToPlayer < proceduralDistance)
+                AnimateProcedural();
+            // else: billboard/dot — no per-frame animation
+        }
 
-            if (_currentLOD == 0)
-                UpdateProceduralAnimation();
-            else
-                UpdateSimplifiedAnimation();
+        #endregion
 
-            _idleTimer += Time.deltaTime;
-            if (_idleTimer >= IdleVariationInterval)
+        #region Animation Tiers
+
+        private void AnimateFull()
+        {
+            if (_animator != null && _animator.isActiveAndEnabled)
             {
-                _idleTimer = 0f;
-                TriggerIdleVariation();
+                _animator.SetFloat("Speed", _speed);
+                _animator.SetInteger("Behavior", (int)_currentBehavior);
+                return;
             }
+            AnimateProcedural();
+        }
+
+        private void AnimateProcedural()
+        {
+            switch (animalCategory)
+            {
+                case WildlifeCategory.Bird:
+                case WildlifeCategory.Raptor:
+                case WildlifeCategory.Seabird:
+                case WildlifeCategory.Waterfowl:
+                case WildlifeCategory.MigratoryBird:
+                    AnimateBirdProcedural();
+                    break;
+                case WildlifeCategory.MarineMammal:
+                case WildlifeCategory.Fish:
+                    AnimateMarineProcedural();
+                    break;
+                case WildlifeCategory.LandMammal:
+                    AnimateLandProcedural();
+                    break;
+            }
+        }
+
+        private void AnimateBirdProcedural()
+        {
+            if (_currentBehavior == WildlifeBehavior.Diving)
+            {
+                // Wings tucked
+                ApplyWingRotation(0f);
+                return;
+            }
+            bool gliding = _currentBehavior == WildlifeBehavior.Circling;
+            float freq   = gliding ? 0.5f : WingFlapFrequency;
+            float amp    = gliding ? 5f : 30f;
+            float angle  = Mathf.Sin(_time * freq * Mathf.PI * 2f) * amp;
+            ApplyWingRotation(angle);
+        }
+
+        private void AnimateMarineProcedural()
+        {
+            if (tailBone == null) return;
+            float angle = Mathf.Sin(_time * 2f * Mathf.PI) * 20f;
+            tailBone.localRotation = Quaternion.Euler(0f, angle, 0f);
+        }
+
+        private void AnimateLandProcedural()
+        {
+            // Minimal procedural: slight body bob with speed
+            float bob = Mathf.Sin(_time * _speed * 2f) * 0.05f;
+            Vector3 pos = transform.localPosition;
+            pos.y = bob;
+            transform.localPosition = pos;
+        }
+
+        private void ApplyWingRotation(float angle)
+        {
+            if (leftWingBone  != null) leftWingBone.localRotation  = Quaternion.Euler(angle, 0f, 0f);
+            if (rightWingBone != null) rightWingBone.localRotation = Quaternion.Euler(-angle, 0f, 0f);
         }
 
         #endregion
 
         #region Public API
 
-        /// <summary>Called by <see cref="AnimalGroupController"/> when behavior state changes.</summary>
-        public void OnBehaviorChanged(AnimalBehavior behavior)
+        /// <summary>Maps a wildlife behavior to the appropriate animation state.</summary>
+        public void SetAnimationState(WildlifeBehavior behavior)
         {
-            if (modelAnimator == null) return;
-            modelAnimator.SetInteger(_hashBehavior, (int)behavior);
+            _currentBehavior = behavior;
+            switch (behavior)
+            {
+                case WildlifeBehavior.Fleeing:
+                    WingFlapFrequency = 6f; break;
+                case WildlifeBehavior.Circling:
+                    WingFlapFrequency = 1f; break;
+                case WildlifeBehavior.Diving:
+                    WingFlapFrequency = 0f; break;
+                default:
+                    WingFlapFrequency = 3f; break;
+            }
         }
 
-        /// <summary>Updates the movement speed parameter on the animator.</summary>
+        /// <summary>Adjusts animation playback rate based on movement speed.</summary>
         public void SetSpeed(float speed)
         {
-            if (modelAnimator != null)
-                modelAnimator.SetFloat(_hashSpeed, speed);
-        }
-
-        /// <summary>Initialises the controller with a species definition.</summary>
-        public void Initialise(AnimalSpecies animalSpecies)
-        {
-            species = animalSpecies;
-        }
-
-        #endregion
-
-        #region LOD
-
-        private void UpdateLOD()
-        {
-            if (lodCamera == null) return;
-            float dist = Vector3.Distance(transform.position, lodCamera.transform.position);
-
-            int newLOD;
-            if (dist < AnimationLOD0Distance)       newLOD = 0;
-            else if (dist < AnimationLOD1Distance)  newLOD = 1;
-            else                                    newLOD = 2;
-
-            if (newLOD == _currentLOD) return;
-            _currentLOD = newLOD;
-
-            // Enable/disable animator based on LOD
-            if (modelAnimator != null)
-                modelAnimator.enabled = _currentLOD < 2;
-        }
-
-        #endregion
-
-        #region Procedural Animation
-
-        private void UpdateProceduralAnimation()
-        {
-            if (species == null) return;
-
-            if (species.flightCapable)
-                AnimateWingFlap();
-            else if (species.swimCapable)
-                AnimateTailWag();
-        }
-
-        private void UpdateSimplifiedAnimation()
-        {
-            // At LOD1 only animate the tail/wings at reduced frequency
-            if (species == null) return;
-            if (species.flightCapable)
-            {
-                _flapPhase += WingFlapFrequencyLarge * Time.deltaTime;
-                ApplyWingRotation(Mathf.Sin(_flapPhase) * 20f);
-            }
-        }
-
-        private void AnimateWingFlap()
-        {
-            float freq = species.size <= AnimalSize.Small ? WingFlapFrequencySmall : WingFlapFrequencyLarge;
-            _flapPhase += freq * Time.deltaTime;
-            ApplyWingRotation(Mathf.Sin(_flapPhase) * 35f);
-        }
-
-        private void ApplyWingRotation(float angle)
-        {
-            foreach (var bone in wingBones)
-            {
-                if (bone == null) continue;
-                bone.localRotation = Quaternion.Euler(angle, 0f, 0f);
-            }
-        }
-
-        private void AnimateTailWag()
-        {
-            _tailPhase += TailWagFrequency * Time.deltaTime;
-            if (tailBone != null)
-                tailBone.localRotation = Quaternion.Euler(0f, Mathf.Sin(_tailPhase) * 25f, 0f);
-        }
-
-        private void TriggerIdleVariation()
-        {
-            if (modelAnimator == null) return;
-            modelAnimator.SetInteger(_hashIdle, Random.Range(0, 3));
+            _speed = speed;
+            WingFlapFrequency = Mathf.Lerp(2f, 6f, speed / 30f);
         }
 
         #endregion

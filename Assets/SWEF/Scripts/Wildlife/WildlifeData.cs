@@ -4,76 +4,67 @@ using UnityEngine;
 
 namespace SWEF.Wildlife
 {
-    #region Enumerations
+    // ─── Enumerations ────────────────────────────────────────────────────────────
 
-    /// <summary>Biological kingdom classification for an animal species.</summary>
-    public enum AnimalKingdom
+    /// <summary>Classification of wildlife species into ecological groups.</summary>
+    public enum WildlifeCategory
     {
-        Mammal,
         Bird,
+        Raptor,
+        Seabird,
+        Waterfowl,
+        MigratoryBird,
+        MarineMammal,
         Fish,
-        Reptile,
-        Amphibian,
-        Insect
+        LandMammal,
+        Insect,
+        Mythical
     }
 
-    /// <summary>Current behavioral state of an animal or group.</summary>
-    public enum AnimalBehavior
+    /// <summary>Behavior state for wildlife AI.</summary>
+    public enum WildlifeBehavior
     {
-        Grazing,
-        Hunting,
+        Idle,
+        Roaming,
+        Feeding,
         Migrating,
-        Resting,
-        Flying,
-        Swimming,
-        Schooling,
-        Nesting,
-        Fleeing
+        Fleeing,
+        Flocking,
+        Circling,
+        Diving,
+        Surfacing,
+        Sleeping
     }
 
-    /// <summary>Biome or habitat zone in which an animal can naturally appear.</summary>
-    public enum BiomeHabitat
+    /// <summary>Threat level from aircraft proximity.</summary>
+    public enum WildlifeThreatLevel
     {
-        Savanna,
-        Forest,
-        Desert,
-        Arctic,
+        None,
+        Aware,
+        Alarmed,
+        Fleeing,
+        Panicked
+    }
+
+    /// <summary>Spawn biome preference for species placement.</summary>
+    public enum SpawnBiome
+    {
         Ocean,
-        River,
-        Mountain,
-        Jungle,
-        Wetland,
-        Grassland,
-        Coral,
-        DeepSea,
         Coast,
-        Urban
-    }
-
-    /// <summary>Body-size tier from insect to blue whale.</summary>
-    public enum AnimalSize
-    {
-        Tiny,
-        Small,
-        Medium,
-        Large,
-        Huge,
-        Colossal
-    }
-
-    /// <summary>Spatial formation used by a flying flock or swimming school.</summary>
-    public enum FlockFormation
-    {
-        Vee,
-        Line,
-        Cluster,
-        Spiral,
-        Random,
-        Circle
+        Lake,
+        River,
+        Forest,
+        Grassland,
+        Desert,
+        Mountain,
+        Arctic,
+        Tropical,
+        Urban,
+        Wetland
     }
 
     /// <summary>Circadian activity pattern of a species.</summary>
-    public enum TimeActivity
+    public enum ActivityPattern
     {
         Diurnal,
         Nocturnal,
@@ -81,206 +72,214 @@ namespace SWEF.Wildlife
         AllDay
     }
 
-    /// <summary>Rarity tier that controls spawn probability weighting.</summary>
-    public enum AnimalRarity
+    /// <summary>Formation type used by bird flocks.</summary>
+    public enum FormationType
     {
-        Common,
-        Uncommon,
-        Rare,
-        Legendary
+        VFormation,
+        Murmuration,
+        SoaringCircle,
+        LineFormation,
+        Scatter
     }
 
-    /// <summary>Seasonal period used for migration route activation.</summary>
-    public enum Season
-    {
-        Spring,
-        Summer,
-        Autumn,
-        Winter
-    }
+    // ─── Data Classes ─────────────────────────────────────────────────────────────
 
-    #endregion
-
-    #region Species & Group Definitions
-
-    /// <summary>
-    /// Design-time specification for a single animal species.
-    /// </summary>
+    /// <summary>Design-time specification for a single wildlife species.</summary>
     [Serializable]
-    public class AnimalSpecies
+    public class WildlifeSpecies
     {
-        [Tooltip("Display name of the species.")]
-        public string speciesName = "Unknown Animal";
+        [Tooltip("Unique identifier, e.g. \"bald_eagle\".")]
+        public string speciesId = string.Empty;
 
-        [Tooltip("Biological kingdom this species belongs to.")]
-        public AnimalKingdom kingdom = AnimalKingdom.Mammal;
+        [Tooltip("Localization key for display name.")]
+        public string displayNameKey = string.Empty;
 
-        [Tooltip("Body-size tier for LOD and audio distance scaling.")]
-        public AnimalSize size = AnimalSize.Medium;
+        [Tooltip("Localization key for journal description.")]
+        public string descriptionKey = string.Empty;
 
-        [Tooltip("List of biomes/habitats where this species naturally appears.")]
-        public List<BiomeHabitat> habitats = new List<BiomeHabitat>();
+        [Tooltip("Ecological category of this species.")]
+        public WildlifeCategory category = WildlifeCategory.Bird;
+
+        [Tooltip("Biomes where this species can spawn.")]
+        public SpawnBiome[] preferredBiomes = new SpawnBiome[0];
 
         [Tooltip("Circadian activity pattern.")]
-        public TimeActivity activityPattern = TimeActivity.Diurnal;
+        public ActivityPattern activityPattern = ActivityPattern.Diurnal;
 
-        [Tooltip("Base movement speed in world units per second.")]
-        public float baseSpeed = 5f;
-
-        [Tooltip("Minimum number of individuals per spawned group.")]
-        public int minGroupSize = 1;
-
-        [Tooltip("Maximum number of individuals per spawned group.")]
-        public int maxGroupSize = 10;
-
-        [Tooltip("Whether this species is capable of sustained flight.")]
-        public bool flightCapable = false;
-
-        [Tooltip("Whether this species can swim.")]
-        public bool swimCapable = false;
-
-        [Tooltip("Minimum altitude (world units) at which this species appears.")]
+        [Tooltip("Minimum altitude (metres AGL) for spawning.")]
         public float minAltitude = 0f;
 
-        [Tooltip("Maximum altitude (world units) at which this species appears.")]
+        [Tooltip("Maximum altitude (metres AGL) for spawning.")]
         public float maxAltitude = 500f;
 
-        [Tooltip("AudioClip reference key used by WildlifeAudioController.")]
-        public string soundClipKey = string.Empty;
+        [Tooltip("Cruising speed in m/s.")]
+        public float baseSpeed = 10f;
 
-        [Tooltip("LOD distances: [0]=full anim, [1]=simplified, [2]=static/off.")]
-        public float[] lodDistances = { 100f, 500f, 1500f };
+        [Tooltip("Flee speed in m/s when evading aircraft.")]
+        public float fleeSpeed = 20f;
 
-        [Tooltip("Prefab reference path (resolved at runtime by WildlifeSpawnSystem).")]
-        public string prefabKey = string.Empty;
+        [Tooltip("Distance in metres at which this species starts fleeing.")]
+        public float fleeDistance = 150f;
 
-        [Tooltip("Animator controller reference key.")]
-        public string animatorControllerKey = string.Empty;
+        [Tooltip("Distance in metres at which this species becomes aware of the aircraft.")]
+        public float awareDistance = 400f;
 
-        [Tooltip("Spawn probability weighting.")]
-        public AnimalRarity rarity = AnimalRarity.Common;
+        [Tooltip("Minimum group size at spawn.")]
+        public int minGroupSize = 1;
 
-        [Tooltip("Short description shown in the Wildlife Codex.")]
-        [TextArea(2, 4)]
-        public string description = string.Empty;
+        [Tooltip("Maximum group size at spawn.")]
+        public int maxGroupSize = 10;
+
+        [Tooltip("Relative spawn probability weighting.")]
+        public float spawnWeight = 1f;
+
+        [Tooltip("Whether this species follows seasonal migration paths.")]
+        public bool isMigratory = false;
+
+        [Tooltip("Month indices (0–11) during which migration is active.")]
+        public int[] migratorySeason = new int[0];
+
+        [Tooltip("Rarity tier: 0 = common, 1 = rare, 2 = legendary.")]
+        public float rarityTier = 0f;
     }
 
-    /// <summary>
-    /// Runtime state for a group of animals moving and behaving together.
-    /// </summary>
+    /// <summary>Runtime state for an active wildlife group.</summary>
     [Serializable]
-    public class AnimalGroup
+    public class WildlifeGroupState
     {
-        [Tooltip("Species specification shared by all members of this group.")]
-        public AnimalSpecies species;
+        [Tooltip("Unique runtime identifier for this group.")]
+        public string groupId = string.Empty;
 
-        [Tooltip("Number of active members in this group.")]
-        public int memberCount = 1;
+        [Tooltip("Species that makes up this group.")]
+        public WildlifeSpecies species;
 
-        [Tooltip("World-space center of the group's bounding area.")]
+        [Tooltip("World-space centre of the group.")]
         public Vector3 centerPosition;
 
-        [Tooltip("Current normalised movement direction.")]
-        public Vector3 movementDirection;
+        [Tooltip("Current group velocity vector.")]
+        public Vector3 groupVelocity;
 
-        [Tooltip("Current behavioral state of the group.")]
-        public AnimalBehavior currentBehavior = AnimalBehavior.Grazing;
+        [Tooltip("Active behavior state.")]
+        public WildlifeBehavior currentBehavior = WildlifeBehavior.Roaming;
 
-        [Tooltip("Spatial formation currently adopted by the group.")]
-        public FlockFormation formation = FlockFormation.Random;
+        [Tooltip("Current threat level from nearby aircraft.")]
+        public WildlifeThreatLevel threatLevel = WildlifeThreatLevel.None;
 
-        [Tooltip("Radius of the group's bounding sphere in world units.")]
-        public float groupRadius = 10f;
+        [Tooltip("Number of individuals in the group.")]
+        public int memberCount = 1;
 
-        [Tooltip("World time at which this group was spawned.")]
+        [Tooltip("Game time at which this group was spawned (Time.time).")]
         public float spawnTime;
+
+        [Tooltip("Maximum lifetime in seconds before this group despawns.")]
+        public float lifetime = 300f;
+
+        [Tooltip("Whether the player has already discovered this group.")]
+        public bool isDiscovered = false;
     }
 
-    /// <summary>
-    /// Defines a seasonal migration path taken by a species.
-    /// </summary>
+    /// <summary>Immutable record of a single wildlife encounter logged by the player.</summary>
     [Serializable]
-    public class MigrationRoute
+    public class WildlifeEncounterRecord
     {
-        [Tooltip("Species that follows this route.")]
-        public AnimalSpecies species;
+        [Tooltip("Species identifier.")]
+        public string speciesId = string.Empty;
 
-        [Tooltip("Ordered list of world-space waypoints defining the migration path.")]
-        public List<Vector3> waypoints = new List<Vector3>();
+        [Tooltip("Group identifier.")]
+        public string groupId = string.Empty;
 
-        [Tooltip("Season during which this route is active.")]
-        public Season activeSeason = Season.Spring;
+        [Tooltip("World position of the encounter.")]
+        public Vector3 encounterPosition;
 
-        [Tooltip("Real-world duration of the migration in in-game days.")]
-        public float durationDays = 7f;
+        [Tooltip("Aircraft altitude at encounter time (metres AGL).")]
+        public float encounterAltitude;
 
-        [Tooltip("Whether this migration is currently running.")]
-        public bool isActive = false;
-    }
+        [Tooltip("Game time of the encounter (Time.time).")]
+        public float encounterTime;
 
-    /// <summary>
-    /// Immutable record of a single wildlife sighting logged by the player.
-    /// </summary>
-    [Serializable]
-    public class WildlifeEncounter
-    {
-        [Tooltip("Common name of the encountered species.")]
-        public string speciesName = string.Empty;
+        [Tooltip("Category of the encountered species.")]
+        public WildlifeCategory category;
 
-        [Tooltip("World position where the encounter occurred.")]
-        public Vector3 position;
+        [Tooltip("Number of individuals in the encountered group.")]
+        public int groupSize;
 
-        [Tooltip("In-game timestamp of the encounter (Time.time).")]
-        public float timestamp;
-
-        [Tooltip("Whether the player photographed this animal during the encounter.")]
+        [Tooltip("Whether the player photographed this encounter.")]
         public bool wasPhotographed;
 
-        [Tooltip("Distance between the player and the animal at time of encounter.")]
-        public float distanceFromPlayer;
+        [Tooltip("Closest approach distance in metres.")]
+        public float closestApproach;
     }
 
-    #endregion
-
-    #region Settings
-
-    /// <summary>
-    /// Runtime-configurable parameters for the entire wildlife system.
-    /// </summary>
+    /// <summary>Runtime performance and tuning configuration for the wildlife system.</summary>
     [Serializable]
-    public class WildlifeSettings
+    public class WildlifeConfig
     {
-        [Tooltip("Maximum number of simultaneously visible individual animals.")]
-        [Range(0, 500)]
-        public int maxAnimalsVisible = 150;
+        [Tooltip("Maximum number of simultaneously active wildlife groups.")]
+        [Range(1, 50)]
+        public int maxActiveGroups = 15;
 
-        [Tooltip("Distance from the player at which animals can spawn.")]
+        [Tooltip("Maximum total individual wildlife entities visible at once.")]
+        [Range(1, 500)]
+        public int maxIndividualsTotal = 200;
+
+        [Tooltip("Spawn ring radius in metres from the player.")]
         public float spawnRadius = 2000f;
 
-        [Tooltip("Distance from the player beyond which animals are despawned.")]
-        public float despawnRadius = 2500f;
+        [Tooltip("Despawn distance in metres from the player.")]
+        public float despawnRadius = 3000f;
 
-        [Tooltip("Per-LOD distances: [0]=full, [1]=simplified, [2]=static.")]
-        public float[] lodDistances = { 150f, 600f, 1800f };
+        [Tooltip("Seconds between spawn attempts.")]
+        public float spawnInterval = 5f;
 
-        [Tooltip("Whether marine life is enabled.")]
-        public bool enableMarineLife = true;
+        [Tooltip("Seconds between flock AI ticks.")]
+        public float flockUpdateRate = 0.1f;
 
-        [Tooltip("Whether birds are enabled.")]
-        public bool enableBirds = true;
+        [Tooltip("Collision distance in metres for bird strike detection.")]
+        public float birdStrikeDistance = 3f;
 
-        [Tooltip("Whether land animals are enabled.")]
-        public bool enableLandAnimals = true;
+        [Tooltip("Minimum seconds between journal encounter entries for the same species.")]
+        public float detectionReportCooldown = 10f;
 
-        [Tooltip("Whether insects and small critters are enabled.")]
-        public bool enableInsects = true;
+        [Tooltip("Whether bird strike collisions are enabled.")]
+        public bool enableBirdStrikes = true;
 
-        [Tooltip("Maximum distance at which animal sounds are audible.")]
-        public float soundDistance = 300f;
+        [Tooltip("Whether seasonal migration patterns are enabled.")]
+        public bool enableMigrationPatterns = true;
 
-        [Tooltip("Whether encounters are written to the encounter log.")]
-        public bool encounterLogEnabled = true;
+        [Tooltip("Quality scale multiplier — reduce on low-end hardware.")]
+        [Range(0.1f, 1f)]
+        public float qualityScaleMultiplier = 1f;
     }
 
-    #endregion
+    /// <summary>Tunable boid weights and radii for flocking simulation.</summary>
+    [Serializable]
+    public class FlockParameters
+    {
+        [Tooltip("Weight for separation rule (avoid crowding).")]
+        public float separationWeight = 1.5f;
+
+        [Tooltip("Weight for alignment rule (match velocity).")]
+        public float alignmentWeight = 1.0f;
+
+        [Tooltip("Weight for cohesion rule (move toward center).")]
+        public float cohesionWeight = 1.0f;
+
+        [Tooltip("Radius for separation rule in metres.")]
+        public float separationRadius = 5f;
+
+        [Tooltip("Radius for alignment rule in metres.")]
+        public float alignmentRadius = 15f;
+
+        [Tooltip("Radius for cohesion rule in metres.")]
+        public float cohesionRadius = 25f;
+
+        [Tooltip("Maximum steering force magnitude.")]
+        public float maxSteerForce = 3f;
+
+        [Tooltip("Weight for obstacle avoidance steering.")]
+        public float obstacleAvoidanceWeight = 2f;
+
+        [Tooltip("Weight for terrain following.")]
+        public float terrainFollowWeight = 0.5f;
+    }
 }

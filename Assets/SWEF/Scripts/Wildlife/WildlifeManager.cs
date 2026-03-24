@@ -6,27 +6,10 @@ using UnityEngine;
 namespace SWEF.Wildlife
 {
     /// <summary>
-    /// Phase 53 — Central singleton that manages all wildlife spawning, lifecycle,
-    /// and cross-system integration for Skywalking Earthflight.
-    ///
-    /// <para>Attach to a persistent GameObject in the bootstrap scene.
-    /// The manager streams animal groups in and out of the world based on player
-    /// proximity, queries TerrainBiomeMapper for biome data, and reacts to time-of-day
-    /// and weather conditions.</para>
-    ///
-    /// <para>Integration points:
-    /// <list type="bullet">
-    ///   <item><c>SWEF.Terrain.TerrainBiomeMapper</c> — biome-based fauna selection.</item>
-    ///   <item><c>SWEF.Ocean.OceanManager</c> — marine life placement.</item>
-    ///   <item><c>SWEF.Weather.WeatherManager</c> — storm shelter / post-rain activity.</item>
-    ///   <item><c>SWEF.TimeOfDay.TimeOfDayManager</c> — nocturnal vs diurnal animals.</item>
-    ///   <item><c>SWEF.Flight.FlightController</c> — altitude-aware fauna visibility.</item>
-    ///   <item><c>SWEF.Achievement.AchievementManager</c> — species-discovery achievements.</item>
-    ///   <item><c>SWEF.Journal.JournalManager</c> — encounter journal entries.</item>
-    ///   <item><see cref="WildlifeSettings"/> — all runtime tuning lives here.</item>
-    /// </list>
-    /// </para>
+    /// Phase 75 — Central singleton that manages all wildlife spawning, lifecycle, and
+    /// cross-system integration for SWEF. Attach to a persistent GameObject in the bootstrap scene.
     /// </summary>
+    [DisallowMultipleComponent]
     public class WildlifeManager : MonoBehaviour
     {
         #region Singleton
@@ -36,85 +19,66 @@ namespace SWEF.Wildlife
 
         #endregion
 
-        #region Constants
-
-        private const float StreamingCheckInterval   = 3f;    // seconds between streaming ticks; balances responsiveness vs. CPU cost
-        private const float EncounterProximityRadius = 200f;  // distance for encounter logging
-        private const int   ChunkSize                = 1000;  // world units per wildlife chunk
-
-        #endregion
-
         #region Inspector
 
-        [Header("Settings")]
-        [SerializeField] private WildlifeSettings settings = new WildlifeSettings();
+        [Header("Configuration")]
+        [SerializeField] private WildlifeConfig config = new WildlifeConfig();
 
-        [Header("Species Catalogue")]
-        [Tooltip("All animal species available for spawning.")]
-        [SerializeField] private List<AnimalSpecies> speciesCatalogue = new List<AnimalSpecies>();
-
-        [Tooltip("Active migration routes.")]
-        [SerializeField] private List<MigrationRoute> migrationRoutes = new List<MigrationRoute>();
+        [Header("Species Database")]
+        [Tooltip("All wildlife species registered for spawning.")]
+        [SerializeField] private List<WildlifeSpecies> speciesDatabase = new List<WildlifeSpecies>();
 
         [Header("References")]
-        [Tooltip("Transform used as the player/camera origin for streaming. Resolved at runtime if null.")]
+        [Tooltip("Player/camera transform used as origin. Resolved at runtime if null.")]
         [SerializeField] private Transform playerTransform;
 
-        [Tooltip("Spawn system component. Resolved at runtime if null.")]
+        [Tooltip("Spawn system component. Auto-resolved if null.")]
         [SerializeField] private WildlifeSpawnSystem spawnSystem;
 
-        [Tooltip("Audio controller for wildlife sounds. Resolved at runtime if null.")]
+        [Tooltip("Audio controller for wildlife sounds. Auto-resolved if null.")]
         [SerializeField] private WildlifeAudioController audioController;
 
         #endregion
 
         #region Events
 
-        /// <summary>Fired after a new animal group is added to the world.</summary>
-        public event Action<AnimalGroup> OnAnimalSpawned;
+        /// <summary>Fired when a new wildlife group is spawned.</summary>
+        public event Action<WildlifeGroupState> OnGroupSpawned;
 
-        /// <summary>Fired after an animal group is removed from the world.</summary>
-        public event Action<AnimalGroup> OnAnimalDespawned;
+        /// <summary>Fired when a wildlife group is removed.</summary>
+        public event Action<string> OnGroupDespawned;
 
-        /// <summary>Fired when the player gets close enough to log an encounter.</summary>
-        public event Action<WildlifeEncounter> OnWildlifeEncounter;
+        /// <summary>Fired the first time the player encounters a species.</summary>
+        public event Action<WildlifeSpecies> OnSpeciesDiscovered;
 
-        /// <summary>Fired the first time the player encounters a Rare or Legendary species.</summary>
-        public event Action<AnimalSpecies> OnRareAnimalFound;
+        /// <summary>Fired when a bird strike occurs.</summary>
+        public event Action<WildlifeSpecies, Vector3> OnBirdStrike;
+
+        /// <summary>Fired when a new encounter record is created.</summary>
+        public event Action<WildlifeEncounterRecord> OnEncounterRecorded;
 
         #endregion
 
         #region Public Properties
 
-        /// <summary>Read-only view of all currently active animal groups.</summary>
-        public IReadOnlyList<AnimalGroup> ActiveGroups => _activeGroups;
+        /// <summary>Read-only view of all currently active wildlife groups.</summary>
+        public IReadOnlyList<WildlifeGroupState> ActiveGroups => _activeGroups;
 
-        /// <summary>Exposes the runtime settings object.</summary>
-        public WildlifeSettings Settings => settings;
+        /// <summary>Exposes the runtime configuration object.</summary>
+        public WildlifeConfig Config => config;
 
-        /// <summary>Total number of individual animals currently visible.</summary>
-        public int TotalVisibleAnimals => _totalVisibleAnimals;
+        /// <summary>Total number of individual wildlife entities currently active.</summary>
+        public int TotalIndividuals => _totalIndividuals;
 
         #endregion
 
         #region Private State
 
-        private readonly List<AnimalGroup>  _activeGroups        = new List<AnimalGroup>();
-        private readonly HashSet<string>    _discoveredSpecies   = new HashSet<string>();
-        private readonly List<WildlifeEncounter> _encounterLog   = new List<WildlifeEncounter>();
-        private readonly Dictionary<Vector2Int, float> _chunkCooldowns = new Dictionary<Vector2Int, float>();
-
-        private int   _totalVisibleAnimals;
-        private float _streamingTimer;
-
-        // Cached component references
-        private Component _biomeMapper;
-        private Component _oceanManager;
-        private Component _weatherManager;
-        private Component _timeOfDayManager;
-        private Component _flightController;
-        private Component _achievementManager;
-        private Component _journalManager;
+        private readonly List<WildlifeGroupState> _activeGroups = new List<WildlifeGroupState>();
+        private readonly HashSet<string> _discoveredSpecies = new HashSet<string>();
+        private int _totalIndividuals;
+        private Coroutine _spawnCoroutine;
+        private static int _groupIdCounter;
 
         #endregion
 
@@ -131,333 +95,327 @@ namespace SWEF.Wildlife
             DontDestroyOnLoad(gameObject);
 
             ResolveReferences();
+            RegisterDefaultSpecies();
+            ApplyQualityScaling();
         }
 
         private void Start()
         {
-            StartCoroutine(StreamingRoutine());
+            _spawnCoroutine = StartCoroutine(SpawnLoop());
         }
 
         private void Update()
         {
-            CheckProximityEncounters();
+            if (config.enableBirdStrikes)
+                CheckBirdStrikes();
         }
 
         private void OnDestroy()
         {
-            if (Instance == this) Instance = null;
+            if (Instance == this)
+                Instance = null;
         }
 
         #endregion
 
-        #region Public API
-
-        /// <summary>
-        /// Returns all active groups whose center is within <paramref name="radius"/> of
-        /// <paramref name="pos"/>.
-        /// </summary>
-        public List<AnimalGroup> GetNearbyAnimals(Vector3 pos, float radius)
-        {
-            var result = new List<AnimalGroup>();
-            float sqr = radius * radius;
-            foreach (var group in _activeGroups)
-            {
-                if ((group.centerPosition - pos).sqrMagnitude <= sqr)
-                    result.Add(group);
-            }
-            return result;
-        }
-
-        /// <summary>
-        /// Returns all species in the catalogue that list <paramref name="biome"/> as a habitat.
-        /// </summary>
-        public List<AnimalSpecies> GetSpeciesInBiome(BiomeHabitat biome)
-        {
-            var result = new List<AnimalSpecies>();
-            foreach (var s in speciesCatalogue)
-            {
-                if (s.habitats.Contains(biome))
-                    result.Add(s);
-            }
-            return result;
-        }
-
-        /// <summary>Returns the full encounter log.</summary>
-        public IReadOnlyList<WildlifeEncounter> GetEncounterLog() => _encounterLog;
-
-        /// <summary>Returns the set of all species names the player has discovered.</summary>
-        public IReadOnlyCollection<string> DiscoveredSpecies => _discoveredSpecies;
-
-        /// <summary>Registers an externally created animal group with the manager.</summary>
-        public void RegisterGroup(AnimalGroup group)
-        {
-            if (group == null) return;
-            _activeGroups.Add(group);
-            _totalVisibleAnimals += group.memberCount;
-            OnAnimalSpawned?.Invoke(group);
-        }
-
-        /// <summary>Removes an animal group and fires the despawn event.</summary>
-        public void UnregisterGroup(AnimalGroup group)
-        {
-            if (group == null) return;
-            if (_activeGroups.Remove(group))
-            {
-                _totalVisibleAnimals = Mathf.Max(0, _totalVisibleAnimals - group.memberCount);
-                OnAnimalDespawned?.Invoke(group);
-            }
-        }
-
-        #endregion
-
-        #region Streaming
-
-        private IEnumerator StreamingRoutine()
-        {
-            while (true)
-            {
-                yield return new WaitForSeconds(StreamingCheckInterval);
-                if (playerTransform == null) continue;
-
-                DespawnDistantGroups();
-                SpawnNearbyGroups();
-            }
-        }
-
-        private void SpawnNearbyGroups()
-        {
-            if (spawnSystem == null) return;
-            if (_totalVisibleAnimals >= settings.maxAnimalsVisible) return;
-
-            Vector3 origin = playerTransform.position;
-            float   alt    = GetPlayerAltitude();
-
-            // Determine current biome for land spawning
-            BiomeHabitat currentBiome = SampleBiome(origin);
-            List<AnimalSpecies> candidates = GetFilteredCandidates(currentBiome, alt);
-
-            foreach (var species in candidates)
-            {
-                if (_totalVisibleAnimals >= settings.maxAnimalsVisible) break;
-
-                Vector2Int chunk = WorldToChunk(origin);
-                if (IsChunkOnCooldown(chunk)) continue;
-
-                spawnSystem.RequestSpawn(species, origin, settings.spawnRadius);
-                SetChunkCooldown(chunk);
-            }
-        }
-
-        private void DespawnDistantGroups()
-        {
-            if (playerTransform == null) return;
-            Vector3 origin = playerTransform.position;
-            float sqrDespawn = settings.despawnRadius * settings.despawnRadius;
-
-            for (int i = _activeGroups.Count - 1; i >= 0; i--)
-            {
-                var group = _activeGroups[i];
-                if ((group.centerPosition - origin).sqrMagnitude > sqrDespawn)
-                {
-                    UnregisterGroup(group);
-                }
-            }
-        }
-
-        #endregion
-
-        #region Encounter Detection
-
-        private void CheckProximityEncounters()
-        {
-            if (!settings.encounterLogEnabled) return;
-            if (playerTransform == null) return;
-
-            Vector3 playerPos = playerTransform.position;
-            float   sqrDist   = EncounterProximityRadius * EncounterProximityRadius;
-
-            foreach (var group in _activeGroups)
-            {
-                if ((group.centerPosition - playerPos).sqrMagnitude > sqrDist) continue;
-
-                string name = group.species != null ? group.species.speciesName : "Unknown";
-                bool firstTime = _discoveredSpecies.Add(name);
-
-                var encounter = new WildlifeEncounter
-                {
-                    speciesName      = name,
-                    position         = group.centerPosition,
-                    timestamp        = Time.time,
-                    wasPhotographed  = false,
-                    distanceFromPlayer = Vector3.Distance(playerPos, group.centerPosition)
-                };
-                _encounterLog.Add(encounter);
-                OnWildlifeEncounter?.Invoke(encounter);
-
-                if (firstTime)
-                {
-                    NotifyAchievement(name);
-                    NotifyJournal(encounter);
-
-                    if (group.species != null &&
-                        (group.species.rarity == AnimalRarity.Rare ||
-                         group.species.rarity == AnimalRarity.Legendary))
-                    {
-                        OnRareAnimalFound?.Invoke(group.species);
-                    }
-                }
-            }
-        }
-
-        #endregion
-
-        #region Biome & Altitude Helpers
-
-        private BiomeHabitat SampleBiome(Vector3 worldPos)
-        {
-#if SWEF_TERRAIN_AVAILABLE
-            var mapper = _biomeMapper as SWEF.Terrain.TerrainBiomeMapper;
-            if (mapper != null)
-                return (BiomeHabitat)(int)mapper.GetBiomeAt(worldPos);
-#endif
-            return BiomeHabitat.Grassland;
-        }
-
-        private float GetPlayerAltitude()
-        {
-#if SWEF_FLIGHT_AVAILABLE
-            var fc = _flightController as SWEF.Flight.FlightController;
-            if (fc != null) return fc.Altitude;
-#endif
-            return playerTransform != null ? playerTransform.position.y : 0f;
-        }
-
-        private List<AnimalSpecies> GetFilteredCandidates(BiomeHabitat biome, float altitude)
-        {
-            bool isNight = IsNightTime();
-            var  result  = new List<AnimalSpecies>();
-
-            foreach (var s in speciesCatalogue)
-            {
-                if (!s.habitats.Contains(biome)) continue;
-                if (altitude < s.minAltitude || altitude > s.maxAltitude) continue;
-
-                bool correctTime =
-                    s.activityPattern == TimeActivity.AllDay ||
-                    (isNight  && s.activityPattern == TimeActivity.Nocturnal) ||
-                    (!isNight && s.activityPattern == TimeActivity.Diurnal) ||
-                    s.activityPattern == TimeActivity.Crepuscular;
-
-                if (!correctTime) continue;
-
-                // Category filters
-                if (s.kingdom == AnimalKingdom.Bird   && !settings.enableBirds)       continue;
-                if (s.kingdom == AnimalKingdom.Insect && !settings.enableInsects)     continue;
-                if (s.kingdom == AnimalKingdom.Fish   && !settings.enableMarineLife)  continue;
-                if (!s.flightCapable && !s.swimCapable && !settings.enableLandAnimals) continue;
-
-                result.Add(s);
-            }
-            return result;
-        }
-
-        private bool IsNightTime()
-        {
-#if SWEF_TIMEOFDAY_AVAILABLE
-            var todm = _timeOfDayManager as SWEF.TimeOfDay.TimeOfDayManager;
-            if (todm != null) return todm.IsNight;
-#endif
-            float hour = (Time.time / 3600f) % 24f;
-            return hour < 6f || hour > 20f;
-        }
-
-        #endregion
-
-        #region Chunk Utilities
-
-        private static Vector2Int WorldToChunk(Vector3 pos)
-        {
-            return new Vector2Int(
-                Mathf.FloorToInt(pos.x / ChunkSize),
-                Mathf.FloorToInt(pos.z / ChunkSize));
-        }
-
-        private bool IsChunkOnCooldown(Vector2Int chunk)
-        {
-            return _chunkCooldowns.TryGetValue(chunk, out float expiry) && Time.time < expiry;
-        }
-
-        private void SetChunkCooldown(Vector2Int chunk, float duration = 10f)
-        {
-            _chunkCooldowns[chunk] = Time.time + duration;
-        }
-
-        #endregion
-
-        #region Cross-System Notifications
-
-        private void NotifyAchievement(string speciesName)
-        {
-#if SWEF_ACHIEVEMENT_AVAILABLE
-            var am = _achievementManager as SWEF.Achievement.AchievementManager;
-            am?.RecordProgress("wildlife_species_discovered", 1);
-#endif
-        }
-
-        private void NotifyJournal(WildlifeEncounter encounter)
-        {
-#if SWEF_JOURNAL_AVAILABLE
-            var jm = _journalManager as SWEF.Journal.JournalManager;
-            jm?.AddAutoEntry($"Spotted {encounter.speciesName} at altitude {encounter.position.y:F0}m.");
-#endif
-        }
-
-        #endregion
-
-        #region Reference Resolution
+        #region Initialization
 
         private void ResolveReferences()
         {
             if (playerTransform == null)
             {
                 var cam = Camera.main;
-                if (cam != null) playerTransform = cam.transform;
+                if (cam != null)
+                    playerTransform = cam.transform;
             }
-
             if (spawnSystem == null)
-                spawnSystem = FindFirstObjectByType<WildlifeSpawnSystem>();
-
+                spawnSystem = GetComponent<WildlifeSpawnSystem>();
             if (audioController == null)
-                audioController = FindFirstObjectByType<WildlifeAudioController>();
+                audioController = GetComponent<WildlifeAudioController>();
+        }
 
-#if SWEF_TERRAIN_AVAILABLE
-            if (_biomeMapper == null)
-                _biomeMapper = FindFirstObjectByType<SWEF.Terrain.TerrainBiomeMapper>();
+        private void ApplyQualityScaling()
+        {
+            float m = config.qualityScaleMultiplier;
+            config.maxActiveGroups = Mathf.Max(1, Mathf.RoundToInt(config.maxActiveGroups * m));
+            config.maxIndividualsTotal = Mathf.Max(1, Mathf.RoundToInt(config.maxIndividualsTotal * m));
+        }
+
+        private void RegisterDefaultSpecies()
+        {
+            // Raptors
+            RegisterSpecies(MakeSpecies("bald_eagle",      "wildlife_species_bald_eagle",     "wildlife_desc_bald_eagle",     WildlifeCategory.Raptor,      new[]{ SpawnBiome.Forest, SpawnBiome.Mountain }, 200f, 1500f, 12f, 25f, 200f, 600f, 1, 3, 0.6f, 2f));
+            // Seabirds
+            RegisterSpecies(MakeSpecies("seagull",         "wildlife_species_seagull",        "wildlife_desc_seagull",        WildlifeCategory.Seabird,     new[]{ SpawnBiome.Coast, SpawnBiome.Ocean },       0f,  300f,  8f, 18f, 100f, 300f, 2, 12, 2f, 0f));
+            RegisterSpecies(MakeSpecies("albatross",       "wildlife_species_albatross",      "wildlife_desc_albatross",      WildlifeCategory.Seabird,     new[]{ SpawnBiome.Ocean },                         50f, 800f, 14f, 28f, 150f, 400f, 1,  4, 1f, 1f));
+            // Waterfowl
+            RegisterSpecies(MakeSpecies("canada_goose",    "wildlife_species_canada_goose",   "wildlife_desc_canada_goose",   WildlifeCategory.Waterfowl,   new[]{ SpawnBiome.Lake, SpawnBiome.River, SpawnBiome.Grassland }, 0f, 400f, 10f, 20f, 120f, 350f, 4, 20, 1.5f, 0f, true));
+            // Birds
+            RegisterSpecies(MakeSpecies("sparrow",         "wildlife_species_sparrow",        "wildlife_desc_sparrow",        WildlifeCategory.Bird,        new[]{ SpawnBiome.Forest, SpawnBiome.Grassland, SpawnBiome.Urban }, 0f, 150f, 7f, 15f, 80f, 200f, 10, 60, 3f, 0f));
+            RegisterSpecies(MakeSpecies("arctic_tern",     "wildlife_species_arctic_tern",    "wildlife_desc_arctic_tern",    WildlifeCategory.MigratoryBird, new[]{ SpawnBiome.Arctic, SpawnBiome.Ocean, SpawnBiome.Coast }, 0f, 500f, 11f, 22f, 120f, 350f, 2, 15, 0.8f, 1f, true, new[]{3,4,9,10}));
+            RegisterSpecies(MakeSpecies("flamingo",        "wildlife_species_flamingo",       "wildlife_desc_flamingo",       WildlifeCategory.Bird,        new[]{ SpawnBiome.Wetland, SpawnBiome.Lake },      0f,  200f,  9f, 18f, 100f, 300f, 5, 30, 0.7f, 1f));
+            RegisterSpecies(MakeSpecies("pelican",         "wildlife_species_pelican",        "wildlife_desc_pelican",        WildlifeCategory.Seabird,     new[]{ SpawnBiome.Coast, SpawnBiome.Lake },         0f,  250f, 10f, 20f, 120f, 350f, 3, 12, 1f, 0f));
+            // Marine Mammals
+            RegisterSpecies(MakeSpecies("dolphin",         "wildlife_species_dolphin",        "wildlife_desc_dolphin",        WildlifeCategory.MarineMammal, new[]{ SpawnBiome.Ocean, SpawnBiome.Coast },       0f,   10f, 15f, 30f, 200f, 600f, 3, 10, 1.5f, 0f));
+            RegisterSpecies(MakeSpecies("humpback_whale",  "wildlife_species_humpback_whale", "wildlife_desc_humpback_whale", WildlifeCategory.MarineMammal, new[]{ SpawnBiome.Ocean },                         0f,    5f,  5f, 15f, 400f, 1000f, 1, 3, 0.5f, 1f));
+            RegisterSpecies(MakeSpecies("blue_whale",      "wildlife_species_blue_whale",     "wildlife_desc_blue_whale",     WildlifeCategory.MarineMammal, new[]{ SpawnBiome.Ocean },                         0f,    5f,  4f, 12f, 500f, 1200f, 1, 2, 0.2f, 2f));
+            // Fish
+            RegisterSpecies(MakeSpecies("salmon",          "wildlife_species_salmon",         "wildlife_desc_salmon",         WildlifeCategory.Fish,        new[]{ SpawnBiome.River, SpawnBiome.Lake, SpawnBiome.Ocean }, 0f, 5f, 3f, 10f, 50f, 150f, 10, 50, 1.5f, 0f));
+            // Land Mammals
+            RegisterSpecies(MakeSpecies("deer",            "wildlife_species_deer",           "wildlife_desc_deer",           WildlifeCategory.LandMammal,  new[]{ SpawnBiome.Forest, SpawnBiome.Grassland },  0f,   50f,  5f, 14f, 200f, 500f, 2,  8, 2f, 0f));
+            RegisterSpecies(MakeSpecies("bison",           "wildlife_species_bison",          "wildlife_desc_bison",          WildlifeCategory.LandMammal,  new[]{ SpawnBiome.Grassland },                      0f,   50f,  6f, 16f, 300f, 700f, 5, 40, 1f, 0f));
+            // Insects
+            RegisterSpecies(MakeSpecies("butterfly",       "wildlife_species_butterfly",      "wildlife_desc_butterfly",      WildlifeCategory.Insect,      new[]{ SpawnBiome.Forest, SpawnBiome.Grassland, SpawnBiome.Tropical }, 0f, 50f, 2f, 8f, 30f, 80f, 20, 100, 2f, 0f));
+        }
+
+        private static WildlifeSpecies MakeSpecies(
+            string id, string nameKey, string descKey, WildlifeCategory cat,
+            SpawnBiome[] biomes, float minAlt, float maxAlt,
+            float speed, float fleeSpeed, float fleeDist, float awareDist,
+            int minGroup, int maxGroup, float weight, float rarity,
+            bool migratory = false, int[] migrationMonths = null)
+        {
+            return new WildlifeSpecies
+            {
+                speciesId        = id,
+                displayNameKey   = nameKey,
+                descriptionKey   = descKey,
+                category         = cat,
+                preferredBiomes  = biomes,
+                activityPattern  = ActivityPattern.Diurnal,
+                minAltitude      = minAlt,
+                maxAltitude      = maxAlt,
+                baseSpeed        = speed,
+                fleeSpeed        = fleeSpeed,
+                fleeDistance     = fleeDist,
+                awareDistance    = awareDist,
+                minGroupSize     = minGroup,
+                maxGroupSize     = maxGroup,
+                spawnWeight      = weight,
+                isMigratory      = migratory,
+                migratorySeason  = migrationMonths ?? new int[0],
+                rarityTier       = rarity
+            };
+        }
+
+        #endregion
+
+        #region Species Database
+
+        /// <summary>Registers a species into the runtime database.</summary>
+        public void RegisterSpecies(WildlifeSpecies species)
+        {
+            if (species == null || string.IsNullOrEmpty(species.speciesId)) return;
+            speciesDatabase.Add(species);
+        }
+
+        /// <summary>Returns the species with the given ID, or null if not found.</summary>
+        public WildlifeSpecies GetSpeciesById(string id)
+        {
+            for (int i = 0; i < speciesDatabase.Count; i++)
+                if (speciesDatabase[i].speciesId == id)
+                    return speciesDatabase[i];
+            return null;
+        }
+
+        /// <summary>Returns all species whose preferred biomes include the given biome.</summary>
+        public List<WildlifeSpecies> GetSpeciesForBiome(SpawnBiome biome)
+        {
+            var result = new List<WildlifeSpecies>();
+            foreach (var s in speciesDatabase)
+                foreach (var b in s.preferredBiomes)
+                    if (b == biome) { result.Add(s); break; }
+            return result;
+        }
+
+        #endregion
+
+        #region Spawn / Despawn Loop
+
+        private IEnumerator SpawnLoop()
+        {
+            while (true)
+            {
+                yield return new WaitForSeconds(config.spawnInterval);
+                TrySpawnGroup();
+                DespawnExpiredGroups();
+            }
+        }
+
+        private void TrySpawnGroup()
+        {
+            if (_activeGroups.Count >= config.maxActiveGroups) return;
+            if (_totalIndividuals >= config.maxIndividualsTotal) return;
+            if (playerTransform == null) return;
+
+            // Determine current biome (null-safe)
+            SpawnBiome biome = SpawnBiome.Grassland;
+#if SWEF_BIOME_AVAILABLE
+            var biomeClassifier = SWEF.Biome.BiomeClassifier.Instance;
+            if (biomeClassifier != null)
+                biome = MapToSpawnBiome(biomeClassifier.GetBiomeAt(playerTransform.position));
 #endif
-#if SWEF_OCEAN_AVAILABLE
-            if (_oceanManager == null)
-                _oceanManager = SWEF.Ocean.OceanManager.Instance;
-#endif
-#if SWEF_WEATHER_AVAILABLE
-            if (_weatherManager == null)
-                _weatherManager = FindFirstObjectByType<SWEF.Weather.WeatherManager>();
-#endif
+
+            // Filter species by biome and altitude
+            float playerAlt = playerTransform.position.y;
+            var candidates = GetSpeciesForBiome(biome);
+            candidates.RemoveAll(s =>
+                playerAlt < s.minAltitude || playerAlt > s.maxAltitude + 200f);
+
+            // Filter by time of day (null-safe)
 #if SWEF_TIMEOFDAY_AVAILABLE
-            if (_timeOfDayManager == null)
-                _timeOfDayManager = FindFirstObjectByType<SWEF.TimeOfDay.TimeOfDayManager>();
+            bool isNight = false;
+            var tod = SWEF.TimeOfDay.TimeOfDayManager.Instance;
+            if (tod != null) isNight = tod.IsNight;
+            candidates.RemoveAll(s =>
+                (s.activityPattern == ActivityPattern.Diurnal && isNight) ||
+                (s.activityPattern == ActivityPattern.Nocturnal && !isNight));
 #endif
-#if SWEF_FLIGHT_AVAILABLE
-            if (_flightController == null)
-                _flightController = FindFirstObjectByType<SWEF.Flight.FlightController>();
+
+            if (candidates.Count == 0) return;
+
+            // Weighted random selection
+            WildlifeSpecies selected = WeightedRandom(candidates);
+            if (selected == null) return;
+
+            // Random ring position around player
+            float angle  = UnityEngine.Random.Range(0f, 360f) * Mathf.Deg2Rad;
+            float dist   = UnityEngine.Random.Range(config.spawnRadius * 0.5f, config.spawnRadius);
+            Vector3 spawnPos = playerTransform.position
+                + new Vector3(Mathf.Cos(angle) * dist, 0f, Mathf.Sin(angle) * dist);
+            spawnPos.y = UnityEngine.Random.Range(selected.minAltitude, selected.maxAltitude);
+
+            int count = UnityEngine.Random.Range(selected.minGroupSize, selected.maxGroupSize + 1);
+            if (_totalIndividuals + count > config.maxIndividualsTotal)
+                count = config.maxIndividualsTotal - _totalIndividuals;
+            if (count <= 0) return;
+
+            // Instantiate via spawn system if available
+            if (spawnSystem != null)
+                spawnSystem.SpawnGroup(selected, spawnPos, count);
+
+            var group = new WildlifeGroupState
+            {
+                groupId         = "grp_" + (++_groupIdCounter),
+                species         = selected,
+                centerPosition  = spawnPos,
+                groupVelocity   = Vector3.zero,
+                currentBehavior = WildlifeBehavior.Roaming,
+                threatLevel     = WildlifeThreatLevel.None,
+                memberCount     = count,
+                spawnTime       = Time.time,
+                lifetime        = UnityEngine.Random.Range(120f, 300f),
+                isDiscovered    = false
+            };
+
+            _activeGroups.Add(group);
+            _totalIndividuals += count;
+            OnGroupSpawned?.Invoke(group);
+        }
+
+        private void DespawnExpiredGroups()
+        {
+            if (playerTransform == null) return;
+            float now = Time.time;
+            for (int i = _activeGroups.Count - 1; i >= 0; i--)
+            {
+                var g = _activeGroups[i];
+                float dist = Vector3.Distance(g.centerPosition, playerTransform.position);
+                bool tooFar  = dist > config.despawnRadius;
+                bool expired = (now - g.spawnTime) > g.lifetime;
+                if (tooFar || expired)
+                {
+                    if (spawnSystem != null)
+                        spawnSystem.DespawnGroup(g.groupId);
+                    _totalIndividuals = Mathf.Max(0, _totalIndividuals - g.memberCount);
+                    OnGroupDespawned?.Invoke(g.groupId);
+                    _activeGroups.RemoveAt(i);
+                }
+            }
+        }
+
+        #endregion
+
+        #region Bird Strike Detection
+
+        private void CheckBirdStrikes()
+        {
+            if (playerTransform == null) return;
+            foreach (var g in _activeGroups)
+            {
+                if (g.species.category != WildlifeCategory.Bird &&
+                    g.species.category != WildlifeCategory.Raptor &&
+                    g.species.category != WildlifeCategory.Seabird &&
+                    g.species.category != WildlifeCategory.Waterfowl &&
+                    g.species.category != WildlifeCategory.MigratoryBird) continue;
+
+                float dist = Vector3.Distance(g.centerPosition, playerTransform.position);
+                if (dist <= config.birdStrikeDistance)
+                {
+                    OnBirdStrike?.Invoke(g.species, g.centerPosition);
+#if SWEF_DAMAGE_AVAILABLE
+                    var dm = SWEF.Damage.DamageModel.Instance;
+                    dm?.ApplyBirdStrikeDamage(g.species.category);
 #endif
-#if SWEF_ACHIEVEMENT_AVAILABLE
-            if (_achievementManager == null)
-                _achievementManager = FindFirstObjectByType<SWEF.Achievement.AchievementManager>();
-#endif
-#if SWEF_JOURNAL_AVAILABLE
-            if (_journalManager == null)
-                _journalManager = FindFirstObjectByType<SWEF.Journal.JournalManager>();
-#endif
+                }
+            }
+        }
+
+        #endregion
+
+        #region Public API
+
+        /// <summary>Marks a species as discovered and fires the discovery event if new.</summary>
+        public void ReportDiscovery(WildlifeSpecies species)
+        {
+            if (species == null) return;
+            if (_discoveredSpecies.Add(species.speciesId))
+                OnSpeciesDiscovered?.Invoke(species);
+        }
+
+        /// <summary>Records a wildlife encounter and fires the encounter event.</summary>
+        public void RecordEncounter(WildlifeEncounterRecord record)
+        {
+            if (record == null) return;
+            OnEncounterRecorded?.Invoke(record);
+        }
+
+        /// <summary>Returns all groups within the specified radius of a position.</summary>
+        public List<WildlifeGroupState> GetNearbyGroups(Vector3 pos, float radius)
+        {
+            var result = new List<WildlifeGroupState>();
+            foreach (var g in _activeGroups)
+                if (Vector3.Distance(g.centerPosition, pos) <= radius)
+                    result.Add(g);
+            return result;
+        }
+
+        /// <summary>Returns the set of discovered species IDs.</summary>
+        public IReadOnlyCollection<string> DiscoveredSpecies => _discoveredSpecies;
+
+        #endregion
+
+        #region Helpers
+
+        private static WildlifeSpecies WeightedRandom(List<WildlifeSpecies> list)
+        {
+            if (list.Count == 0) return null;
+            float total = 0f;
+            foreach (var s in list) total += s.spawnWeight;
+            float roll = UnityEngine.Random.Range(0f, total);
+            float acc  = 0f;
+            foreach (var s in list)
+            {
+                acc += s.spawnWeight;
+                if (roll <= acc) return s;
+            }
+            return list[list.Count - 1];
+        }
+
+        private static SpawnBiome MapToSpawnBiome(object biome)
+        {
+            // Fallback mapping; real implementation resolves SWEF.Biome enum
+            return SpawnBiome.Grassland;
         }
 
         #endregion

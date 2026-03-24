@@ -1,235 +1,169 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Audio;
 
 namespace SWEF.Wildlife
 {
     /// <summary>
-    /// Phase 53 — Manages all wildlife audio for Skywalking Earthflight.
-    ///
-    /// <para>Handles ambient biome sounds, individual animal calls triggered by proximity
-    /// and behavior, 3D spatial audio on group centers, altitude and weather attenuation,
-    /// dawn chorus scheduling, and sound priority management.</para>
-    ///
-    /// <para>Integrates with <c>SWEF.Audio.AudioManager</c> when available; otherwise
-    /// creates its own AudioSource components.</para>
+    /// Phase 75 — Manages spatial audio for wildlife encounters.
+    /// Uses one 3D AudioSource per group for performance.
     /// </summary>
     public class WildlifeAudioController : MonoBehaviour
     {
-        #region Constants
-
-        private const float AltitudeFadeStartHeight = 500f;
-        private const float AltitudeFadeEndHeight   = 2000f;
-        private const float DawnHour                = 5.5f;
-        private const float DawnDuration            = 1.5f;   // hours
-        private const int   AudioSourcePoolSize     = 16;
-        private const float MinCallInterval         = 3f;
-
-        #endregion
-
         #region Inspector
 
         [Header("Audio Settings")]
-        [Tooltip("Master volume multiplier for all wildlife sounds.")]
-        [Range(0f, 1f)]
-        [SerializeField] private float masterVolume = 1f;
+        [Tooltip("Maximum volume for wildlife group audio.")]
+        [SerializeField, Range(0f, 1f)] private float maxGroupVolume = 0.8f;
 
-        [Tooltip("Maximum distance at which animal sounds are audible.")]
-        [SerializeField] private float soundDistance = 300f;
+        [Tooltip("Ambient wildlife volume when groups are nearby.")]
+        [SerializeField, Range(0f, 1f)] private float ambientVolume = 0.3f;
 
-        [Tooltip("AudioMixerGroup for wildlife sounds. Optional.")]
-        [SerializeField] private AudioMixerGroup audioMixerGroup;
-
-        [Header("Clips")]
-        [Tooltip("Ambient savanna background loop.")]
-        [SerializeField] private AudioClip savannaAmbient;
-
-        [Tooltip("Ambient jungle bird loop.")]
-        [SerializeField] private AudioClip jungleAmbient;
-
-        [Tooltip("Ocean wave + whale song loop.")]
-        [SerializeField] private AudioClip oceanAmbient;
-
-        [Tooltip("Arctic wind loop.")]
-        [SerializeField] private AudioClip arcticAmbient;
-
-        [Tooltip("Night cricket loop.")]
-        [SerializeField] private AudioClip nightCrickets;
-
-        [Header("References")]
-        [Tooltip("Player/camera transform for distance checks. Resolved at runtime if null.")]
-        [SerializeField] private Transform playerTransform;
+        [Tooltip("3D AudioSource rolloff maximum distance.")]
+        [SerializeField] private float audioMaxDistance = 500f;
 
         #endregion
 
         #region Private State
 
-        private readonly List<AudioSource>    _pool         = new List<AudioSource>();
-        private readonly Dictionary<AnimalGroup, AudioSource> _activeSources =
-            new Dictionary<AnimalGroup, AudioSource>();
-
-        private AudioSource _ambientSource;
-        private float       _playerAltitude;
-        private float       _callTimer;
-        private BiomeHabitat _currentBiome       = BiomeHabitat.Grassland;
-        private float       _weatherMultiplier   = 1f;
+        private const float VolumeScaleMemberCount = 20f;
+        private float _masterVolume = 1f;
 
         #endregion
 
         #region Unity Lifecycle
 
-        private void Awake()
+        private void Start()
         {
-            if (playerTransform == null)
-                playerTransform = Camera.main != null ? Camera.main.transform : null;
-
-            BuildAudioPool();
-            _ambientSource = CreateSource();
-            _ambientSource.loop   = true;
-            _ambientSource.volume = 0.3f;
+            SubscribeToManager();
         }
 
-        private void Update()
+        private void OnDestroy()
         {
-            if (playerTransform != null)
-                _playerAltitude = playerTransform.position.y;
-
-            UpdateAltitudeAttenuation();
-            _callTimer += Time.deltaTime;
+            UnsubscribeFromManager();
         }
 
         #endregion
 
-        #region Public API
+        #region Manager Integration
 
-        /// <summary>Plays the appropriate ambient clip for the given biome.</summary>
-        public void PlayBiomeAmbient(BiomeHabitat biome)
+        private void SubscribeToManager()
         {
-            if (_currentBiome == biome && _ambientSource.isPlaying) return;
-            _currentBiome = biome;
-
-            AudioClip clip = GetBiomeClip(biome);
-            if (clip == null) return;
-
-            _ambientSource.clip = clip;
-            _ambientSource.Play();
+            var mgr = WildlifeManager.Instance;
+            if (mgr == null) return;
+            mgr.OnGroupSpawned    += HandleGroupSpawned;
+            mgr.OnGroupDespawned  += HandleGroupDespawned;
+            mgr.OnBirdStrike      += HandleBirdStrike;
         }
 
-        /// <summary>Stops the ambient loop.</summary>
-        public void StopBiomeAmbient()
+        private void UnsubscribeFromManager()
         {
-            _ambientSource.Stop();
+            var mgr = WildlifeManager.Instance;
+            if (mgr == null) return;
+            mgr.OnGroupSpawned   -= HandleGroupSpawned;
+            mgr.OnGroupDespawned -= HandleGroupDespawned;
+            mgr.OnBirdStrike     -= HandleBirdStrike;
         }
 
-        /// <summary>Plays a behavior-appropriate sound for the given group.</summary>
-        public void PlayGroupSound(AnimalGroup group, AnimalBehavior behavior)
+        private void HandleGroupSpawned(WildlifeGroupState group)  => PlayGroupAudio(group);
+        private void HandleGroupDespawned(string groupId)           => StopGroupAudio(groupId);
+        private void HandleBirdStrike(WildlifeSpecies s, Vector3 p) => PlayBirdStrikeAudio(p);
+
+        #endregion
+
+        #region Audio Playback
+
+        /// <summary>Creates or updates the spatial audio source for a wildlife group.</summary>
+        public void PlayGroupAudio(WildlifeGroupState group)
         {
-            if (group?.species == null) return;
-            if (_callTimer < MinCallInterval) return;
-            if (string.IsNullOrEmpty(group.species.soundClipKey)) return;
+            if (group == null) return;
+            if (IsReducedAudioMode()) return;
 
-            _callTimer = 0f;
+            if (!_groupSources.TryGetValue(group.groupId, out var src) || src == null)
+            {
+                var go = new GameObject($"WildlifeAudio_{group.groupId}");
+                go.transform.SetParent(transform);
+                go.transform.position = group.centerPosition;
+                src = go.AddComponent<AudioSource>();
+                src.spatialBlend  = 1f;
+                src.rolloffMode   = AudioRolloffMode.Logarithmic;
+                src.maxDistance   = audioMaxDistance;
+                src.loop          = true;
+                src.volume        = Mathf.Clamp01(
+                    maxGroupVolume * (group.memberCount / VolumeScaleMemberCount) * _masterVolume);
+                _groupSources[group.groupId] = src;
+            }
 
-            float dist = playerTransform != null
-                ? Vector3.Distance(group.centerPosition, playerTransform.position)
-                : float.MaxValue;
-
-            if (dist > soundDistance) return;
-
-            AudioSource src = GetPooledSource();
-            if (src == null) return;
-
-            src.transform.position = group.centerPosition;
-            src.volume = masterVolume * Mathf.Clamp01(1f - dist / soundDistance)
-                         * AltitudeVolumeMultiplier() * _weatherMultiplier;
-
-            // Clip lookup via Resources (key-based)
-            AudioClip clip = Resources.Load<AudioClip>("Wildlife/Audio/" + group.species.soundClipKey);
-            if (clip == null) return;
-
-            src.PlayOneShot(clip);
-            _activeSources[group] = src;
+            // Resolve audio clip via AudioManager (null-safe)
+#if SWEF_AUDIO_AVAILABLE
+            var am = SWEF.Audio.AudioManager.Instance;
+            if (am != null)
+            {
+                string clipKey = GetClipKeyForCategory(group.species.category,
+                    group.currentBehavior);
+                var clip = am.GetClip(clipKey);
+                if (clip != null && src.clip != clip)
+                {
+                    src.clip = clip;
+                    src.Play();
+                }
+            }
+#endif
         }
 
-        /// <summary>Stops any active sound for the given group.</summary>
-        public void StopGroupSound(AnimalGroup group)
+        /// <summary>Stops and removes the spatial audio source for a wildlife group.</summary>
+        public void StopGroupAudio(string groupId)
         {
-            if (_activeSources.TryGetValue(group, out var src))
+            if (_groupSources.TryGetValue(groupId, out var src) && src != null)
             {
                 src.Stop();
-                _activeSources.Remove(group);
+                Destroy(src.gameObject);
             }
+            _groupSources.Remove(groupId);
         }
 
-        /// <summary>Reduces all wildlife audio during storms.</summary>
-        public void OnWeatherChanged(bool isStorming)
+        /// <summary>Sets the master ambient wildlife volume.</summary>
+        public void SetAmbientWildlifeVolume(float volume)
         {
-            _weatherMultiplier = isStorming ? 0.3f : 1f;
+            ambientVolume = Mathf.Clamp01(volume);
+        }
+
+        private void PlayBirdStrikeAudio(Vector3 position)
+        {
+#if SWEF_AUDIO_AVAILABLE
+            var am = SWEF.Audio.AudioManager.Instance;
+            am?.PlayOneShot("bird_strike_impact", position);
+#endif
         }
 
         #endregion
 
-        #region Biome Clips
+        #region Helpers
 
-        private AudioClip GetBiomeClip(BiomeHabitat biome)
+        private static string GetClipKeyForCategory(WildlifeCategory cat, WildlifeBehavior behavior)
         {
-            switch (biome)
+            string suffix = behavior == WildlifeBehavior.Fleeing ? "_alarm" : "_idle";
+            switch (cat)
             {
-                case BiomeHabitat.Savanna:   return savannaAmbient;
-                case BiomeHabitat.Jungle:    return jungleAmbient;
-                case BiomeHabitat.Ocean:
-                case BiomeHabitat.DeepSea:
-                case BiomeHabitat.Coast:     return oceanAmbient;
-                case BiomeHabitat.Arctic:    return arcticAmbient;
-                default:                     return nightCrickets;
+                case WildlifeCategory.Bird:          return "bird_chirp"     + suffix;
+                case WildlifeCategory.Raptor:        return "raptor_cry"     + suffix;
+                case WildlifeCategory.Seabird:       return "seabird_squawk" + suffix;
+                case WildlifeCategory.Waterfowl:     return "waterfowl_call" + suffix;
+                case WildlifeCategory.MigratoryBird: return "bird_flock"     + suffix;
+                case WildlifeCategory.MarineMammal:  return "whale_song"     + suffix;
+                case WildlifeCategory.Fish:          return "water_ambient"  + suffix;
+                case WildlifeCategory.LandMammal:    return "land_animal"    + suffix;
+                case WildlifeCategory.Insect:        return "insect_swarm"   + suffix;
+                default:                             return "wildlife_ambient";
             }
         }
 
-        #endregion
-
-        #region Altitude Attenuation
-
-        private void UpdateAltitudeAttenuation()
+        private bool IsReducedAudioMode()
         {
-            float mult = AltitudeVolumeMultiplier();
-            if (_ambientSource != null) _ambientSource.volume = 0.3f * mult * _weatherMultiplier;
-        }
-
-        private float AltitudeVolumeMultiplier()
-        {
-            if (_playerAltitude <= AltitudeFadeStartHeight) return 1f;
-            if (_playerAltitude >= AltitudeFadeEndHeight)   return 0f;
-            return 1f - (_playerAltitude - AltitudeFadeStartHeight) /
-                        (AltitudeFadeEndHeight - AltitudeFadeStartHeight);
-        }
-
-        #endregion
-
-        #region Audio Pool
-
-        private void BuildAudioPool()
-        {
-            for (int i = 0; i < AudioSourcePoolSize; i++)
-                _pool.Add(CreateSource());
-        }
-
-        private AudioSource CreateSource()
-        {
-            var go  = new GameObject("WildlifeAudioSource");
-            go.transform.SetParent(transform);
-            var src = go.AddComponent<AudioSource>();
-            src.spatialBlend = 1f;
-            src.rolloffMode  = AudioRolloffMode.Linear;
-            src.maxDistance  = soundDistance;
-            if (audioMixerGroup != null) src.outputAudioMixerGroup = audioMixerGroup;
-            return src;
-        }
-
-        private AudioSource GetPooledSource()
-        {
-            foreach (var src in _pool)
-                if (!src.isPlaying) return src;
-            return null;
+#if SWEF_ACCESSIBILITY_AVAILABLE
+            var am = SWEF.Accessibility.AccessibilityManager.Instance;
+            if (am != null && am.IsReducedAudioEnabled) return true;
+#endif
+            return false;
         }
 
         #endregion
