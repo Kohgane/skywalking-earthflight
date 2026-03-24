@@ -65,6 +65,7 @@ Assets/SWEF/
 │   ├── Performance/      # PerformanceProfiler, AdaptiveQualityController, RuntimeDiagnosticsHUD, MemoryPoolManager, GarbageCollectionTracker, DrawCallAnalyzer, AssetLoadProfiler, SceneLoadProfiler, TextureMemoryOptimizer
 │   ├── PhotoMode/        # PhotoModeData, PhotoModeUI, PhotoModeAnalytics, PhotoCameraController, PhotoCaptureManager, PhotoFilterSystem, PhotoFrameRenderer, PhotoGalleryManager, DroneCameraController, DroneVisualController
 │   ├── Progression/      # PilotRankData, ProgressionManager, XPSourceConfig, XPTracker, SkillTreeData, SkillTreeManager, CosmeticUnlockManager, ProgressionHUD, ProgressionProfileUI, ProgressionDefaultData
+│   ├── Radar/            # RadarEnums, RadarContact, RadarSystem, IFFTransponder, ThreatDetector, RadarDisplay, MissileWarningReceiver, RadarJammer, RadarConfig
 │   ├── Racing/           # RacingData, BoostController, DriftController, BoostPadManager, SlipstreamController, StartBoostController, TrickBoostController, BoostVFXBridge, BoostAudioController, RacingAnalytics
 │   ├── Recorder/         # FlightRecorder, FlightPlayback, RecorderUI
 │   ├── Replay/           # ReplayData, ReplayFileManager, GhostRacer, FlightPathRenderer, ReplayShareManager
@@ -1671,65 +1672,71 @@ HUDDashboard (Singleton)
 
 ---
 
-## Phase 66 — Damage & Repair System
+## Phase 67 — Radar & Threat Detection System
 
-### New Scripts (8 files) — `Assets/SWEF/Scripts/Damage/` — namespace `SWEF.Damage`
+### New Scripts (9 files) — `Assets/SWEF/Scripts/Radar/` — namespace `SWEF.Radar`
 
 | # | File | Description |
 |---|------|-------------|
-| 1 | `DamageType.cs` | Enums: `DamageSource` (7 values), `DamageLevel` (6 values), `AircraftPart` (11 values), `RepairMode` (4 values) |
-| 2 | `DamageData.cs` | Serialisable data container for a single damage event — source, affected part, damage amount, impact point/normal/force, timestamp, description |
-| 3 | `PartHealth.cs` | Serialisable per-part health tracker — `currentHealth`, `damageLevel`, `healthPercent`, `isDestroyed`, `isFunctional`, `damageHistory`; `ApplyDamage()`, `Repair()`, `CalculateDamageLevel()` |
-| 4 | `DamageConfig.cs` | Static config — health thresholds (`MinorThreshold=0.9`, `ModerateThreshold=0.7`, `SevereThreshold=0.5`, `CriticalThreshold=0.25`), collision/overspeed/overG rates, repair constants, part importance weights, UI colours |
-| 5 | `DamageModel.cs` | Master damage controller (`RequireComponent(Rigidbody)`) — per-part `PartHealth` dictionary, `ApplyDamage()`, `ApplyAreaDamage()`, `GetOverallHealth()`, `IsFlightCapable()`, `GetEngineEfficiency()`, `GetWingEfficiency()`, `GetStabilityEfficiency()`; events `OnDamageReceived`, `OnPartDamageLevelChanged`, `OnAircraftDestroyed`; `OnCollisionEnter` auto-detection |
-| 6 | `DamageEffect.cs` | Visual/audio effects (`RequireComponent(AudioSource)`) — smoke, fire, spark, debris `ParticleSystem`s; impact/stress/alarm `AudioClip` pools; `PlayImpactEffect()`, `UpdateDamageVisuals()`, `PlayExplosion()`; subscribes to `DamageModel` events |
-| 7 | `RepairSystem.cs` | Repair mechanics — `StartEmergencyRepair()` (instant burst, cooldown + charge-limited), `StartFieldRepair()` (slow coroutine), `StartFullRepair()` (fast coroutine), `StopRepair()`; events `OnRepairStarted`, `OnRepairCompleted`, `OnPartRepaired` |
-| 8 | `DamageIndicatorUI.cs` | HUD damage display (`TMPro`) — per-part coloured overlays, overall health text + fill bar, repair cooldown indicator, repair charges, damage popup, pulse animation on recently damaged parts; subscribes to `DamageModel` and `RepairSystem` events |
+| 1 | `RadarEnums.cs` | Enums — `ContactClassification` (Unknown/Friendly/Neutral/Hostile/Civilian/Landmark/Event), `ThreatLevel` (None/Low/Medium/High/Imminent), `RadarMode` (Off/Passive/Active/Search/Track), `BlipSize` (Small/Medium/Large/VeryLarge) |
+| 2 | `RadarContact.cs` | Data class — unique `contactId`, `trackedTransform`, classification, threat, size, position, velocity, distance, bearing, elevation, signal strength, first/last detected times, `isLocked`, `displayName`, `contactIcon` |
+| 3 | `RadarConfig.cs` | Static config — `DefaultRadarRange`, `ScanInterval`, `MaxContacts`, `ContactTimeout`, `SignalFalloffStart`, threat thresholds (`CloseRange`, `MediumRange`, `ClosingSpeedThreshold`), jammer defaults, zoom presets, display colors per classification with `GetClassificationColor()` helper |
+| 4 | `RadarSystem.cs` | Singleton MonoBehaviour — `Physics.OverlapSphere` scan coroutine, IFF classification via `IFFTransponder`, signal-strength falloff, contact create/update/expire, `LockTarget`/`UnlockTarget`/`CycleTargets`, `GetNearestHostile`/`GetNearestContact`/`GetContactsByClassification`, events `OnContactDetected`/`OnContactLost`/`OnTargetLocked`/`OnTargetUnlocked` |
+| 5 | `IFFTransponder.cs` | MonoBehaviour attached to detectable objects — `identity`, `transponderCode`, `displayName`, `radarSignature`, `radarIcon`, `isTransponderActive`, `signatureModifier`, `baseThreatLevel`; exposes `EffectiveIdentity` (returns Unknown when transponder is silent) |
+| 6 | `ThreatDetector.cs` | MonoBehaviour — periodic `EvaluateThreat()` for each contact based on classification, distance, closing speed, heading-toward-player; `prioritizedThreats` sorted by level, `GetHighestThreat()`, `hostileCount`, `imminentThreatCount`; events `OnThreatLevelChanged`/`OnImminentThreat`; Phase 65 WarningSystem integration via `#if SWEF_WARNINGSYSTEM_AVAILABLE` |
+| 7 | `RadarDisplay.cs` | MonoBehaviour UI — `RadarDisplayMode` (PlanPosition/BScope/ForwardLooking), rotating sweep line (PPI), blip pool keyed by contactId, per-classification color coding, locked-target blink ring, `CycleZoom()`/`SetDisplayMode()`, range rings label, heading indicator, north indicator |
+| 8 | `MissileWarningReceiver.cs` | MonoBehaviour — `Physics.OverlapSphere` projectile detection at configurable Hz, closing-vector filter, direction indicators (`incomingBearing`/`incomingElevation`), looping audio tones for missile/lock warnings, `NotifyRadarLock()`/`ClearRadarLock()`, events `OnMissileDetected`/`OnMissileLockDetected`/`OnThreatCleared` |
+| 9 | `RadarJammer.cs` | MonoBehaviour — `ToggleJammer()` with cooldown guard, `jamRange`/`jamEffectiveness`/`powerConsumption`, `DeployChaffs()`/`DeployFlares()` with particle effects, `chaffCount`/`flareCount` charges, `isOnCooldown`/`cooldownRemaining` state, events `OnJammerToggled`/`OnChaffDeployed`/`OnFlareDeployed` |
 
 ### Architecture
 
 ```
-DamageModel (Rigidbody aircraft root)
-│   ├── Dictionary<AircraftPart, PartHealth>
-│   ├── ApplyDamage(DamageData) → scales by globalDamageMultiplier
-│   ├── ApplyAreaDamage(center, radius, damage, source) → linear falloff
-│   ├── OnCollisionEnter → auto DamageData creation + nearest-part detection
-│   ├── IsFlightCapable() → false if engine destroyed or both wings critical
-│   ├── GetEngineEfficiency() / GetWingEfficiency() / GetStabilityEfficiency()
-│   └── Events → DamageEffect + DamageIndicatorUI
+RadarSystem (Singleton)
+│   ├── ScanRoutine (coroutine, every scanInterval)
+│   │       └── Physics.OverlapSphere → IFFTransponder read → create/update RadarContact
+│   ├── CleanupStaleContacts (Update, contactTimeout)
+│   ├── LockTarget / UnlockTarget / CycleTargets
+│   └── Events: OnContactDetected, OnContactLost, OnTargetLocked, OnTargetUnlocked
 │
-PartHealth (per-part state)
-│   ├── ApplyDamage(amount, data?) → clamp to 0, update DamageLevel, append history
-│   ├── Repair(amount) → clamp to maxHealth, update DamageLevel
-│   └── CalculateDamageLevel() → threshold-based enum mapping
+├── IFFTransponder   → attached to any detectable scene object
+│       identity, transponderCode, signatureModifier, baseThreatLevel
 │
-RepairSystem
-│   ├── StartEmergencyRepair() → instant heal, cooldown + charge check
-│   ├── StartFieldRepair() → coroutine at fieldRepairRate (10 HP/s)
-│   ├── StartFullRepair() → coroutine at fullRepairRate (25 HP/s)
-│   └── StopRepair() → cancel coroutine
+├── ThreatDetector   → subscribes to RadarSystem contacts
+│   ├── EvaluateThreat: classification + distance + closing speed + heading dot
+│   ├── prioritizedThreats[] sorted by ThreatLevel descending
+│   └── Events: OnThreatLevelChanged, OnImminentThreat
+│           └── #if SWEF_WARNINGSYSTEM_AVAILABLE → WarningSystem.AddWarning("THREAT", ...)
 │
-DamageEffect
-│   ├── Subscribes: OnDamageReceived → PlayImpactEffect (sparks + sound)
-│   ├── Subscribes: OnPartDamageLevelChanged → UpdateDamageVisuals (smoke/fire)
-│   └── Subscribes: OnAircraftDestroyed → PlayExplosion
+├── RadarDisplay     → reads RadarSystem.contacts each frame
+│   ├── PlanPosition: polar blip placement, rotating sweep line
+│   ├── BScope: azimuth/range grid
+│   ├── ForwardLooking: azimuth/elevation grid
+│   ├── Blip color ← RadarConfig.GetClassificationColor(classification)
+│   ├── Lock ring blink on lockedContact
+│   └── CycleZoom (2 km / 5 km / 10 km presets)
 │
-DamageIndicatorUI (TMPro + UI.Image)
-│   ├── Per-part coloured overlays (green/yellow/orange/red/black)
-│   ├── Overall health text + fill bar
-│   ├── Emergency repair cooldown fill + charges text
-│   ├── Damage popup (2.5 s auto-hide)
-│   └── Pulse animation on recently damaged parts
+├── MissileWarningReceiver  → OverlapSphere on missileLayers
+│   ├── Closing-vector filter (dot product > 0.5)
+│   ├── incomingBearing / incomingElevation direction indicators
+│   └── Audio: missileWarningTone (loop) / lockWarningTone
+│
+└── RadarJammer
+    ├── ToggleJammer → isJamming, cooldown after deactivation
+    ├── DeployChaffs / DeployFlares (particle effects + counters)
+    └── powerConsumption drain while active
 ```
 
 ### Integration Points
 
 | Script | Integrates With |
 |--------|----------------|
-| `DamageModel` | `UnityEngine.Rigidbody` — collision velocity |
-| `DamageModel` | `UnityEngine.Collider` — contact point / normal |
-| `DamageEffect` | `UnityEngine.ParticleSystem` — smoke, fire, sparks, debris |
-| `DamageEffect` | `UnityEngine.AudioSource` — impact, stress, alarm clips |
-| `DamageIndicatorUI` | `TMPro.TextMeshProUGUI` — health % and repair charges text |
-| `DamageIndicatorUI` | `UnityEngine.UI.Image` — part overlays, health bar, cooldown ring |
-| `RepairSystem` | `DamageModel.GetPartHealth()` — reads and repairs per-part health |
+| `RadarSystem` | `Physics.OverlapSphere` — Unity physics for scan |
+| `RadarSystem` | `IFFTransponder` — reads identity, signature, display name |
+| `ThreatDetector` | `RadarSystem.contacts` — subscribes for periodic evaluation |
+| `ThreatDetector` | `SWEF.CockpitHUD.WarningSystem.AddWarning` — guarded by `#if SWEF_WARNINGSYSTEM_AVAILABLE` (Phase 65) |
+| `RadarDisplay` | `RadarSystem.contacts` — reads each frame for blip positions |
+| `RadarDisplay` | `TMPro.TextMeshProUGUI` — range and heading labels |
+| `RadarDisplay` | `UnityEngine.UI.Image` — blip and sweep-line rendering |
+| `MissileWarningReceiver` | `Physics.OverlapSphere` — missile layer detection |
+| `MissileWarningReceiver` | `Rigidbody.linearVelocity` — closing-speed calculation |
+| `RadarJammer` | `ParticleSystem` — chaff/flare visual effects |
