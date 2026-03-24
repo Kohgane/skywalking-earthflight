@@ -48,6 +48,7 @@ Assets/SWEF/
 │   ├── Favorites/        # FavoriteManager, FavoritesUI
 │   ├── Flight/           # FlightController, AltitudeController, TouchInputRouter, HoldButton, AeroPhysicsModel, AeroState, FlightPhysicsIntegrator, FlightPhysicsSnapshot, OrbitalMechanics, OrbitState, JetTrail, CameraController, StallWarningSystem
 │   ├── FlightSchool/     # FlightSchoolData, FlightSchoolManager, FlightInstructor, FlightSchoolUI, FlightSchoolAnalyticsBridge
+│   ├── Fuel/             # FuelEnums, FuelConfig, FuelTank, FuelConsumptionModel, FuelManager, RefuelStation, FuelGaugeUI, EmergencyFuelProtocol
 │   ├── GuidedTour/       # TourData, TourManager, WaypointNavigator, WaypointHUD, TourNarrationController, TourCatalogUI, TourProgressTracker, TourMinimapOverlay
 │   ├── Haptic/           # HapticManager, HapticPattern, HapticTriggerZone
 │   ├── HiddenGems/       # HiddenGemData, HiddenGemDatabase, HiddenGemManager, GemDiscoveryUI, GemCollectionUI, GemRadarUI, GemMinimapIntegration, GemTourGenerator, GemStatisticsTracker, Editor/HiddenGemEditorWindow
@@ -58,6 +59,7 @@ Assets/SWEF/
 │   ├── Leaderboard/      # GlobalLeaderboardService, GlobalLeaderboardEntry, LeaderboardUI, LeaderboardEntryUI, LeaderboardCategory, LeaderboardTimeFilter, WeeklyChallengeManager, WeeklyChallengeUI
 │   ├── Localization/     # LocalizationManager, LanguageDatabase, LocalizationUI, LocalizedText, LocalizedImage, FontManager, PluralResolver, RTLTextHandler
 │   ├── Minimap/          # MinimapData, MinimapManager, MinimapRenderer, MinimapIconConfig, MinimapBlipProvider, MinimapCompass, MinimapSettingsUI, RadarOverlay
+│   ├── Mission/          # MissionEnums, MissionConfig, MissionObjective, MissionCheckpoint, MissionReward, MissionResult, MissionData, MissionManager, MissionBriefingUI, MissionTrackerUI
 │   ├── Multiplayer/      # MultiplayerManager, NetworkManager2, PlayerSyncController, PlayerSyncSystem, FormationFlyingManager, CoopMissionSystem, MultiplayerWeatherSync, MultiplayerHUD, MultiplayerScoreboard, MultiplayerRace, RoomManager, PlayerAvatar, RemotePlayerRenderer, NetworkTransport, VoiceChatManager, ProximityChat
 │   ├── MusicPlayer/      # MusicPlayerData, MusicPlayerManager, MusicPlaylistController, MusicPlayerUI, MusicLibraryUI, MusicFlightSync, MusicWeatherMixer, MusicVisualizerEffect, MusicMultiplayerSync, MusicEQController, MusicCrossfadeController, MusicSleepTimer, LrcParser, LyricsDatabase, KaraokeController, LyricsDisplayUI, LyricsEditorUI
 │   ├── Narration/        # NarrationData, LandmarkDatabase, NarrationManager, NarrationAudioController, NarrationSubtitleUI, NarrationHudPanel, LandmarkDiscoveryTracker, LandmarkMinimapIntegration, NarrationSettingsUI, NarrationAnalytics, Editor/LandmarkDatabaseEditorWindow
