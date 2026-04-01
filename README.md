@@ -78,7 +78,7 @@ Assets/SWEF/
 │   ├── Racing/           # RacingData, BoostController, DriftController, BoostPadManager, SlipstreamController, StartBoostController, TrickBoostController, BoostVFXBridge, BoostAudioController, RacingAnalytics
 │   ├── Recorder/         # FlightRecorder, FlightPlayback, RecorderUI
 │   ├── Replay/           # ReplayData, ReplayFileManager, GhostRacer, FlightPathRenderer, ReplayShareManager
-│   ├── ReplayTheater/    # ReplayTheaterManager, ReplayTheaterSettings, ReplayTheaterUI, ReplayTimeline, TimelineTrack, CameraKeyframe, CinematicCameraEditor, ReplayImporter, ReplayExporter, ReplayThumbnailGenerator
+│   ├── ReplayTheater/    # ReplayTheaterManager, ReplayTheaterSettings, ReplayTimeline, TimelineTrack, CameraKeyframe, CinematicCameraEditor, ReplayImporter, ReplayExporter, ReplayThumbnailGenerator — **Phase 79**: ReplayTheaterData, ReplayEditorManager, ReplayClipEditor, ReplayTransitionSystem, ReplayEffectsProcessor, ReplayMusicMixer, ReplayExportManager, ReplaySharingHub, ReplayTheaterUI (enhanced), ReplayTheaterAnalytics
 │   ├── RoutePlanner/     # RoutePlannerData, RoutePlannerManager, RouteBuilderController, RoutePathRenderer, RouteNavigationHUD, RouteStorageManager, RouteShareManager, RoutePlannerUI, RouteRecommendationEngine, RoutePlannerAnalytics
 │   ├── SaveSystem/       # SaveData, SaveManager, SaveIntegrityChecker, SaveMigrationSystem, CloudSyncManager, SaveConflictResolver, SaveExportImport, SaveSystemUI
 │   ├── Screenshot/       # ScreenshotController, ScreenshotUI
@@ -2467,3 +2467,107 @@ ATCManager (Singleton, DontDestroyOnLoad)
 ### Localization
 
 42 keys across 8 languages (en, de, es, fr, ja, ko, pt, zh) covering ATC facility types (6 keys), flight phases (9 keys), clearance types (9 keys), HUD labels (11 keys), and standard radio phrases (7 keys).
+
+---
+
+## Phase 79 — Flight Replay Theater Enhancement
+
+Extends the Phase 48 Replay system with a full non-linear editing suite, cinematic post-process effects, beat-synced music mixing, multi-format export, and multi-platform social sharing.
+
+### Scripts
+
+| # | Script | Purpose |
+|---|--------|---------|
+| 1 | `ReplayTheaterData.cs` | Serialisable project model — ordered clip list, per-clip metadata (in/out, speed, colour grade, transition), music strip, export settings, sharing metadata |
+| 2 | `ReplayEditorManager.cs` | Session owner and undo/redo coordinator — opens/saves/closes projects, drives preview playback, dispatches commands to subsystems via `CommandHistory` stack |
+| 3 | `ReplayClipEditor.cs` | Non-linear clip operations — add, remove, split at playhead, trim in/out handles, duplicate, copy/paste with clipboard |
+| 4 | `ReplayTransitionSystem.cs` | Inter-clip transition rendering — Fade, Cross Dissolve, Wipe, Zoom, Slide; configurable duration and easing curve |
+| 5 | `ReplayEffectsProcessor.cs` | Per-clip post-process effects — slow motion / fast forward speed ramp, cinematic / vintage / dramatic / vivid / mono colour grades, vignette, bloom, film grain, picture-in-picture overlay |
+| 6 | `ReplayMusicMixer.cs` | Beat-synced background music strip — loads AudioClip, places beat markers, applies fade-in / fade-out envelopes, volume control |
+| 7 | `ReplayExportManager.cs` | Render-to-file pipeline — MP4 / WebM / GIF output, quality / framerate / watermark / HUD-inclusion settings, async coroutine with progress events |
+| 8 | `ReplaySharingHub.cs` | Link generation and platform dispatch — Direct Link / Social Media / In-Game / Cloud Save; Public / Friends Only / Private privacy levels |
+| 9 | `ReplayTheaterUI.cs` | Full editor canvas — timeline scrubber with Video / Audio / Effects / Music track lanes, clip inspector, transition picker, effects sidebar, export and share dialogs |
+| 10 | `ReplayTheaterAnalytics.cs` | Telemetry bridge — view / like / share counts per project; integrates with `SWEF.Analytics.TelemetryDispatcher` (null-safe, `#define SWEF_ANALYTICS_AVAILABLE`) |
+
+### Key Data Types
+
+| Type | Kind | Purpose |
+|------|------|---------|
+| `ReplayTheaterProject` | class | Top-level serialisable container for a Replay Theater editing session |
+| `ReplayClipData` | class | Per-clip in/out points, speed multiplier, colour grade preset, transition reference |
+| `TransitionType` | enum | None / Fade / CrossDissolve / Wipe / Zoom / Slide |
+| `ColorGradePreset` | enum | None / Cinematic / Vintage / Dramatic / Vivid / Monochrome |
+| `ReplayMusicData` | class | AudioClip reference, volume, fade-in/out durations, beat marker list |
+| `ReplayExportSettings` | class | Format (MP4/WebM/GIF), quality level, framerate, watermark flag, HUD-inclusion flag |
+| `ReplaySharingMetadata` | class | Link URL, platform, privacy level, timestamp |
+| `SharePlatform` | enum | DirectLink / SocialMedia / InGame / CloudSave |
+| `PrivacyLevel` | enum | Public / FriendsOnly / Private |
+| `ReplayAnalyticsStats` | class | Views, likes, shares counts for a project |
+| `CommandHistory` | class | Undo/redo stack of `IReplayCommand` operations |
+
+### Architecture
+
+```
+ReplayEditorManager (Singleton, DontDestroyOnLoad)
+│   ├── ReplayTheaterData — serialisable project model (clips, music, export settings)
+│   ├── CommandHistory — undo/redo stack
+│   └── Preview loop — frame-accurate playback scrubbing
+│
+├── ReplayClipEditor
+│   ├── Clip CRUD (add / remove / duplicate)
+│   ├── Split at playhead, trim in/out handles
+│   └── Copy/paste clipboard
+│
+├── ReplayTransitionSystem
+│   ├── Transition assignment per clip boundary
+│   ├── GPU blit: Fade / CrossDissolve / Wipe / Zoom / Slide
+│   └── Configurable duration and easing
+│
+├── ReplayEffectsProcessor
+│   ├── Speed ramp (slow motion / fast forward)
+│   ├── Colour grade presets (Cinematic / Vintage / Dramatic / Vivid / Mono)
+│   ├── Vignette, Bloom, Film Grain overlays
+│   └── Picture-in-Picture compositing
+│
+├── ReplayMusicMixer
+│   ├── AudioClip track with beat markers
+│   ├── Fade-in / fade-out envelope
+│   └── Volume mix with flight audio
+│
+├── ReplayExportManager
+│   ├── Frame-accurate ScreenCapture render loop
+│   ├── Format selection: MP4 / WebM / GIF
+│   ├── Watermark and HUD compositing
+│   └── Async coroutine → OnProgress / OnComplete / OnFailed events
+│
+├── ReplaySharingHub
+│   ├── Shareable URL generation
+│   ├── Platform routing (DirectLink / Social / InGame / Cloud)
+│   └── Privacy enforcement (Public / FriendsOnly / Private)
+│
+├── ReplayTheaterUI
+│   ├── Timeline scrubber with track lanes (Video / Audio / Effects / Music)
+│   ├── Clip inspector (in/out, speed, grade, transition)
+│   ├── Effects sidebar and transition picker
+│   └── Export and Share modal dialogs
+│
+└── ReplayTheaterAnalytics
+    ├── Per-project view / like / share counters
+    └── TelemetryDispatcher integration (null-safe)
+```
+
+### Integration Points
+
+| Phase 79 Script | Integrates With |
+|----------------|----------------|
+| `ReplayEditorManager` | `SWEF.Replay.ReplayFileManager` — loads source `.replay` files (null-safe, `#define SWEF_REPLAY_AVAILABLE`) |
+| `ReplayEffectsProcessor` | `SWEF.Replay.GhostRacer` — optional PiP ghost overlay (null-safe) |
+| `ReplayTheaterUI` | `SWEF.Replay.FlightPathRenderer` — map layer in timeline preview window (null-safe) |
+| `ReplaySharingHub` | `SWEF.Replay.ReplayShareManager` — extends Phase 48 share primitives for new platform targets (null-safe) |
+| `ReplayExportManager` | `UnityEngine.ScreenCapture` / encoder plugin — built-in GIF; MP4/WebM via Unity MovieTexture API or drop-in plugin |
+| `ReplayTheaterAnalytics` | `SWEF.Analytics.TelemetryDispatcher` — telemetry event dispatch (null-safe, `#define SWEF_ANALYTICS_AVAILABLE`) |
+| `ReplayMusicMixer` | `SWEF.Audio.AudioManager` — final audio mix integration (null-safe, `#define SWEF_AUDIO_AVAILABLE`) |
+
+### Localization
+
+63 keys across 8 languages (en, de, es, fr, ja, ko, pt, zh) with prefix `replay_theater_` covering: project management (8 keys), timeline and track labels (5 keys), clip operations (10 keys), transitions (6 keys), visual effects (9 keys), music controls (5 keys), export settings (7 keys), sharing and privacy (8 keys), and analytics labels (3 keys).  All keys are in `Assets/SWEF/Resources/Localization/lang_*.json`.
