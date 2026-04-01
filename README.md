@@ -46,6 +46,7 @@ Assets/SWEF/
 │   ├── Damage/           # DamageType, DamageData, PartHealth, DamageModel, DamageEffect, RepairSystem, DamageIndicatorUI, DamageConfig
 │   ├── DebugOverlay/     # DebugOverlayData, FPSCounter, MemoryProfiler, DrawCallMonitor, DebugOverlayController, PerformanceLogger, DebugConsole, DebugOverlayAnalytics
 │   ├── Editor/           # SWEFEditorWindow, SWEFBuildPreprocessor, SWEFSceneValidator, AchievementEditorWindow, LocalizationEditorWindow, AnalyticsDebugWindow, CloudRenderingDebugWindow, MultiplayerDebugWindow, PerformanceProfilerWindow, SpatialAudioDebugWindow, TerrainDebugWindow, WeatherDebugWindow
+│   ├── Emergency/        # EmergencyData, EmergencyManager, EmergencyChecklistController, EmergencyLandingController, DistressCallSystem, EmergencyEffectsController, RescueSimulationController, EmergencyHUD, EmergencyTrainingBridge, EmergencyDebugOverlay
 │   ├── Events/           # WorldEventData, WorldEventInstance, EventScheduler, EventParticipationTracker, EventVisualController, EventNotificationUI, EventCalendarUI, EventRewardController
 │   ├── Favorites/        # FavoriteManager, FavoritesUI
 │   ├── Flight/           # FlightController, AltitudeController, TouchInputRouter, HoldButton, AeroPhysicsModel, AeroState, FlightPhysicsIntegrator, FlightPhysicsSnapshot, OrbitalMechanics, OrbitState, JetTrail, CameraController, StallWarningSystem
@@ -2146,3 +2147,110 @@ WildlifeDebugOverlay (#if EDITOR || DEV_BUILD)
 | `WildlifeJournalIntegration` | `SWEF.PhotoMode.PhotoCaptureManager` — wildlife photography detection (null-safe) |
 | `WildlifeSpawnSystem` | `SWEF.Water.WaterSurfaceManager` — marine spawn water check (null-safe) |
 | `WildlifeDebugOverlay` | `SWEF.DebugOverlay.DebugOverlayController` — debug panel toggle (null-safe) |
+
+---
+
+## Phase 76 — Emergency & Safety Simulation System
+
+### New Scripts (10 files) — `Assets/SWEF/Scripts/Emergency/` — namespace `SWEF.Emergency`
+
+| # | File | Description |
+|---|------|-------------|
+| 1 | `EmergencyData.cs` | Pure data layer — enums (`EmergencyType`, `EmergencySeverity`, `EmergencyPhase`, `DistressCallType`, `RescueUnitType`) and serializable classes (`EmergencyConfig`, `EmergencyChecklistItem`, `EmergencyLandingSite`, `EmergencyEvent`, `DistressCallData`, `RescueUnit`, `EmergencyTrainingScenario`) |
+| 2 | `EmergencyManager.cs` | Singleton MonoBehaviour — active emergency lifecycle, severity escalation, 15 emergency type definitions with checklists, distress call triggering, landing site scoring, null-safe cross-system integration |
+| 3 | `EmergencyChecklistController.cs` | Per-emergency checklist execution — step-by-step procedure walkthrough, auto-advance, manual skip, completion tracking, training mode hint injection |
+| 4 | `EmergencyLandingController.cs` | Nearest landing site identification — glide range computation, distance/heading to candidate sites, can-make-it evaluation, approach lateral/vertical deviation display |
+| 5 | `DistressCallSystem.cs` | Radio distress call simulation — PAN-PAN / MAYDAY / Squawk code transmission sequences, ATC acknowledgement playback, transponder code display |
+| 6 | `EmergencyEffectsController.cs` | Visual and audio effects for emergencies — engine smoke/fire particles, electrical flicker, cabin pressure fog, hydraulic fluid streaks; audio alerts per severity level |
+| 7 | `RescueSimulationController.cs` | Post-landing rescue unit spawning — fire truck / ambulance / helicopter / coast guard / mountain rescue / military escort; ETA countdown, approach animation, outcome scoring |
+| 8 | `EmergencyHUD.cs` | UGUI overlay — alert banner, severity badge, active emergency type label, checklist step display with execute/skip buttons, glide-range indicator, rescue ETA panel, training-mode watermark |
+| 9 | `EmergencyTrainingBridge.cs` | Training integration — six preset training scenarios (engine, fire, depressurization, gear, fuel, dual-engine), hint text injection, `FlightSchoolManager` event hooks, scenario pass/fail evaluation |
+| 10 | `EmergencyDebugOverlay.cs` | `#if UNITY_EDITOR \|\| DEVELOPMENT_BUILD` — OnGUI panel listing active emergency state, checklist progress, glide-range overlay; force-trigger / force-resolve / clear controls |
+
+### Key Data Types
+
+| Type | Kind | Purpose |
+|------|------|---------|
+| `EmergencyType` | enum | EngineFailure / DualEngineFailure / FuelStarvation / FuelLeak / BirdStrike / StructuralDamage / IcingCritical / ElectricalFailure / HydraulicFailure / FireOnboard / Depressurization / NavigationFailure / CommunicationFailure / ControlSurfaceJam / LandingGearMalfunction |
+| `EmergencySeverity` | enum | Caution / Warning / Emergency / Mayday |
+| `EmergencyPhase` | enum | Detected / Acknowledged / ChecklistActive / ExecutingProcedure / Diverting / OnApproach / Landed / Crashed / Rescued / Resolved |
+| `DistressCallType` | enum | PanPan / Mayday / Squawk7700 / Squawk7600 / Squawk7500 |
+| `RescueUnitType` | enum | FireTruck / Ambulance / Helicopter / CoastGuard / MountainRescue / MilitaryJet |
+| `EmergencyConfig` | class | Performance / spawn settings: maxConcurrentEmergencies, checklistAutoAdvance, rescueSpawnDelay, glideRatioDefault, trainingMode flag |
+| `EmergencyChecklistItem` | class | Checklist step: locKey, actionLocKey, autoCompleteSec, isCritical, requiredForScore |
+| `EmergencyLandingSite` | class | Landing site definition: nameLocKey, position, runwayHeading, elevation, isAirport, isBay, isField |
+| `EmergencyEvent` | class | Runtime emergency snapshot: type, severity, phase, triggerTime, checklistProgress, score, resolved flag |
+| `DistressCallData` | class | Distress transmission: callType, messageLocKey, squawkCode, transmitTime |
+| `RescueUnit` | class | Rescue unit runtime data: unitType, nameLocKey, eta, spawnPosition, hasArrived |
+| `EmergencyTrainingScenario` | class | Training definition: scenarioId, emergencyType, hintLocKey, passConditions, scoreThreshold |
+
+### Architecture
+
+```
+EmergencyManager (Singleton, DontDestroyOnLoad)
+│   ├── EmergencyConfig — tuning parameters
+│   ├── activeEmergency — current EmergencyEvent (nullable)
+│   ├── Emergency trigger pipeline: detect → acknowledge → checklist → resolve
+│   ├── 15 emergency type definitions with pre-built checklists
+│   └── Events: OnEmergencyTriggered / OnPhaseChanged / OnChecklistComplete / OnEmergencyResolved
+│
+EmergencyChecklistController
+│   ├── Step iteration with auto-advance timer
+│   ├── Manual execute / skip support
+│   ├── Training hint overlay (EmergencyTrainingBridge)
+│   └── Completion score accumulation
+│
+EmergencyLandingController
+│   ├── Candidate site registry (airport, bay, field)
+│   ├── Glide range circle computed from altitude + glide ratio
+│   ├── Nearest reachable site selection
+│   └── Approach deviation (lateral °, vertical m) display
+│
+DistressCallSystem
+│   ├── PAN-PAN / MAYDAY transmission sequence
+│   ├── Squawk 7700 / 7600 / 7500 code display
+│   └── ATC acknowledgement coroutine
+│
+EmergencyEffectsController              RescueSimulationController
+│   ├── Engine smoke / fire particles   │   ├── Rescue unit pool (6 types)
+│   ├── Electrical flicker VFX          │   ├── ETA countdown coroutine
+│   ├── Cabin pressure fog              │   ├── Approach path animation
+│   └── Audio alert per severity        │   └── Outcome score reporting
+│
+EmergencyHUD (UGUI)
+│   ├── Alert banner + severity badge
+│   ├── Checklist step with Execute / Skip buttons
+│   ├── Glide-range indicator + can-make-it label
+│   └── Rescue ETA panel + training-mode watermark
+│
+EmergencyTrainingBridge
+│   ├── 6 preset training scenarios
+│   ├── FlightSchoolManager event hooks
+│   └── Pass / fail evaluation
+│
+EmergencyDebugOverlay (#if EDITOR || DEV_BUILD)
+    ├── OnGUI: active emergency state, checklist progress
+    ├── Glide-range gizmo overlay
+    └── Controls: force trigger / force resolve / clear
+```
+
+### Integration Points
+
+| Phase 76 Script | Integrates With |
+|----------------|----------------|
+| `EmergencyManager` | `SWEF.Flight.FlightController` — aircraft position, altitude, speed for emergency context (null-safe) |
+| `EmergencyManager` | `SWEF.Damage.DamageModel` — structural damage events trigger emergency (null-safe) |
+| `EmergencyManager` | `SWEF.Fuel.FuelManager` — fuel starvation / leak events trigger emergency (null-safe) |
+| `EmergencyManager` | `SWEF.Weather.WeatherManager` — icing conditions trigger emergency (null-safe) |
+| `EmergencyLandingController` | `SWEF.Landing.AirportRegistry` — nearest airport lookup (null-safe) |
+| `EmergencyEffectsController` | `SWEF.Audio.AudioManager` — emergency alert audio playback (null-safe) |
+| `EmergencyEffectsController` | `SWEF.VFX.VFXPoolManager` — smoke / fire / flicker VFX (null-safe) |
+| `DistressCallSystem` | `SWEF.Audio.AudioManager` — radio transmission audio (null-safe) |
+| `EmergencyTrainingBridge` | `SWEF.FlightSchool.FlightSchoolManager` — training scenario hooks (null-safe) |
+| `EmergencyHUD` | `SWEF.CockpitHUD.HUDDashboard` — HUD layer ordering (null-safe) |
+| `EmergencyManager` | `SWEF.Achievement.AchievementManager` — emergency handled milestones (null-safe) |
+| `EmergencyDebugOverlay` | `SWEF.DebugOverlay.DebugOverlayController` — debug panel toggle (null-safe) |
+
+### Localization
+
+~143 keys across 8 languages (en, de, es, fr, ja, ko, pt, zh) covering emergency type names and descriptions (30 keys), checklist step names and action instructions (52 keys), HUD / UI labels (20 keys), radio call strings (6 keys), rescue unit names (6 keys), landing site names (3 keys), severity levels (4 keys), phase labels (10 keys), and training scenario titles and hints (12 keys).
