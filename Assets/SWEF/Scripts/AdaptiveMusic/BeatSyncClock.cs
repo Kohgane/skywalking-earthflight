@@ -36,6 +36,8 @@ namespace SWEF.AdaptiveMusic
         private float _currentBpm;
         private float _targetBpm;
         private int   _bpmChangeBars;   // bars over which BPM lerps to target
+        private float _bpmLerpElapsed;  // seconds elapsed since BPM change started
+        private float _bpmLerpDuration; // total seconds for BPM transition
 
         private double _nextBeatDspTime;
         private int    _beatCount;      // total beats since clock started
@@ -72,15 +74,25 @@ namespace SWEF.AdaptiveMusic
                 _nextBeatDspTime += BeatDuration(_currentBpm);
             }
 
-            // Lerp BPM toward target
+            // Lerp BPM toward target using accumulated elapsed time
             if (!Mathf.Approximately(_currentBpm, _targetBpm))
             {
-                float lerpRate = _bpmChangeBars > 0
-                    ? Time.deltaTime / (float)(_bpmChangeBars * beatsPerBar * BeatDuration(_currentBpm))
-                    : 1f;
-                _currentBpm = Mathf.Lerp(_currentBpm, _targetBpm, lerpRate);
-                if (Mathf.Abs(_currentBpm - _targetBpm) < 0.05f)
+                if (_bpmLerpDuration > 0f)
+                {
+                    _bpmLerpElapsed += Time.deltaTime;
+                    float t = Mathf.Clamp01(_bpmLerpElapsed / _bpmLerpDuration);
+                    _currentBpm = Mathf.Lerp(_currentBpm, _targetBpm, t);
+                    if (t >= 1f)
+                    {
+                        _currentBpm      = _targetBpm;
+                        _bpmLerpDuration = 0f;
+                        _bpmLerpElapsed  = 0f;
+                    }
+                }
+                else
+                {
                     _currentBpm = _targetBpm;
+                }
             }
         }
 
@@ -100,8 +112,12 @@ namespace SWEF.AdaptiveMusic
         /// </summary>
         public void SetBPMOverBars(float newBpm, int bars)
         {
-            _targetBpm     = Mathf.Clamp(newBpm, 20f, 400f);
-            _bpmChangeBars = Mathf.Max(1, bars);
+            float startBpm     = _currentBpm;
+            _targetBpm         = Mathf.Clamp(newBpm, 20f, 400f);
+            _bpmChangeBars     = Mathf.Max(1, bars);
+            // Calculate total duration in seconds for the BPM transition
+            _bpmLerpDuration   = _bpmChangeBars * beatsPerBar * (float)BeatDuration(startBpm);
+            _bpmLerpElapsed    = 0f;
         }
 
         /// <summary>Returns the current BPM.</summary>
@@ -125,9 +141,14 @@ namespace SWEF.AdaptiveMusic
 
         /// <summary>
         /// Returns the DSP time of the next bar start, for sample-accurate stem scheduling.
+        /// When called at the downbeat (<see cref="GetBarProgress01"/> == 0), returns the
+        /// start of the following bar (i.e., always returns a time in the future).
         /// </summary>
         public double GetNextBarTime()
         {
+            // _beatInBar is 0-based; beatsPerBar - _beatInBar gives beats remaining until next bar.
+            // When _beatInBar == 0 (just fired a downbeat), this returns the next bar start,
+            // which is one full bar (beatsPerBar beats) in the future.
             int beatsUntilNextBar = beatsPerBar - _beatInBar;
             return _nextBeatDspTime + beatsUntilNextBar * BeatDuration(_currentBpm);
         }

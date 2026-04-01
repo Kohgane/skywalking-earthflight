@@ -179,7 +179,7 @@ namespace SWEF.AdaptiveMusic
             foreach (var kvp in _moodDurations)
             {
                 float pct = totalTime > 0f ? kvp.Value / totalTime * 100f : 0f;
-                payload[$"mood_{kvp.Key.ToString().ToLower()}_pct"] = pct;
+                payload[$"mood_{kvp.Key}_pct"] = pct;
             }
 
             Dispatch("music_session_summary", payload);

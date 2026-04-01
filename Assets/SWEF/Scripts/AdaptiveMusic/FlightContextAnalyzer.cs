@@ -82,6 +82,7 @@ namespace SWEF.AdaptiveMusic
 
             // FlightPhysicsIntegrator does not expose GForce/IsStalling as direct public
             // properties; values remain at defaults (gForce=1, stallWarning=false).
+            // TODO: Wire ctx.gForce and ctx.stallWarning once FlightPhysicsIntegrator exposes them.
 
             // ── Weather ───────────────────────────────────────────────────────────
             if (weatherManager != null)

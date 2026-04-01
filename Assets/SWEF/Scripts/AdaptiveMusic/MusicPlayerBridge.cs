@@ -124,16 +124,9 @@ namespace SWEF.AdaptiveMusic
 
         private void PausePlaylist()
         {
-#if SWEF_MUSICPLAYER_AVAILABLE
-            musicPlayerManager?.Pause();
-#else
-            if (musicPlayerManager != null)
-            {
-                // Use reflection to call Pause() if available
-                var method = musicPlayerManager.GetType().GetMethod("Pause");
-                method?.Invoke(musicPlayerManager, null);
-            }
-#endif
+            if (musicPlayerManager == null) return;
+            var method = musicPlayerManager.GetType().GetMethod("Pause");
+            method?.Invoke(musicPlayerManager, null);
         }
 
         private void ResumePlaylist(float volumeMult)

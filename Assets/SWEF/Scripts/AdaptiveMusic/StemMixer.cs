@@ -216,15 +216,17 @@ namespace SWEF.AdaptiveMusic
             newSrc.Play();
 
             float inElapsed = 0f;
+            float targetVol = _targetVolumes.TryGetValue(layer, out float tv) ? tv : 1f;
+            float effectiveVol = targetVol * masterVolume * (_isDucked ? duckingVolume : 1f);
             while (inElapsed < duration * 0.5f)
             {
                 inElapsed    += Time.deltaTime;
-                newSrc.volume = Mathf.Lerp(0f, masterVolume, inElapsed / (duration * 0.5f));
+                newSrc.volume = Mathf.Lerp(0f, effectiveVol, inElapsed / (duration * 0.5f));
                 yield return null;
             }
 
-            newSrc.volume        = masterVolume;
-            _targetVolumes[layer] = 1f;
+            newSrc.volume        = effectiveVol;
+            _targetVolumes[layer] = targetVol;
             _fadeCoroutines.Remove(layer);
         }
     }
