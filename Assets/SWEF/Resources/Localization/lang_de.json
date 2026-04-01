@@ -1145,6 +1145,7 @@
   "replay_theater_analytics_views": "Aufrufe",
   "replay_theater_analytics_likes": "Gefällt mir",
   "replay_theater_analytics_shares": "Geteilt",
+<<<<<<< copilot/add-passenger-cargo-mission-system
 
   "transport_type_passenger_standard": "Passagierflug",
   "transport_type_passenger_vip": "VIP-Flug",
@@ -1177,3 +1178,30 @@
   "transport_history_title": "Lieferverlauf",
   "transport_stats_title": "Transportstatistiken"
 }
+=======
+  "survey_feature_mountain": "Berg",
+  "survey_feature_desert": "Wüste",
+  "survey_feature_volcano": "Vulkan",
+  "survey_feature_plains": "Ebene",
+  "survey_feature_forest": "Wald",
+  "survey_feature_glacier": "Gletscher",
+  "survey_feature_coastline": "Küstenlinie",
+  "survey_feature_canyon": "Canyon",
+  "survey_feature_wetland": "Feuchtgebiet",
+  "survey_feature_tundra": "Tundra",
+  "survey_feature_plateau": "Hochebene",
+  "survey_feature_rift_valley": "Grabenbruch",
+  "survey_mode_altitude": "Höhe",
+  "survey_mode_slope": "Neigung",
+  "survey_mode_biome": "Biom",
+  "survey_mode_temperature": "Temperatur",
+  "survey_mode_mineral": "Mineral",
+  "survey_hud_scanning": "Scannen…",
+  "survey_hud_idle": "Scanner bereit",
+  "survey_poi_discovered": "Neue Entdeckung!",
+  "survey_catalog_title": "Erkundungskatalog",
+  "survey_stats_title": "Erkundungsstatistiken",
+  "survey_navigate_to": "Navigieren zu",
+  "survey_export_data": "Daten exportieren"
+}
+>>>>>>> main

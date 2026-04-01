@@ -88,6 +88,7 @@ Assets/SWEF/
 │   ├── SocialHub/        # SocialHubController, FriendManager, FriendListUI, PlayerProfile, PlayerProfileManager, PlayerSearchUI, ProfileCardUI, ProfileCustomizationUI, ActivityFeedUI, SocialActivityFeed, SocialNotificationSystem
 │   ├── Teleport/         # TeleportController, TeleportUI
 │   ├── Terrain/          # CesiumTerrainBridge, ProceduralTerrainGenerator, TerrainChunk, TerrainChunkPool, TerrainBiomeMapper, TerrainTextureManager
+│   ├── TerrainSurvey/    # TerrainSurveyData, TerrainScannerController, GeologicalClassifier, HeatmapOverlayRenderer, SurveyPOIManager, SurveyMinimapIntegration, SurveyJournalBridge, TerrainSurveyHUD, TerrainSurveyUI, TerrainSurveyAnalytics
 │   ├── TimeCapsule/      # TimeCapsuleData, TimeCapsuleManager, TimeCapsuleAutoCapture, TimeCapsuleUI, TimeCapsuleMapOverlay, TimeCapsuleNotificationService
 │   ├── TimeOfDay/        # TimeOfDayData, SolarCalculator, TimeOfDayManager, LightingController, SeasonalLightingProfile, GoldenHourEffect, NightSkyRenderer, TimeOfDayMultiplayerSync, TimeOfDayUI, TimeOfDayAnalytics
 │   ├── Tutorial/         # TutorialManager, TutorialStepData, TutorialActionDetector, TutorialHighlight, TutorialTooltip, TutorialReplayButton, InteractiveTutorialManager
@@ -2615,48 +2616,42 @@ Adds a comprehensive flight instruments calibration and realism system to SWEF. 
 
 ---
 
-## Phase 82 — Passenger & Cargo Mission System
+## Phase 81 — Terrain Scanning & Geological Survey System
 
-**Namespace:** `SWEF.PassengerCargo`  
-**Directory:** `Assets/SWEF/Scripts/PassengerCargo/`
+Adds a real-time terrain scanning and geological survey system to SWEF. Players can activate the scanner during flight to analyse terrain below the aircraft, view heatmap overlays, discover geological POIs, and track discoveries in the flight journal and minimap.
 
-Adds a comprehensive passenger and cargo transport mission system. Players
-accept transport contracts, manage payload weight affecting flight physics,
-keep passengers comfortable, and earn tiered rewards on delivery.
+### New Scripts (10 files) — `Assets/SWEF/Scripts/TerrainSurvey/`
 
-### New Scripts (12 files)
+| # | File | Description |
+|---|------|-------------|
+| 1 | `TerrainSurveyData.cs` | `GeologicalFeatureType` enum (12 values), `SurveyMode` enum (5 values), `SurveySample` struct, `SurveyPOI` class, `TerrainSurveyConfig` ScriptableObject |
+| 2 | `TerrainScannerController.cs` | Singleton MonoBehaviour — raycast-based grid scan loop, `OnScanStarted` / `OnScanCompleted` / `OnScanPaused` events, pause/resume support |
+| 3 | `GeologicalClassifier.cs` | Static utility — `Classify(altitude, slope, biomeId, temperature)`, `GetFeatureDisplayName()`, `GetFeatureColor()` |
+| 4 | `HeatmapOverlayRenderer.cs` | Procedural mesh overlay — 5 visualization modes (Altitude, Slope, Biome, Temperature, Mineral), opacity slider, LOD-aware |
+| 5 | `SurveyPOIManager.cs` | Singleton — proximity deduplication (500 m default), JSON persistence (`survey_pois.json`), max-cap oldest-first eviction, POI events |
+| 6 | `SurveyMinimapIntegration.cs` | Subscribes to `OnPOIDiscovered`, registers `MinimapManager` blips (null-safe) |
+| 7 | `SurveyJournalBridge.cs` | Auto-creates `JournalManager` entries and reports `AchievementManager` milestones (null-safe) |
+| 8 | `TerrainSurveyHUD.cs` | HUD panel — pulsing scan indicator, terrain classification label, altitude/slope readout, 5-mode selector, POI toast, cooldown bar |
+| 9 | `TerrainSurveyUI.cs` | Full-screen catalog — POI list with filters (type/date/altitude), navigate-to-POI, CSV export, statistics panel |
+| 10 | `TerrainSurveyAnalytics.cs` | Telemetry events via `TelemetryDispatcher` (null-safe); session summary flushed on quit |
 
-| # | Script | Purpose |
-|---|--------|---------|
-| 1 | `PassengerCargoData.cs` | Enums, data classes, `TransportContract` ScriptableObject, `DeliveryResult` |
-| 2 | `PassengerComfortSystem.cs` | Singleton — real-time comfort scoring (G-force, turbulence, pressure, noise) |
-| 3 | `CargoPhysicsController.cs` | Singleton — cargo weight/damage tracking, exposes `TotalMassKg`, `FuelMultiplier`, `CGShiftMetres` |
-| 4 | `TransportMissionManager.cs` | Singleton — full mission lifecycle with JSON persistence |
-| 5 | `TransportContractGenerator.cs` | Static — procedural contract generation (rank-gated, weather-aware) |
-| 6 | `PassengerBehaviorController.cs` | Passenger reaction state machine |
-| 7 | `DeliveryTimerController.cs` | Singleton — countdown with Green/Yellow/Red/Overtime phases |
-| 8 | `TransportRewardCalculator.cs` | Static — reward calculation with comfort/time/damage multipliers |
-| 9 | `TransportMissionHUD.cs` | In-flight HUD overlay (comfort meter, cargo bar, timer) |
-| 10 | `TransportMissionUI.cs` | Full-screen contract board with accept/decline flow |
-| 11 | `TransportMissionBridge.cs` | Integration bridge → Progression, Achievement, Social systems |
-| 12 | `TransportAnalytics.cs` | Telemetry dispatch (9 event types via `TelemetryDispatcher.EnqueueEvent`) |
-
-### New Tests
+### New Tests — `Assets/Tests/EditMode/`
 
 | File | Coverage |
-|------|---------|
-| `PassengerCargoTests.cs` | `TransportRewardCalculator` (all multipliers, time bonus, cargo penalty, star rating), `PassengerComfortSystem` (score-to-level mapping), `CargoPhysicsController` (fuel multiplier), `TransportContractGenerator` (rank distribution), `DeliveryTimerController` (phase transitions) |
+|------|----------|
+| `TerrainSurveyTests.cs` | `GeologicalClassifier.Classify()` for all 12 feature types with boundary values; `SurveyPOIManager` deduplication (within/beyond threshold); max-cap eviction; `SurveySample` JSON round-trip; `TerrainSurveyConfig` default values; `SurveyPOI` constructor and event firing |
 
-### Localization Keys (30)
+### Localization
 
-Added to all 8 language files (`lang_en.json` → `lang_pt.json`). Keys use the
-`transport_` prefix, covering mission types (8), comfort levels (5), cargo
-categories (7), and UI strings (10).
+24 keys across 8 languages (en, de, es, fr, ja, ko, pt, zh) with prefix `survey_`: 12 geological feature type names, 5 survey mode labels, 7 HUD/UI strings.
 
-### Persistence
+### Integration Points
 
-| File | Contents |
-|------|---------|
-| `transport_active.json` | Active contract metadata |
-| `transport_history.json` | Completed delivery history |
-| `transport_stats.json` | Cumulative stats (deliveries, avg rating, streak) |
+| Script | Integrates With |
+|--------|----------------|
+| `TerrainScannerController` | `SWEF.Flight.FlightController` — player position for scan origin (null-safe, `#if SWEF_FLIGHT_AVAILABLE`) |
+| `SurveyMinimapIntegration` | `SWEF.Minimap.MinimapManager` — POI blip registration (null-safe, `#if SWEF_MINIMAP_AVAILABLE`) |
+| `SurveyJournalBridge` | `SWEF.Journal.JournalManager` — auto-record discoveries (null-safe, `#if SWEF_JOURNAL_AVAILABLE`) |
+| `SurveyJournalBridge` | `SWEF.Achievement.AchievementManager` — milestone achievements (null-safe, `#if SWEF_ACHIEVEMENT_AVAILABLE`) |
+| `TerrainSurveyUI` | `SWEF.GuidedTour.WaypointNavigator` — navigate to POI (null-safe, `#if SWEF_GUIDEDTOUR_AVAILABLE`) |
+| `TerrainSurveyAnalytics` | `SWEF.Analytics.TelemetryDispatcher` — telemetry events (null-safe, `#if SWEF_ANALYTICS_AVAILABLE`) |
