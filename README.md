@@ -96,6 +96,7 @@ Assets/SWEF/
 │   ├── UI/               # HudBinder, AccessibilityController, OneHandedModeController, VoiceCommandManager, HudBinder, FlightPhysicsHUD, CompassHUD, SpeedIndicator, AltitudeMilestone, WeatherHUD, WeatherUI, MiniMap, MiniMapController, MultiplayerHUD, GhostRaceHUD, SplashScreen, LoadingScreen (see Core), StatsDashboard, LeaderboardUI, FlightJournalUI, CameraUI, InputRebinder, LocalizationManager, PhotoModeUI, ReplayBrowserUI, StoreUI, TimeOfDayUI, PremiumPromptUI, VoiceCommand, ColorblindMode, AccessibilityManager
 │   ├── Util/             # ExpSmoothing, PerformanceProfiler, SWEFTestHelpers
 │   ├── VFX/              # VFXData, VFXPoolManager, VFXTriggerSystem, VFXLODController, EngineExhaustController, EnvironmentVFXController, SpeedVFXController, CelebrationVFXController, VFXCompositor, VFXAnalytics
+│   ├── VoiceCommand/     # VoiceCommandData, VoiceRecognitionController, CommandParser, CommandRegistry, CommandExecutor, VoiceConfirmationController, VoiceResponseGenerator, VoiceCommandHistory, VoiceCommandHUD, VoiceCommandUI, VoiceATCBridge, VoiceCommandAnalytics
 │   ├── VoiceChat/        # VoiceChatData, VoiceChatManager, VoiceAudioProcessor, VoiceSpatialAudio, VoiceNetworkTransport, VoiceChannelManager, VoiceChatUI, VoiceChatSettings, VoiceRadioEffect, VoiceChatAnalytics
 │   ├── Water/            # WaterData, WaterSurfaceManager, BuoyancyController, SplashEffectController, UnderwaterCameraTransition, WaterRippleSystem, WaterInteractionAnalytics
 │   ├── Weather/          # WeatherData, WeatherCondition, WeatherManager, WeatherAPIClient, WeatherDataService, WeatherStateManager, WeatherLightingController, WeatherSkyboxController, WeatherFogController, WeatherVFXController, WeatherAudioController, WeatherSoundController, WeatherFlightModifier, PrecipitationSystem, WindSystem, WeatherUI
@@ -2721,3 +2722,58 @@ The Adaptive Music System dynamically mixes audio stems in real-time based on fl
 | `FlightContextAnalyzer` | `EmergencyManager` — active emergencies, combat zone (null-safe, `#if SWEF_EMERGENCY_AVAILABLE`) |
 | `MusicPlayerBridge` | `MusicPlayerManager` — playlist interop via reflection (no compile-time dependency) |
 | `AdaptiveMusicAnalytics` | `TelemetryDispatcher` — telemetry events (null-safe, `#if SWEF_ANALYTICS_AVAILABLE`) |
+
+---
+
+## Phase 84 — Voice Command & Cockpit Voice Assistant System
+
+### New Scripts (12 files in `Assets/SWEF/Scripts/VoiceCommand/`)
+
+| # | Script | Purpose |
+|---|--------|---------|
+| 1 | `VoiceCommandData.cs` | `CommandCategory` (9 values), `CommandPriority` (4 values), `VoiceCommandDefinition`, `VoiceCommandResult`, `VoiceAssistantConfig` ScriptableObject |
+| 2 | `VoiceRecognitionController.cs` | Singleton — microphone input, push-to-talk / wake-word / always-listening modes, `OnKeywordRecognized` event |
+| 3 | `CommandParser.cs` | Static — `Parse()` with Levenshtein fuzzy matching, parameter extraction, `GetSuggestions()` autocomplete |
+| 4 | `CommandRegistry.cs` | Singleton — 40+ built-in commands, `Register / Unregister / GetByCategory / GetAll` |
+| 5 | `CommandExecutor.cs` | Singleton — dispatch to subsystems, cooldown guard, category-enabled guard |
+| 6 | `VoiceConfirmationController.cs` | "Are you sure?" queued confirmation with voice/touch and timeout auto-cancel |
+| 7 | `VoiceResponseGenerator.cs` | Static — template-based response text with `{param}` substitution |
+| 8 | `VoiceCommandHistory.cs` | Circular buffer, JSON persistence to `voice_history.json` |
+| 9 | `VoiceCommandHUD.cs` | State indicator, phrase display, confidence bar, response toast, audio level meter |
+| 10 | `VoiceCommandUI.cs` | Settings panel: mode selector, confidence slider, searchable command list, history view, test button |
+| 11 | `VoiceATCBridge.cs` | ATC protocol translation (`#if SWEF_ATC_AVAILABLE`) |
+| 12 | `VoiceCommandAnalytics.cs` | Telemetry events (`#if SWEF_ANALYTICS_AVAILABLE`) |
+
+### Activation Modes
+
+| Mode | Trigger |
+|------|---------|
+| Push-to-Talk (default) | Hold button → release |
+| Wake-Word | "Hey Pilot" detected |
+| Always Listening | Continuous microphone |
+
+### Built-in Categories & Example Commands
+
+| Category | Example Commands |
+|----------|-----------------|
+| Flight | increase/decrease throttle, set altitude [N], bank left/right, level wings, engage/disengage autopilot, flaps up/down, landing gear up/down *(confirmation)*, emergency landing *(confirmation)* |
+| Navigation | set waypoint [name], next waypoint, show route, distance to destination, ETA, heading [N] degrees |
+| Instruments | show altimeter, show speed, calibrate instruments |
+| Weather | weather report, turbulence level, wind direction, visibility check |
+| Music | play/pause music, next track, volume up/down |
+| Camera | photo mode, take screenshot, cinematic/cockpit/chase view |
+| System | pause/resume game, save flight, show map, toggle HUD/minimap |
+
+### Tests
+
+`Assets/Tests/EditMode/VoiceCommandTests.cs` — 40+ NUnit EditMode tests covering:
+`CommandParser` exact/fuzzy/parameter extraction, `GetSuggestions`, Levenshtein distance,
+`CommandRegistry` register/unregister/lookup/built-in count,
+`VoiceCommandHistory` buffer/category/clear,
+`VoiceResponseGenerator` substitution/detailed/confirmation prompt,
+`VoiceConfirmationController` initial state/request/confirm/cancel/queue order,
+enum completeness, `VoiceAssistantConfig` defaults, `VoiceCommandResult` factories.
+
+### Localization
+
+33 keys added to all 8 language files (`voice_category_*` × 9, `voice_response_*` × 10, UI keys × 14).
