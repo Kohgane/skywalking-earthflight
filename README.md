@@ -87,6 +87,7 @@ Assets/SWEF/
 │   ├── SocialHub/        # SocialHubController, FriendManager, FriendListUI, PlayerProfile, PlayerProfileManager, PlayerSearchUI, ProfileCardUI, ProfileCustomizationUI, ActivityFeedUI, SocialActivityFeed, SocialNotificationSystem
 │   ├── Teleport/         # TeleportController, TeleportUI
 │   ├── Terrain/          # CesiumTerrainBridge, ProceduralTerrainGenerator, TerrainChunk, TerrainChunkPool, TerrainBiomeMapper, TerrainTextureManager
+│   ├── TerrainSurvey/    # TerrainSurveyData, TerrainScannerController, GeologicalClassifier, HeatmapOverlayRenderer, SurveyPOIManager, SurveyMinimapIntegration, SurveyJournalBridge, TerrainSurveyHUD, TerrainSurveyUI, TerrainSurveyAnalytics
 │   ├── TimeCapsule/      # TimeCapsuleData, TimeCapsuleManager, TimeCapsuleAutoCapture, TimeCapsuleUI, TimeCapsuleMapOverlay, TimeCapsuleNotificationService
 │   ├── TimeOfDay/        # TimeOfDayData, SolarCalculator, TimeOfDayManager, LightingController, SeasonalLightingProfile, GoldenHourEffect, NightSkyRenderer, TimeOfDayMultiplayerSync, TimeOfDayUI, TimeOfDayAnalytics
 │   ├── Tutorial/         # TutorialManager, TutorialStepData, TutorialActionDetector, TutorialHighlight, TutorialTooltip, TutorialReplayButton, InteractiveTutorialManager
@@ -2611,3 +2612,45 @@ Adds a comprehensive flight instruments calibration and realism system to SWEF. 
 | `InstrumentFailureMode` | enum | None, Frozen, Erratic, SlowDrift, BlackOut, StuckAtValue, Oscillating |
 | `BarometricMode` | enum | QNH, QFE, Standard |
 | `RealismLevel` | enum | Casual, Realistic, Hardcore |
+
+---
+
+## Phase 81 — Terrain Scanning & Geological Survey System
+
+Adds a real-time terrain scanning and geological survey system to SWEF. Players can activate the scanner during flight to analyse terrain below the aircraft, view heatmap overlays, discover geological POIs, and track discoveries in the flight journal and minimap.
+
+### New Scripts (10 files) — `Assets/SWEF/Scripts/TerrainSurvey/`
+
+| # | File | Description |
+|---|------|-------------|
+| 1 | `TerrainSurveyData.cs` | `GeologicalFeatureType` enum (12 values), `SurveyMode` enum (5 values), `SurveySample` struct, `SurveyPOI` class, `TerrainSurveyConfig` ScriptableObject |
+| 2 | `TerrainScannerController.cs` | Singleton MonoBehaviour — raycast-based grid scan loop, `OnScanStarted` / `OnScanCompleted` / `OnScanPaused` events, pause/resume support |
+| 3 | `GeologicalClassifier.cs` | Static utility — `Classify(altitude, slope, biomeId, temperature)`, `GetFeatureDisplayName()`, `GetFeatureColor()` |
+| 4 | `HeatmapOverlayRenderer.cs` | Procedural mesh overlay — 5 visualization modes (Altitude, Slope, Biome, Temperature, Mineral), opacity slider, LOD-aware |
+| 5 | `SurveyPOIManager.cs` | Singleton — proximity deduplication (500 m default), JSON persistence (`survey_pois.json`), max-cap oldest-first eviction, POI events |
+| 6 | `SurveyMinimapIntegration.cs` | Subscribes to `OnPOIDiscovered`, registers `MinimapManager` blips (null-safe) |
+| 7 | `SurveyJournalBridge.cs` | Auto-creates `JournalManager` entries and reports `AchievementManager` milestones (null-safe) |
+| 8 | `TerrainSurveyHUD.cs` | HUD panel — pulsing scan indicator, terrain classification label, altitude/slope readout, 5-mode selector, POI toast, cooldown bar |
+| 9 | `TerrainSurveyUI.cs` | Full-screen catalog — POI list with filters (type/date/altitude), navigate-to-POI, CSV export, statistics panel |
+| 10 | `TerrainSurveyAnalytics.cs` | Telemetry events via `TelemetryDispatcher` (null-safe); session summary flushed on quit |
+
+### New Tests — `Assets/Tests/EditMode/`
+
+| File | Coverage |
+|------|----------|
+| `TerrainSurveyTests.cs` | `GeologicalClassifier.Classify()` for all 12 feature types with boundary values; `SurveyPOIManager` deduplication (within/beyond threshold); max-cap eviction; `SurveySample` JSON round-trip; `TerrainSurveyConfig` default values; `SurveyPOI` constructor and event firing |
+
+### Localization
+
+24 keys across 8 languages (en, de, es, fr, ja, ko, pt, zh) with prefix `survey_`: 12 geological feature type names, 5 survey mode labels, 7 HUD/UI strings.
+
+### Integration Points
+
+| Script | Integrates With |
+|--------|----------------|
+| `TerrainScannerController` | `SWEF.Flight.FlightController` — player position for scan origin (null-safe, `#if SWEF_FLIGHT_AVAILABLE`) |
+| `SurveyMinimapIntegration` | `SWEF.Minimap.MinimapManager` — POI blip registration (null-safe, `#if SWEF_MINIMAP_AVAILABLE`) |
+| `SurveyJournalBridge` | `SWEF.Journal.JournalManager` — auto-record discoveries (null-safe, `#if SWEF_JOURNAL_AVAILABLE`) |
+| `SurveyJournalBridge` | `SWEF.Achievement.AchievementManager` — milestone achievements (null-safe, `#if SWEF_ACHIEVEMENT_AVAILABLE`) |
+| `TerrainSurveyUI` | `SWEF.GuidedTour.WaypointNavigator` — navigate to POI (null-safe, `#if SWEF_GUIDEDTOUR_AVAILABLE`) |
+| `TerrainSurveyAnalytics` | `SWEF.Analytics.TelemetryDispatcher` — telemetry events (null-safe, `#if SWEF_ANALYTICS_AVAILABLE`) |
