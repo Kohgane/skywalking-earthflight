@@ -7,15 +7,30 @@
 
 Phases 1–80 have been merged into `main`. See individual PR descriptions and `README.md` for details.
 
-## Upcoming Phases
+| Phase | Title | PR | Merged |
+|-------|-------|----|--------|
+| 81 | Terrain Scanning & Geological Survey System | [#98](https://github.com/Kohgane/skywalking-earthflight/pull/98) | 2026-04-01 |
+| 82 | Passenger & Cargo Mission System | [#99](https://github.com/Kohgane/skywalking-earthflight/pull/99) | 2026-04-01 |
 
-| Phase | Title | Status | Description |
-|-------|-------|--------|-------------|
-| 81 | Terrain Scanning & Geological Survey System | 🔄 In Progress | Real-time terrain scanning, geological classification, heatmap overlays, POI discovery, journal/minimap integration |
-| 82 | Passenger & Cargo Mission System | ⏳ Planned | Passenger comfort scoring, cargo weight/CG physics, VIP missions, delivery timers, route planner integration |
-| 83 | Dynamic Soundtrack & Adaptive Music System | ⏳ Planned | Flight-state-driven stem mixing, altitude/weather/danger layering, crossfade transitions, custom playlist support |
-| 84 | Flight Training Academy & Skill Certification | ⏳ Planned | Structured flight courses (PPL→ATPL), skill tests (landing/IFR/formation), scoring, certificate issuance, FlightSchool expansion |
-| 85 | Space Station & Orbital Docking System | ⏳ Planned | Post-Kármán space station approach, docking minigame, zero-G camera, EVA viewpoint, orbital mechanics expansion |
+## In Progress (83–85)
+
+| Phase | Title | Status | PR | Notes |
+|-------|-------|--------|----|-------|
+| 83 | Dynamic Soundtrack & Adaptive Music System | ⚠️ Conflict — needs rebuild | [#100](https://github.com/Kohgane/skywalking-earthflight/pull/100) | Branch based on pre-81 main; localization + README conflicts. Close & recreate from latest main. |
+| 84 | Flight Training Academy & Skill Certification | ⚠️ WIP/Draft — needs rebuild | [#101](https://github.com/Kohgane/skywalking-earthflight/pull/101) | Rate-limited draft; conflicts with main. Close & recreate. |
+| 85 | Space Station & Orbital Docking System | ⚠️ WIP/Draft — needs rebuild | [#102](https://github.com/Kohgane/skywalking-earthflight/pull/102) | Rate-limited draft (0 additions); empty shell. Close & recreate. |
+
+## Next Batch — Phase 86–90 (Confirmed)
+
+> Approved on 2026-04-01. Execute in order below.
+
+| # | Phase | Title | Rationale | Key Systems |
+|---|-------|-------|-----------|-------------|
+| 1️⃣ | 86 | 🌋 Natural Disaster & Dynamic World Events | Weather/Emergency/Biome synergy, game dynamics core | Volcano/earthquake/hurricane/wildfire sim, flight-path hazards, rescue missions, atmospheric effects (ash, smoke) |
+| 2️⃣ | 87 | 🗺️ Advanced Navigation & Flight Plan System | Only missing core flight-sim feature, ATC (Phase 78) integration | IFR/VFR routes, STAR/SID procedures, FMS, waypoint chaining, fuel/time calc, ATC flight plan submission |
+| 3️⃣ | 88 | 🏆 Competitive Racing & Time Trial System | Racing/ dir exists but no course editor/seasons, user retention | Race course editor, checkpoint gates, ghost racing, seasonal leaderboards, multiplayer real-time races, course sharing |
+| 4️⃣ | 89 | 📸 Advanced Photography & Drone Camera System | PhotoMode basic only, drone+AI composition = killer feature | Independent drone camera flight, filter/frame expansion, AI auto-composition, timelapse, panorama, photo challenges |
+| 5️⃣ | 90 | 🔧 Aircraft Workshop & Part Customization | Aircraft/ has skins only, endgame content | Engine/wing/fuselage part customization, performance simulation, paint/decal editor, part unlock tree, custom aircraft sharing |
 
 ## Phase Selection Criteria
 
