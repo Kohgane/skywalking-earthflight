@@ -96,6 +96,7 @@ Assets/SWEF/
 │   ├── UI/               # HudBinder, AccessibilityController, OneHandedModeController, VoiceCommandManager, HudBinder, FlightPhysicsHUD, CompassHUD, SpeedIndicator, AltitudeMilestone, WeatherHUD, WeatherUI, MiniMap, MiniMapController, MultiplayerHUD, GhostRaceHUD, SplashScreen, LoadingScreen (see Core), StatsDashboard, LeaderboardUI, FlightJournalUI, CameraUI, InputRebinder, LocalizationManager, PhotoModeUI, ReplayBrowserUI, StoreUI, TimeOfDayUI, PremiumPromptUI, VoiceCommand, ColorblindMode, AccessibilityManager
 │   ├── Util/             # ExpSmoothing, PerformanceProfiler, SWEFTestHelpers
 │   ├── VFX/              # VFXData, VFXPoolManager, VFXTriggerSystem, VFXLODController, EngineExhaustController, EnvironmentVFXController, SpeedVFXController, CelebrationVFXController, VFXCompositor, VFXAnalytics
+│   ├── SpaceStation/     # SpaceStationData, OrbitalMechanicsController, StationSpawnManager, DockingController, RCSController, DockingGuidanceHUD, StationInteriorController, StationModuleGenerator, SpaceStationUI, SpaceStationMinimap, SpaceStationAchievements, SpaceStationAnalytics
 │   ├── VoiceCommand/     # VoiceCommandData, VoiceRecognitionController, CommandParser, CommandRegistry, CommandExecutor, VoiceConfirmationController, VoiceResponseGenerator, VoiceCommandHistory, VoiceCommandHUD, VoiceCommandUI, VoiceATCBridge, VoiceCommandAnalytics
 │   ├── VoiceChat/        # VoiceChatData, VoiceChatManager, VoiceAudioProcessor, VoiceSpatialAudio, VoiceNetworkTransport, VoiceChannelManager, VoiceChatUI, VoiceChatSettings, VoiceRadioEffect, VoiceChatAnalytics
 │   ├── Water/            # WaterData, WaterSurfaceManager, BuoyancyController, SplashEffectController, UnderwaterCameraTransition, WaterRippleSystem, WaterInteractionAnalytics
@@ -2777,3 +2778,49 @@ enum completeness, `VoiceAssistantConfig` defaults, `VoiceCommandResult` factori
 ### Localization
 
 33 keys added to all 8 language files (`voice_category_*` × 9, `voice_response_*` × 10, UI keys × 14).
+
+---
+
+## Phase 85 — Space Station & Orbital Docking System
+
+### New Scripts (12 files in `Assets/SWEF/Scripts/SpaceStation/`)
+
+| # | Script | Purpose |
+|---|--------|---------|
+| 1 | `SpaceStationData.cs` | `OrbitalBody` (6 values), `DockingPortState` (4 values), `StationSegmentType` (8 values), `DockingApproachPhase` (6 values) enums; `OrbitalParameters` struct; `StationDefinition`, `DockingPortDefinition` classes; `SpaceStationConfig` ScriptableObject |
+| 2 | `OrbitalMechanicsController.cs` | Singleton — simplified Keplerian (2-body) orbit propagation; `GetStationPosition(stationId, time)`, `GetOrbitalVelocity()`, `GetRelativeVelocity()`; `OnStationInRange` event |
+| 3 | `StationSpawnManager.cs` | Singleton — LOD-based spawn/despawn (icon >50 km, low-poly 10–50 km, full <10 km); pools GameObjects; `GetNearestStation()`, `GetStationsInRange()` |
+| 4 | `DockingController.cs` | Singleton — 6-phase docking state machine (FreeApproach → Docked); `BeginDockingApproach()`, `Tick()`, `Abort()`, `Undock()`; `OnPhaseChanged`, `OnDockingComplete`, `OnDockingAborted` events |
+| 5 | `RCSController.cs` | 6-DOF Reaction Control System; `Translate()`, `Rotate()`, `ProcessInput()`; dead-zone/sensitivity; fuel consumption (`#if SWEF_FUEL_AVAILABLE`) |
+| 6 | `DockingGuidanceHUD.cs` | Docking approach HUD — alignment crosshair, distance, closing speed, pitch/yaw/roll deviation, phase label, corridor colour (green/yellow/red) |
+| 7 | `StationInteriorController.cs` | Activated post-dock — first-person interior, zero-G movement (push-off, float, grab-handle), hatch navigation; `ExitStation()` triggers undock |
+| 8 | `StationModuleGenerator.cs` | Static utility — `GenerateLayout(StationDefinition, seed)` → `StationLayout` (graph of connected `StationSegmentNode`); guarantees Docking + Habitat + Command modules |
+| 9 | `SpaceStationUI.cs` | Station panel — name/orbit/segment info, port status list, approach/dock/undock buttons, station catalogue |
+| 10 | `SpaceStationMinimap.cs` | Orbital icons + approach corridor + interior module map (`#if SWEF_MINIMAP_AVAILABLE`) |
+| 11 | `SpaceStationAchievements.cs` | Achievements: first docking, speed dock, zero-damage, visit all segments, undock-and-redock, max orbital altitude (`#if SWEF_ACHIEVEMENT_AVAILABLE`) |
+| 12 | `SpaceStationAnalytics.cs` | Telemetry: `station_approach_started`, `docking_phase_changed`, `docking_completed`, `docking_aborted`, `station_interior_entered`, `station_interior_exited`, `rcs_fuel_consumed`, `station_session_summary` (`#if SWEF_ANALYTICS_AVAILABLE`) |
+
+### Docking Sequence
+
+| Phase | Distance | Fail Condition |
+|-------|----------|----------------|
+| FreeApproach | >1000 m | None |
+| InitialAlignment | 200–1000 m | Closing speed >50 m/s |
+| FinalApproach | 10–200 m | Speed >10 m/s OR alignment >15° |
+| SoftCapture | <10 m | Impact speed >2 m/s |
+| HardDock | <1 m | 2-second auto-lock (abortable) |
+| Docked | 0 m | Undock command |
+
+### Tests
+
+`Assets/Tests/EditMode/SpaceStationTests.cs` — NUnit EditMode tests covering:
+`OrbitalMechanicsController` period/speed/position calculations,
+`DockingController` phase transitions/abort conditions/complete sequence simulation,
+`StationModuleGenerator` valid layout/connectivity/deterministic seed,
+enum completeness (DockingApproachPhase × 6, OrbitalBody × 6, StationSegmentType × 8, DockingPortState × 4),
+`SpaceStationConfig` default value validation, `StationDefinition` serialization round-trip,
+`DockingPortState` transitions.
+
+### Localization
+
+40 keys added to all 8 language files: `station_body_*` × 6, `station_segment_*` × 8, `station_dock_phase_*` × 6, `station_port_*` × 4, UI/HUD keys × 16.
