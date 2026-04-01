@@ -38,6 +38,7 @@ Assets/SWEF/
 │   ├── Autopilot/        # AutopilotEnums, PIDController, AutopilotController, CruiseControlManager, AutopilotHUD, AutopilotInputHandler, AutopilotConfigSO, AutopilotAnalytics
 │   ├── Biome/            # BiomeData, BiomeClassifier, BiomeVisualEffects, BiomeAudioManager, VegetationPlacementHints, TerrainTextureBlender, BiomeTransitionZone, BiomeAnalytics
 │   ├── Cinema/           # TimeOfDayController, PhotoModeController, CinematicCameraPath, CinematicCameraUI
+│   ├── CityGen/          # CityGenData, CityManager, ProceduralBuildingGenerator, CityLayoutGenerator, RoadNetworkRenderer, LandmarkPlacer, BuildingLODController, CityLightingController, VegetationPlacer, CityAmbientController
 │   ├── CockpitHUD/       # HUDDashboard, HUDInstrument, FlightData, FlightDataProvider, Altimeter, Speedometer, CompassHeading, AttitudeIndicator, VerticalSpeedIndicator, GForceIndicator, ThrottleFuelGauge, WarningSystem, CockpitHUDConfig
 │   ├── Contrail/         # ContrailEnums, ContrailConfig, ContrailConditions, ContrailEmitter, ExhaustEffect, WingTipVortex, TrailPersistence, ContrailManager
 │   ├── CloudRendering/   # CloudRenderingManager, CloudSessionManager, StreamingClient, FrameDecoder, InputStreamEncoder, LatencyCompensator, NetworkQualityMonitor, AdaptiveBitrateController, HybridRenderingController, ServerDiscoveryService, CloudRenderingUI
@@ -2254,3 +2255,102 @@ EmergencyDebugOverlay (#if EDITOR || DEV_BUILD)
 ### Localization
 
 ~143 keys across 8 languages (en, de, es, fr, ja, ko, pt, zh) covering emergency type names and descriptions (30 keys), checklist step names and action instructions (52 keys), HUD / UI labels (20 keys), radio call strings (6 keys), rescue unit names (6 keys), landing site names (3 keys), severity levels (4 keys), phase labels (10 keys), and training scenario titles and hints (12 keys).
+
+---
+
+## Phase 77 — Procedural City & Landmark Generation System
+
+### New Scripts (10 files) — `Assets/SWEF/Scripts/CityGen/` — namespace `SWEF.CityGen`
+
+| # | File | Description |
+|---|------|-------------|
+| 1 | `CityGenData.cs` | Pure data layer — enums (`SettlementType`, `BuildingType`, `RoadType`, `ArchitectureStyle`, `LandmarkCategory`, `RoofType`, `LayoutStyle`) and serializable classes (`BuildingDefinition`, `SettlementDefinition`, `LandmarkDefinition`, `RoadSegment`, `RoadNetwork`, `CityBlock`, `CityGenSettings`, `CityLayout`) |
+| 2 | `CityManager.cs` | Singleton MonoBehaviour — settlement streaming orchestrator; spawn/despawn city blocks by player distance; `GenerateCity()` pipeline; `OnCityGenerated / OnCityUnloaded / OnLandmarkDiscovered` events |
+| 3 | `ProceduralBuildingGenerator.cs` | Mesh assembly engine — base box + floor repetition + roof cap per `BuildingDefinition`; 4-tier object pool; static-batch combine per `CityBlock`; quality-tier poly scaling |
+| 4 | `CityLayoutGenerator.cs` | Grid / organic / mixed layout algorithms — recursive quad-tree (grid), radial growth (organic), hybrid; synchronous `Generate()` and coroutine `GenerateAsync()` variants |
+| 5 | `RoadNetworkRenderer.cs` | Road quad-mesh renderer — per-`RoadType` width and material; T-junction and crossing intersection merging; `RenderNetwork()` / `ClearNetwork()` public API |
+| 6 | `LandmarkPlacer.cs` | Landmark streaming and discovery — `LandmarkDefinition` placement at runtime layout positions; proximity trigger; null-safe `SWEF.Narration` bridge (`#if SWEF_NARRATION_AVAILABLE`) |
+| 7 | `BuildingLODController.cs` | Performance-adaptive LOD — 5-level chain (LOD0 <200 m full mesh → LOD1 <500 m → LOD2 <1000 m impostor → LOD3 <2000 m quad → Culled); quality-tier threshold scaling |
+| 8 | `CityLightingController.cs` | Day/night lighting — window emission and street-lamp toggle; intensity scaling; `OnTimeOfDayChanged()` callback (`#if SWEF_TIMEOFDAY_AVAILABLE`) |
+| 9 | `VegetationPlacer.cs` | Tree and park vegetation — density driven by `SettlementType`; billboard LOD swap at distance; `SetDensityMultiplier()` runtime control |
+| 10 | `CityAmbientController.cs` | Crowd / smoke / birds / fountain ambient particles — `StartAmbient()` / `StopAmbient()`; emission intensity and time-of-day density scaling |
+
+### Key Data Types
+
+| Type | Kind | Purpose |
+|------|------|---------|
+| `SettlementType` | enum | Megacity / City / Town / Village / Hamlet / Industrial / Resort / HistoricCenter |
+| `BuildingType` | enum | Residential / Commercial / Industrial / Skyscraper / Church / Mosque / Temple / Stadium / Airport / Park / Monument / Bridge / Tower |
+| `RoadType` | enum | Highway / MainRoad / Street / Alley / Pedestrian / Bridge |
+| `ArchitectureStyle` | enum | Modern / Classical / Asian / MiddleEastern / Tropical / Nordic / Mediterranean / Futuristic |
+| `LandmarkCategory` | enum | Natural / Historical / Architectural / Religious / Cultural / Engineering |
+| `RoofType` | enum | Flat / Pitched / Dome / Spire / Antenna |
+| `LayoutStyle` | enum | Grid / Organic / Mixed |
+| `BuildingDefinition` | class | Per-archetype spec: buildingType, height range, width range, roofType, architectureStyle, windowDensity, materialIndex |
+| `SettlementDefinition` | class | Settlement spec: settlementType, layoutStyle, architectureStyle, radius, density, landmarkCount |
+| `LandmarkDefinition` | class | Landmark spec: nameLocKey, category, prefabIndex, discoveryRadius, discoveryNarrationKey |
+| `CityGenSettings` | ScriptableObject | Master config: streamingRadius, qualityTier, buildingDefinitions, settlementDefinitions, landmarkDefinitions, seed |
+| `CityLayout` | class | Generation result: settlement, blocks, roads, landmarks, generationTimeSec |
+
+### Architecture
+
+```
+CityManager (Singleton, DontDestroyOnLoad)
+│   ├── CityGenSettings         ← Serializable configuration asset
+│   ├── Streaming radius check  ← Spawn/despawn blocks by player distance
+│   ├── ActiveBlocks list       ← Live CityBlock instances
+│   ├── GenerateCity()          ← Full settlement pipeline
+│   └── Events: OnCityGenerated / OnCityUnloaded / OnLandmarkDiscovered
+│
+CityLayoutGenerator
+│   ├── Grid: recursive quad-tree (Manhattan)
+│   ├── Organic: radial growth from historic core
+│   └── Mixed: grid outskirts + organic center
+│
+RoadNetworkRenderer
+│   ├── Per-segment quad mesh (width from RoadType)
+│   └── Intersection merging (T-junctions, crossings)
+│
+ProceduralBuildingGenerator
+│   ├── Mesh: base box + floor repetition + roof cap
+│   ├── Object pool: reuse inactive GameObjects
+│   └── Static batch combine per CityBlock
+│
+LandmarkPlacer
+│   ├── Proximity discovery trigger
+│   └── Narration bridge (#if SWEF_NARRATION_AVAILABLE)
+│
+BuildingLODController (per CityBlock)
+│   ├── LOD0 (<200 m)   ← Full mesh + materials
+│   ├── LOD1 (<500 m)   ← Reduced mesh
+│   ├── LOD2 (<1000 m)  ← Impostor billboard
+│   ├── LOD3 (<2000 m)  ← Single quad
+│   └── Culled (>2000 m)
+│
+CityLightingController               VegetationPlacer
+│   ├── Window emission toggle       │   ├── Park + boulevard trees/bushes
+│   └── Street-lamp enable/disable   │   └── Billboard LOD at distance
+│
+CityAmbientController
+    ├── Crowd particles
+    ├── Chimney / industrial smoke
+    ├── Rooftop bird flocks
+    └── Fountain spray
+```
+
+### Integration Points
+
+| Script | Integrates With |
+|--------|----------------|
+| `CityManager` | `SWEF.Flight.FlightController` — player world position for streaming (null-safe) |
+| `CityManager` | `SWEF.Terrain.TerrainManager` — ground height sampling for building placement (null-safe) |
+| `CityManager` | `SWEF.LOD.LODManager` — global quality tier callback (null-safe) |
+| `CityManager` | `SWEF.Analytics.UserBehaviorTracker` — city_generated / landmark_discovered events (null-safe) |
+| `LandmarkPlacer` | `SWEF.Narration.NarrationManager` — landmark discovery narration (`#if SWEF_NARRATION_AVAILABLE`) |
+| `CityLightingController` | `SWEF.TimeOfDay.TimeOfDayManager` — solar time for night mode (`#if SWEF_TIMEOFDAY_AVAILABLE`) |
+| `CityAmbientController` | `SWEF.Audio.AudioManager` — crowd / ambient audio (null-safe) |
+| `BuildingLODController` | `SWEF.Performance.PerformanceManager` — adaptive quality tier (null-safe) |
+
+### Localization
+
+35 keys across 8 languages (en, de, es, fr, ja, ko, pt, zh) covering settlement types (8 keys: megacity, city, town, village, hamlet, industrial zone, resort, historic center), building types (13 keys: residential, commercial, industrial, skyscraper, church, mosque, temple, stadium, airport, park, monument, bridge, tower), road types (6 keys: highway, main road, street, alley, pedestrian, bridge road), and architecture styles (8 keys: modern, classical, asian, middle eastern, tropical, nordic, mediterranean, futuristic).
