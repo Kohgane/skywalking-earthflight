@@ -36,6 +36,7 @@ Assets/SWEF/
 │   ├── Atmosphere/       # AtmosphereController, CloudLayer, DayNightCycle, WeatherController, WindController, ComfortVignette, ReentryEffect
 │   ├── Audio/            # AudioManager, AudioMixerController, AudioEventTrigger, AltitudeAudioTrigger, AltitudeSoundscapeController, WindAudioGenerator, DopplerEffectController, SonicBoomController, EnvironmentReverbController, AudioOcclusionSystem, SpatialAudioManager, MusicLayerSystem, AudioVisualizerData
 │   ├── Autopilot/        # AutopilotEnums, PIDController, AutopilotController, CruiseControlManager, AutopilotHUD, AutopilotInputHandler, AutopilotConfigSO, AutopilotAnalytics
+│   ├── ATC/              # ATCData, ATCManager, ATCRadioController, ATCPhraseGenerator, TrafficSimulator, RunwayManager, ApproachController, AirspaceController, ATCHUD, ATCAnalytics
 │   ├── Biome/            # BiomeData, BiomeClassifier, BiomeVisualEffects, BiomeAudioManager, VegetationPlacementHints, TerrainTextureBlender, BiomeTransitionZone, BiomeAnalytics
 │   ├── Cinema/           # TimeOfDayController, PhotoModeController, CinematicCameraPath, CinematicCameraUI
 │   ├── CityGen/          # CityGenData, CityManager, ProceduralBuildingGenerator, CityLayoutGenerator, RoadNetworkRenderer, LandmarkPlacer, BuildingLODController, CityLightingController, VegetationPlacer, CityAmbientController
@@ -2354,3 +2355,115 @@ CityAmbientController
 ### Localization
 
 35 keys across 8 languages (en, de, es, fr, ja, ko, pt, zh) covering settlement types (8 keys: megacity, city, town, village, hamlet, industrial zone, resort, historic center), building types (13 keys: residential, commercial, industrial, skyscraper, church, mosque, temple, stadium, airport, park, monument, bridge, tower), road types (6 keys: highway, main road, street, alley, pedestrian, bridge road), and architecture styles (8 keys: modern, classical, asian, middle eastern, tropical, nordic, mediterranean, futuristic).
+
+---
+
+## Phase 78 — Air Traffic Control (ATC) System
+
+### New Scripts (10 files) — `Assets/SWEF/Scripts/ATC/` — namespace `SWEF.ATC`
+
+| # | File | Description |
+|---|------|-------------|
+| 1 | `ATCData.cs` | Pure data layer — enums (`ATCFacilityType`, `FlightPhase`, `Clearance`, `RunwayStatus`) and serializable classes (`RadioFrequency`, `ATCInstruction`, `AirspaceZone`, `TrafficContact`, `RunwayInfo`, `ATCSettings`) |
+| 2 | `ATCManager.cs` | Singleton MonoBehaviour — ATC facility registry, active frequency tracking, player zone detection, clearance lifecycle (Request → Issue → Acknowledge → Monitor → Expire); events: `OnClearanceReceived`, `OnClearanceExpired`, `OnFrequencyChanged`, `OnHandoff`, `OnEmergencyDeclared` |
+| 3 | `ATCRadioController.cs` | Radio communication system — frequency tuning, TX/RX queue simulation with realistic timing delays, squelch gating, static audio effects; COMM1 + COMM2 dual-radio; integrates with `SWEF.Audio.AudioManager` (`#if SWEF_AUDIO_AVAILABLE`) |
+| 4 | `ATCPhraseGenerator.cs` | ICAO-standard ATC phraseology — `GenerateClearance(ATCInstruction)`, `GenerateReadback(ATCInstruction)`, `GenerateATIS(airport, weather)`; NATO phonetic alphabet callsign spelling; realistic / simplified mode toggle |
+| 5 | `TrafficSimulator.cs` | AI air traffic simulation — spawns `TrafficContact` objects around the player; flight path updates; separation enforcement (3 nm lateral / 1,000 ft vertical); distance-based LOD update intervals |
+| 6 | `RunwayManager.cs` | Runway assignment and status — wind-based active runway selection, ILS approach data, runway status management; integrates with `SWEF.Weather.WeatherManager` (`#if SWEF_WEATHER_AVAILABLE`) |
+| 7 | `ApproachController.cs` | Approach and departure procedures — standard circuit waypoints (downwind → base → final), SID departure waypoints, glidepath tracking, centreline deviation; integrates with `SWEF.Landing.ApproachGuidance` (`#if SWEF_LANDING_AVAILABLE`) |
+| 8 | `AirspaceController.cs` | Controlled airspace management — per-frame zone entry/exit detection, controlled vs uncontrolled classification, entry clearance enforcement; events: `OnZoneEntered`, `OnZoneExited`, `OnUnauthorizedEntry` |
+| 9 | `ATCHUD.cs` | ATC HUD overlay — active/standby frequency display, clearance card with countdown timer, mini traffic radar scope, communication log (max 50 messages), TX/RX indicators, ATIS panel |
+| 10 | `ATCAnalytics.cs` | Telemetry bridge — clearance compliance rate, approach accuracy (deviation), go-around count, emergency declaration frequency; integrates with `SWEF.Analytics.TelemetryDispatcher` (`#if SWEF_ANALYTICS_AVAILABLE`) |
+
+### Key Data Types
+
+| Type | Kind | Purpose |
+|------|------|---------|
+| `ATCFacilityType` | enum | Tower / Approach / Center / Ground / Departure / ATIS |
+| `FlightPhase` | enum | Parked / Taxi / Takeoff / Departure / Cruise / Approach / Landing / GoAround / Emergency |
+| `Clearance` | enum | Taxi / Takeoff / Landing / Approach / Altitude / Speed / Heading / Hold / GoAround |
+| `RunwayStatus` | enum | Active / Closed / Maintenance |
+| `RadioFrequency` | class | Frequency in MHz, human name, facility type |
+| `ATCInstruction` | class | Clearance type, assigned runway/altitude/heading/speed, holding flag, expiration time |
+| `AirspaceZone` | class | Cylindrical zone with floor/ceiling altitudes, facility type, primary frequency |
+| `TrafficContact` | class | AI aircraft with position, altitude, speed, heading, flight phase, threat level |
+| `RunwayInfo` | class | Runway designator, heading, dimensions, ILS availability, operational status |
+| `ATCSettings` | class | Max traffic, communication range, radio volume, phraseology mode, auto-tune flag, ATIS flag |
+
+### Architecture
+
+```
+ATCManager (Singleton, DontDestroyOnLoad)
+│   ├── ATC facility registry — loads AirspaceZone definitions
+│   ├── Active frequency tracking (COMM1 / COMM2)
+│   ├── Player zone detection — streams ATC zones based on position
+│   ├── Clearance lifecycle: Request → Issue → Acknowledge → Monitor → Expire
+│   └── Events: OnClearanceReceived / OnHandoff / OnEmergencyDeclared
+│
+├── ATCRadioController
+│   ├── Frequency tuning (118.000–136.975 MHz, 25 kHz spacing)
+│   ├── TX/RX queue with realistic timing delays
+│   ├── Audio processing: static noise, squelch gate, voice filter
+│   └── COMM1 + COMM2 dual-radio support
+│
+├── ATCPhraseGenerator
+│   ├── ICAO standard phraseology generation
+│   ├── NATO phonetic alphabet for callsigns
+│   ├── Localization-aware phrase construction
+│   └── Simplified mode for casual players
+│
+├── TrafficSimulator
+│   ├── AI traffic spawning around airports (configurable max)
+│   ├── Flight path updates (heading-based dead reckoning)
+│   ├── Separation enforcement (3 nm / 1,000 ft)
+│   └── Distance-based update LOD (full → reduced → minimal)
+│
+├── RunwayManager
+│   ├── Wind-based active runway selection
+│   ├── ILS approach data provision
+│   ├── Runway status management
+│   └── Weather integration (null-safe)
+│
+├── ApproachController
+│   ├── Standard approach circuit (downwind → base → final)
+│   ├── SID departure procedure generation
+│   ├── Glidepath tracking and centreline deviation
+│   └── ApproachGuidance ILS overlay integration (null-safe)
+│
+├── AirspaceController
+│   ├── Zone entry/exit detection (per-frame)
+│   ├── Controlled vs uncontrolled airspace classification
+│   ├── Entry clearance requirement enforcement
+│   └── Class A airspace (above 18,000 ft MSL)
+│
+├── ATCHUD
+│   ├── Active + standby frequency display
+│   ├── Clearance card with countdown timer
+│   ├── Mini traffic radar scope (configurable range)
+│   ├── Communication log (50 messages, auto-scroll)
+│   └── TX/RX indicator icons + ATIS panel
+│
+└── ATCAnalytics
+    ├── Clearance compliance rate
+    ├── Average approach deviation (degrees)
+    ├── Go-around count
+    └── TelemetryDispatcher integration (null-safe)
+```
+
+### Integration Points
+
+| Phase 78 Script | Integrates With |
+|-----------------|----------------|
+| `ATCManager` | `SWEF.Landing.AirportRegistry` — queries known airports for facility generation (null-safe, `#define SWEF_LANDING_AVAILABLE`) |
+| `ATCRadioController` | `SWEF.Audio.AudioManager` — radio audio effects (null-safe, `#define SWEF_AUDIO_AVAILABLE`) |
+| `ATCPhraseGenerator` | `SWEF.Localization.LocalizationManager` — localised ATC phrases (null-safe, `#define SWEF_LOCALIZATION_AVAILABLE`) |
+| `RunwayManager` | `SWEF.Weather.WeatherManager` — wind direction for runway selection (null-safe, `#define SWEF_WEATHER_AVAILABLE`) |
+| `ApproachController` | `SWEF.Landing.ApproachGuidance` — ILS overlay integration (null-safe, `#define SWEF_LANDING_AVAILABLE`) |
+| `AirspaceController` | `SWEF.Flight.FlightController` — player position for zone detection (null-safe) |
+| `ATCHUD` | `SWEF.UI` — standard SWEF HUD canvas integration |
+| `ATCAnalytics` | `SWEF.Analytics.TelemetryDispatcher` — telemetry event dispatch (null-safe, `#define SWEF_ANALYTICS_AVAILABLE`) |
+| `TrafficSimulator` | `SWEF.CityGen.CityManager` — settlement proximity for traffic density scaling (null-safe) |
+
+### Localization
+
+42 keys across 8 languages (en, de, es, fr, ja, ko, pt, zh) covering ATC facility types (6 keys), flight phases (9 keys), clearance types (9 keys), HUD labels (11 keys), and standard radio phrases (7 keys).
