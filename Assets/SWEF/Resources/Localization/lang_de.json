@@ -1145,6 +1145,40 @@
   "replay_theater_analytics_views": "Aufrufe",
   "replay_theater_analytics_likes": "Gefällt mir",
   "replay_theater_analytics_shares": "Geteilt",
+<<<<<<< copilot/add-passenger-cargo-mission-system
+
+  "transport_type_passenger_standard": "Passagierflug",
+  "transport_type_passenger_vip": "VIP-Flug",
+  "transport_type_passenger_charter": "Charterflug",
+  "transport_type_cargo_standard": "Frachtlieferung",
+  "transport_type_cargo_fragile": "Zerbrechliche Fracht",
+  "transport_type_cargo_hazardous": "Gefährliche Fracht",
+  "transport_type_cargo_oversized": "Schwertransport",
+  "transport_type_emergency_medical": "Medizinischer Notfall",
+  "transport_comfort_excellent": "Ausgezeichnet",
+  "transport_comfort_good": "Gut",
+  "transport_comfort_fair": "Ausreichend",
+  "transport_comfort_poor": "Schlecht",
+  "transport_comfort_critical": "Kritisch",
+  "transport_cargo_general": "Allgemein",
+  "transport_cargo_perishable": "Verderblich",
+  "transport_cargo_fragile": "Zerbrechlich",
+  "transport_cargo_hazardous": "Gefährlich",
+  "transport_cargo_livestock": "Vieh",
+  "transport_cargo_oversized": "Überdimensional",
+  "transport_cargo_medical": "Medizinisch",
+  "transport_board_title": "Auftragsbörse",
+  "transport_accept_contract": "Annehmen",
+  "transport_decline_contract": "Ablehnen",
+  "transport_mission_active": "Mission aktiv",
+  "transport_delivery_complete": "Lieferung abgeschlossen!",
+  "transport_mission_failed": "Mission fehlgeschlagen",
+  "transport_time_bonus": "Zeitbonus",
+  "transport_comfort_bonus": "Komfortbonus",
+  "transport_history_title": "Lieferverlauf",
+  "transport_stats_title": "Transportstatistiken"
+}
+=======
   "survey_feature_mountain": "Berg",
   "survey_feature_desert": "Wüste",
   "survey_feature_volcano": "Vulkan",
@@ -1170,3 +1204,4 @@
   "survey_navigate_to": "Navigieren zu",
   "survey_export_data": "Daten exportieren"
 }
+>>>>>>> main

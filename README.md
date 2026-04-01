@@ -71,6 +71,7 @@ Assets/SWEF/
 │   ├── Notification/     # NotificationManager, NotificationSettings
 │   ├── Offline/          # OfflineManager, OfflineFallbackController, OfflineHUD, TileCacheManager, TilePrefetchController, RegionDownloadUI
 │   ├── OrbitalCamera/    # OrbitalCameraData, OrbitalCameraController, SpaceGroundTransition, OrbitalMechanicsSimulator, SatelliteViewRenderer, AltitudeEffectsManager, OrbitPathVisualizer, OrbitalCameraAnalytics
+│   ├── PassengerCargo/   # PassengerCargoData, PassengerComfortSystem, CargoPhysicsController, TransportMissionManager, TransportContractGenerator, PassengerBehaviorController, DeliveryTimerController, TransportRewardCalculator, TransportMissionHUD, TransportMissionUI, TransportMissionBridge, TransportAnalytics
 │   ├── Performance/      # PerformanceProfiler, AdaptiveQualityController, RuntimeDiagnosticsHUD, MemoryPoolManager, GarbageCollectionTracker, DrawCallAnalyzer, AssetLoadProfiler, SceneLoadProfiler, TextureMemoryOptimizer
 │   ├── PhotoMode/        # PhotoModeData, PhotoModeUI, PhotoModeAnalytics, PhotoCameraController, PhotoCaptureManager, PhotoFilterSystem, PhotoFrameRenderer, PhotoGalleryManager, DroneCameraController, DroneVisualController
 │   ├── Progression/      # PilotRankData, ProgressionManager, XPSourceConfig, XPTracker, SkillTreeData, SkillTreeManager, CosmeticUnlockManager, ProgressionHUD, ProgressionProfileUI, ProgressionDefaultData
