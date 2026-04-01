@@ -66,6 +66,7 @@ Assets/SWEF/
 │   ├── Minimap/          # MinimapData, MinimapManager, MinimapRenderer, MinimapIconConfig, MinimapBlipProvider, MinimapCompass, MinimapSettingsUI, RadarOverlay
 │   ├── Mission/          # MissionEnums, MissionConfig, MissionObjective, MissionCheckpoint, MissionReward, MissionResult, MissionData, MissionManager, MissionBriefingUI, MissionTrackerUI
 │   ├── Multiplayer/      # MultiplayerManager, NetworkManager2, PlayerSyncController, PlayerSyncSystem, FormationFlyingManager, CoopMissionSystem, MultiplayerWeatherSync, MultiplayerHUD, MultiplayerScoreboard, MultiplayerRace, RoomManager, PlayerAvatar, RemotePlayerRenderer, NetworkTransport, VoiceChatManager, ProximityChat
+│   ├── AdaptiveMusic/    # AdaptiveMusicData, AdaptiveMusicManager, FlightContextAnalyzer, MoodResolver, StemMixer, MusicTransitionController, IntensityController, BeatSyncClock, AdaptiveMusicHUD, AdaptiveMusicUI, MusicPlayerBridge, AdaptiveMusicAnalytics
 │   ├── MusicPlayer/      # MusicPlayerData, MusicPlayerManager, MusicPlaylistController, MusicPlayerUI, MusicLibraryUI, MusicFlightSync, MusicWeatherMixer, MusicVisualizerEffect, MusicMultiplayerSync, MusicEQController, MusicCrossfadeController, MusicSleepTimer, LrcParser, LyricsDatabase, KaraokeController, LyricsDisplayUI, LyricsEditorUI
 │   ├── Narration/        # NarrationData, LandmarkDatabase, NarrationManager, NarrationAudioController, NarrationSubtitleUI, NarrationHudPanel, LandmarkDiscoveryTracker, LandmarkMinimapIntegration, NarrationSettingsUI, NarrationAnalytics, Editor/LandmarkDatabaseEditorWindow
 │   ├── Notification/     # NotificationManager, NotificationSettings
@@ -2611,3 +2612,87 @@ Adds a comprehensive flight instruments calibration and realism system to SWEF. 
 | `InstrumentFailureMode` | enum | None, Frozen, Erratic, SlowDrift, BlackOut, StuckAtValue, Oscillating |
 | `BarometricMode` | enum | QNH, QFE, Standard |
 | `RealismLevel` | enum | Casual, Realistic, Hardcore |
+
+---
+
+## Phase 83 — Dynamic Soundtrack & Adaptive Music System
+
+Adds a fully adaptive music system that dynamically mixes audio stems in real-time based on flight state. The music reacts to altitude, speed, weather, time of day, danger level, biome, and mission context — creating a unique soundtrack for every flight.
+
+### New Scripts (12 files) — `Assets/SWEF/Scripts/AdaptiveMusic/`
+
+| # | File | Description |
+|---|------|-------------|
+| 1 | `AdaptiveMusicData.cs` | Pure data layer: `MusicMood` enum (9 values), `MusicLayer` enum (8 values), `StemDefinition`, `AdaptiveMusicProfile` ScriptableObject, `FlightMusicContext` struct |
+| 2 | `AdaptiveMusicManager.cs` | Singleton orchestrator — polls context every 0.5 s, resolves mood/intensity, manages transitions; PlayerPrefs persistence |
+| 3 | `FlightContextAnalyzer.cs` | Builds `FlightMusicContext` from FlightController, WeatherManager, TimeOfDayManager, BiomeClassifier, EmergencyManager, DamageModel (all null-safe) |
+| 4 | `MoodResolver.cs` | Static utility — `ResolveMood()` (10-priority rules) + `ResolveIntensity()` |
+| 5 | `StemMixer.cs` | AudioSource pool; fade-in / fade-out / crossfade coroutines; ducking for narration/voice |
+| 6 | `MusicTransitionController.cs` | Mood-to-mood transitions; 8 s anti-flicker hold; bar-quantised timing; optional stinger clips |
+| 7 | `IntensityController.cs` | Intensity → active layers mapping with smooth volume interpolation |
+| 8 | `BeatSyncClock.cs` | Master BPM clock; OnBeat / OnBar / OnDownbeat events; `GetNextBarTime()` for scheduling |
+| 9 | `AdaptiveMusicHUD.cs` | Mood label + icon, intensity bar, per-layer stem dot indicators |
+| 10 | `AdaptiveMusicUI.cs` | Full settings panel: enable, volume, mode selector, profile selector, preview mode |
+| 11 | `MusicPlayerBridge.cs` | Bridges adaptive music with `MusicPlayerManager`; Adaptive / Playlist / Hybrid modes |
+| 12 | `AdaptiveMusicAnalytics.cs` | 6 event types + session summary → `TelemetryDispatcher` |
+
+### Key Types
+
+| Type | Kind | Purpose |
+|------|------|---------|
+| `MusicMood` | enum | Peaceful, Cruising, Adventurous, Tense, Danger, Epic, Serene, Mysterious, Triumphant |
+| `MusicLayer` | enum | Drums, Bass, Melody, Pads, Strings, Percussion, Choir, Synth |
+| `MusicMode` | enum | AdaptiveOnly, PlaylistOnly, Hybrid |
+| `FlightMusicContext` | struct | Snapshot of all flight-state data used for mood resolution |
+| `AdaptiveMusicProfile` | ScriptableObject | Stems, transition rules, intensity curves, crossfade durations |
+| `StemDefinition` | class | Clip reference, layer, mood, BPM, key, loop points |
+
+### Mood Resolution Priority
+
+| Priority | Condition | Mood |
+|----------|-----------|------|
+| 1 | Active emergency OR damage > 60% | Danger |
+| 2 | G-force > 3.0 OR stall warning | Tense |
+| 3 | Storm (weather intensity > 0.7) | Tense |
+| 4 | Altitude > 100,000 m (space) | Epic |
+| 5 | Mission just completed (10 s window) | Triumphant |
+| 6 | Golden hour (sun altitude 0–6°) | Serene |
+| 7 | Night + clear weather | Mysterious |
+| 8 | Speed > Mach 0.8 | Adventurous |
+| 9 | Smooth cruise (stable altitude, moderate speed) | Cruising |
+| 10 | Low altitude + calm weather + low speed | Peaceful |
+
+### Intensity → Layer Mapping
+
+| Intensity | Active Layers |
+|-----------|---------------|
+| 0.0–0.2 | Pads |
+| 0.2–0.4 | Pads, Strings |
+| 0.4–0.6 | Pads, Strings, Melody, Bass |
+| 0.6–0.8 | Pads, Strings, Melody, Bass, Drums, Percussion |
+| 0.8–1.0 | All layers (+ Choir, Synth) |
+
+### Integration Points
+
+| Script | Integrates With |
+|--------|----------------|
+| `FlightContextAnalyzer` | `SWEF.Flight.FlightController` — speed, isFlying (null-safe) |
+| `FlightContextAnalyzer` | `SWEF.Flight.AltitudeController` — altitude (null-safe) |
+| `FlightContextAnalyzer` | `SWEF.Weather.WeatherManager` — intensity (null-safe) |
+| `FlightContextAnalyzer` | `SWEF.TimeOfDay.TimeOfDayManager` — hour, sun altitude (null-safe) |
+| `FlightContextAnalyzer` | `SWEF.Biome.BiomeClassifier` — biome type (null-safe) |
+| `FlightContextAnalyzer` | `SWEF.Emergency.EmergencyManager` — active emergencies (null-safe) |
+| `FlightContextAnalyzer` | `SWEF.Damage.DamageModel` — overall health (null-safe) |
+| `MusicPlayerBridge` | `SWEF.MusicPlayer.MusicPlayerManager` — playlist control (null-safe) |
+| `AdaptiveMusicAnalytics` | `SWEF.Analytics.TelemetryDispatcher` — 6 event types + session summary (null-safe) |
+
+### Localization
+
+25 keys across 8 languages (en, de, es, fr, ja, ko, pt, zh):
+- 9 mood names (`music_mood_*`)
+- 8 layer names (`music_layer_*`)
+- 8 UI keys (`music_adaptive_title`, `music_adaptive_enabled`, `music_mode_*`, `music_intensity_label`, `music_preview_mode`, `music_crossfade_speed`)
+
+### New Tests — `Assets/Tests/EditMode/AdaptiveMusicTests.cs`
+
+Covers: `MoodResolver.ResolveMood()` (all 10 priority rules), `MoodResolver.ResolveIntensity()`, `IntensityController.GetActiveLayersForIntensity()` (all boundary values), `BeatSyncClock` (initial state, BPM set/clamp), `FlightMusicContext.Default()`, `MusicTransitionController` (initial mood, same-mood no-op), enum completeness.
