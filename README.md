@@ -52,6 +52,7 @@ Assets/SWEF/
 │   ├── Events/           # WorldEventData, WorldEventInstance, EventScheduler, EventParticipationTracker, EventVisualController, EventNotificationUI, EventCalendarUI, EventRewardController
 │   ├── Favorites/        # FavoriteManager, FavoritesUI
 │   ├── Flight/           # FlightController, AltitudeController, TouchInputRouter, HoldButton, AeroPhysicsModel, AeroState, FlightPhysicsIntegrator, FlightPhysicsSnapshot, OrbitalMechanics, OrbitState, JetTrail, CameraController, StallWarningSystem
+│   ├── FlightAcademy/    # FlightAcademyData, FlightAcademyManager, ExamController, ExamScoringEngine, TrainingModuleRunner, CertificateGenerator, CertificateShareController, FlightAcademyHUD, FlightAcademyUI, ExamResultUI, FlightAcademyBridge, FlightAcademyAnalytics, InstructorDialogueController, FlightAcademyDefaultData
 │   ├── FlightSchool/     # FlightSchoolData, FlightSchoolManager, FlightInstructor, FlightSchoolUI, FlightSchoolAnalyticsBridge
 │   ├── Fuel/             # FuelEnums, FuelConfig, FuelTank, FuelConsumptionModel, FuelManager, RefuelStation, FuelGaugeUI, EmergencyFuelProtocol
 │   ├── GuidedTour/       # TourData, TourManager, WaypointNavigator, WaypointHUD, TourNarrationController, TourCatalogUI, TourProgressTracker, TourMinimapOverlay
@@ -2611,3 +2612,48 @@ Adds a comprehensive flight instruments calibration and realism system to SWEF. 
 | `InstrumentFailureMode` | enum | None, Frozen, Erratic, SlowDrift, BlackOut, StuckAtValue, Oscillating |
 | `BarometricMode` | enum | QNH, QFE, Standard |
 | `RealismLevel` | enum | Casual, Realistic, Hardcore |
+
+---
+
+## Phase 84 — Flight Training Academy & Skill Certification System
+
+Adds a structured flight training academy with progressive licensing (Student Pilot → PPL → CPL → ATPL → Instructor Rating → Test Pilot), skill-based examinations, a weighted scoring engine, SHA-256 signed certificate issuance, and deep integration with the existing FlightSchool, Progression, Achievement, and Mission systems.
+
+### New Scripts (14 files) — `Assets/SWEF/Scripts/FlightAcademy/`
+
+| # | Script | Purpose |
+|---|--------|---------|
+| 1 | `FlightAcademyData.cs` | Enums (`LicenseGrade`, `ExamType`, `ExamDifficulty`), data classes (`ExamObjective`, `ExamResult`, `Certificate`, `AcademyProgress`), `TrainingModule` ScriptableObject |
+| 2 | `FlightAcademyManager.cs` | Singleton orchestrator — module loading, license progression, JSON persistence to `academy_progress.json`; Events: `OnModuleStarted`, `OnExamStarted`, `OnExamCompleted`, `OnLicenseEarned`, `OnCertificateIssued` |
+| 3 | `ExamController.cs` | Active exam session — real-time objective monitoring, penalty/bonus tracking, timer management; `PauseExam()`, `ResumeExam()`, `AbortExam()` |
+| 4 | `ExamScoringEngine.cs` | Static scoring utility — `CalculateScore()`, `CalculateLandingScore()`, `CalculateIFRScore()`, `CalculateFormationScore()`, `GetLetterGrade()`, `GetPassStatus()` |
+| 5 | `TrainingModuleRunner.cs` | Pre-exam guided training — instructor dialogue, ghost paths, practice mode; bridges to `FlightInstructor` (null-safe) |
+| 6 | `CertificateGenerator.cs` | Static certificate creator — `GenerateCertificate()` with SHA-256 signature, `VerifyCertificate()`, `FormatCertificateText()` |
+| 7 | `CertificateShareController.cs` | Share/save certificate image via RenderTexture; native share sheet + clipboard fallback |
+| 8 | `FlightAcademyHUD.cs` | In-exam HUD — live objective checklist, countdown timer, score estimate, penalty/bonus toasts |
+| 9 | `FlightAcademyUI.cs` | Full-screen academy panel — license tree, module grid, module detail card, certificate gallery, statistics |
+| 10 | `ExamResultUI.cs` | Post-exam results screen — animated score reveal, letter grade, per-objective breakdown, confetti VFX for A grades |
+| 11 | `FlightAcademyBridge.cs` | Integration bridge — `ProgressionManager.AddXP()`, `AchievementManager`, `SkillTreeManager.AddSkillPoint()`, `JournalManager`, `SocialActivityFeed`, `FlightSchoolManager` (all null-safe) |
+| 12 | `FlightAcademyAnalytics.cs` | Telemetry — 8 event types via `TelemetryDispatcher` (null-safe) |
+| 13 | `InstructorDialogueController.cs` | Priority-queued instructor dialogue; localized text + TTS via `ScreenReaderBridge` (null-safe) |
+| 14 | `FlightAcademyDefaultData.cs` | 30 default `TrainingModule` instances (5 per license grade) with prerequisite chains |
+
+### Key Types
+
+| Type | Kind | Purpose |
+|------|------|---------|
+| `LicenseGrade` | enum | StudentPilot, PPL, CPL, ATPL, InstructorRating, TestPilot |
+| `ExamType` | enum | Landing, TakeOff, InstrumentFlight, FormationFlying, EmergencyProcedure, Navigation, WeatherFlight, NightFlight, Aerobatics, CargoOperations |
+| `ExamDifficulty` | enum | Bronze (60), Silver (70), Gold (80), Platinum (90) passing thresholds |
+| `TrainingModule` | ScriptableObject | Module definition with objectives, difficulty, reward XP/SP |
+| `ExamResult` | class | Score, grade, pass/fail, per-objective breakdown, penalties, bonuses, timestamp |
+| `Certificate` | class | Signed pilot certificate with SHA-256 hash |
+| `AcademyProgress` | class | Full persisted player progress |
+
+### Localization
+
+35 keys added to all 8 language files with prefix `academy_` covering: license grades (6), exam types (10), difficulty tiers (4), letter grades (6), and UI labels (9).
+
+### Tests
+
+`Assets/Tests/EditMode/FlightAcademyTests.cs` — NUnit EditMode tests covering scoring engine, landing score bands, all grade boundaries, per-difficulty pass status, certificate generation/verification, default data validation (30 modules, 6 grades, unique IDs, prereq chains), and license progression logic.
