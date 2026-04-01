@@ -2571,3 +2571,43 @@ ReplayEditorManager (Singleton, DontDestroyOnLoad)
 ### Localization
 
 63 keys across 8 languages (en, de, es, fr, ja, ko, pt, zh) with prefix `replay_theater_` covering: project management (8 keys), timeline and track labels (5 keys), clip operations (10 keys), transitions (6 keys), visual effects (9 keys), music controls (5 keys), export settings (7 keys), sharing and privacy (8 keys), and analytics labels (3 keys).  All keys are in `Assets/SWEF/Resources/Localization/lang_*.json`.
+
+---
+
+## Phase 80 — Flight Instruments Calibration & Realism System
+
+Adds a comprehensive flight instruments calibration and realism system to SWEF. Provides realistic cockpit instrument behaviour including calibration procedures, instrument lag/delay, failure simulation, and barometric pressure adjustments.
+
+### New Scripts (7 files) — `Assets/Scripts/Instruments/`
+
+| # | File | Description |
+|---|------|-------------|
+| 1 | `InstrumentConfig.cs` | ScriptableObject — instrument identity, calibration drift rate, response lag, failure probability, display range/precision/unit |
+| 2 | `FlightInstrument.cs` | MonoBehaviour base class — calibration drift, response lag, damping curve, failure mode simulation, events (`OnValueChanged`, `OnFailureTriggered`, `OnCalibrationRequired`, `OnCalibrated`) |
+| 3 | `InstrumentPanel.cs` | Cockpit panel manager — registers instruments by type, health monitoring, `CalibrateAll()`, `RepairAll()`, `GetFailedInstruments()`, `GetOverallHealth()` |
+| 4 | `BarometricCalibration.cs` | Barometric pressure controller — QNH/QFE/Standard modes, simulated pressure drift, altimeter correction (~30 ft per hPa), `SyncFromATIS()` |
+| 5 | `InstrumentCalibrationUI.cs` | UI controller — panel open/close, per-instrument info display, QNH slider, calibrate/repair buttons, failed instrument list |
+| 6 | `SixPackInstruments.cs` | Standard six-pack cluster — reads Rigidbody & Transform each frame, feeds airspeed (knots), attitude (pitch), altimeter (feet), turn coordinator (roll), heading, vertical speed (ft/min) |
+| 7 | `InstrumentRealismSettings.cs` | ScriptableObject — Casual/Realistic/Hardcore presets controlling drift multiplier, failure multiplier, lag multiplier, manual calibration requirement |
+
+### New Tests — `Assets/Tests/EditMode/`
+
+| File | Coverage |
+|------|----------|
+| `InstrumentCalibrationTests.cs` | Initial value zero, no failure by default, ForceFailure sets state, Repair clears failure, Calibrate resets accuracy, events fired on failure/calibration, enum value counts |
+
+### Key Types
+
+| Type | Kind | Purpose |
+|------|------|---------|
+| `InstrumentConfig` | ScriptableObject | Per-instrument parameter definition |
+| `FlightInstrument` | MonoBehaviour | Base instrument with calibration/lag/failure |
+| `InstrumentPanel` | MonoBehaviour | Panel-level health and coordination |
+| `BarometricCalibration` | MonoBehaviour | QNH/QFE/Standard pressure management |
+| `InstrumentCalibrationUI` | MonoBehaviour | Calibration interface controller |
+| `SixPackInstruments` | MonoBehaviour | Classic six-pack data feed |
+| `InstrumentRealismSettings` | ScriptableObject | Global realism preset |
+| `InstrumentType` | enum | Altimeter, Airspeed, VerticalSpeed, Heading, Attitude, TurnCoordinator, BarometricPressure, EngineRPM, FuelGauge, OilPressure, OilTemperature, Tachometer |
+| `InstrumentFailureMode` | enum | None, Frozen, Erratic, SlowDrift, BlackOut, StuckAtValue, Oscillating |
+| `BarometricMode` | enum | QNH, QFE, Standard |
+| `RealismLevel` | enum | Casual, Realistic, Hardcore |
