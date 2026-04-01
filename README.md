@@ -71,6 +71,7 @@ Assets/SWEF/
 │   ├── Notification/     # NotificationManager, NotificationSettings
 │   ├── Offline/          # OfflineManager, OfflineFallbackController, OfflineHUD, TileCacheManager, TilePrefetchController, RegionDownloadUI
 │   ├── OrbitalCamera/    # OrbitalCameraData, OrbitalCameraController, SpaceGroundTransition, OrbitalMechanicsSimulator, SatelliteViewRenderer, AltitudeEffectsManager, OrbitPathVisualizer, OrbitalCameraAnalytics
+│   ├── PassengerCargo/   # PassengerCargoData, PassengerComfortSystem, CargoPhysicsController, TransportMissionManager, TransportContractGenerator, PassengerBehaviorController, DeliveryTimerController, TransportRewardCalculator, TransportMissionHUD, TransportMissionUI, TransportMissionBridge, TransportAnalytics
 │   ├── Performance/      # PerformanceProfiler, AdaptiveQualityController, RuntimeDiagnosticsHUD, MemoryPoolManager, GarbageCollectionTracker, DrawCallAnalyzer, AssetLoadProfiler, SceneLoadProfiler, TextureMemoryOptimizer
 │   ├── PhotoMode/        # PhotoModeData, PhotoModeUI, PhotoModeAnalytics, PhotoCameraController, PhotoCaptureManager, PhotoFilterSystem, PhotoFrameRenderer, PhotoGalleryManager, DroneCameraController, DroneVisualController
 │   ├── Progression/      # PilotRankData, ProgressionManager, XPSourceConfig, XPTracker, SkillTreeData, SkillTreeManager, CosmeticUnlockManager, ProgressionHUD, ProgressionProfileUI, ProgressionDefaultData
@@ -2611,3 +2612,51 @@ Adds a comprehensive flight instruments calibration and realism system to SWEF. 
 | `InstrumentFailureMode` | enum | None, Frozen, Erratic, SlowDrift, BlackOut, StuckAtValue, Oscillating |
 | `BarometricMode` | enum | QNH, QFE, Standard |
 | `RealismLevel` | enum | Casual, Realistic, Hardcore |
+
+---
+
+## Phase 82 — Passenger & Cargo Mission System
+
+**Namespace:** `SWEF.PassengerCargo`  
+**Directory:** `Assets/SWEF/Scripts/PassengerCargo/`
+
+Adds a comprehensive passenger and cargo transport mission system. Players
+accept transport contracts, manage payload weight affecting flight physics,
+keep passengers comfortable, and earn tiered rewards on delivery.
+
+### New Scripts (12 files)
+
+| # | Script | Purpose |
+|---|--------|---------|
+| 1 | `PassengerCargoData.cs` | Enums, data classes, `TransportContract` ScriptableObject, `DeliveryResult` |
+| 2 | `PassengerComfortSystem.cs` | Singleton — real-time comfort scoring (G-force, turbulence, pressure, noise) |
+| 3 | `CargoPhysicsController.cs` | Singleton — cargo weight/damage tracking, exposes `TotalMassKg`, `FuelMultiplier`, `CGShiftMetres` |
+| 4 | `TransportMissionManager.cs` | Singleton — full mission lifecycle with JSON persistence |
+| 5 | `TransportContractGenerator.cs` | Static — procedural contract generation (rank-gated, weather-aware) |
+| 6 | `PassengerBehaviorController.cs` | Passenger reaction state machine |
+| 7 | `DeliveryTimerController.cs` | Singleton — countdown with Green/Yellow/Red/Overtime phases |
+| 8 | `TransportRewardCalculator.cs` | Static — reward calculation with comfort/time/damage multipliers |
+| 9 | `TransportMissionHUD.cs` | In-flight HUD overlay (comfort meter, cargo bar, timer) |
+| 10 | `TransportMissionUI.cs` | Full-screen contract board with accept/decline flow |
+| 11 | `TransportMissionBridge.cs` | Integration bridge → Progression, Achievement, Social systems |
+| 12 | `TransportAnalytics.cs` | Telemetry dispatch (9 event types via `TelemetryDispatcher.EnqueueEvent`) |
+
+### New Tests
+
+| File | Coverage |
+|------|---------|
+| `PassengerCargoTests.cs` | `TransportRewardCalculator` (all multipliers, time bonus, cargo penalty, star rating), `PassengerComfortSystem` (score-to-level mapping), `CargoPhysicsController` (fuel multiplier), `TransportContractGenerator` (rank distribution), `DeliveryTimerController` (phase transitions) |
+
+### Localization Keys (30)
+
+Added to all 8 language files (`lang_en.json` → `lang_pt.json`). Keys use the
+`transport_` prefix, covering mission types (8), comfort levels (5), cargo
+categories (7), and UI strings (10).
+
+### Persistence
+
+| File | Contents |
+|------|---------|
+| `transport_active.json` | Active contract metadata |
+| `transport_history.json` | Completed delivery history |
+| `transport_stats.json` | Cumulative stats (deliveries, avg rating, streak) |
