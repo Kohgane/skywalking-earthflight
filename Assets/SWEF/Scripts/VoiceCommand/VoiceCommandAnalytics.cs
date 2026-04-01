@@ -50,8 +50,9 @@ namespace SWEF.VoiceCommand
 
         private void OnStateChanged(ListeningState state)
         {
-            if (state == ActivationMode.WakeWord.ToString().GetHashCode())
-                return; // filter noise
+            // Only emit telemetry for terminal states (confirmed/error) to reduce noise.
+            if (state != ListeningState.Confirmed && state != ListeningState.Error)
+                return;
 
             Emit("voice_activation_mode_changed", new System.Collections.Generic.Dictionary<string, object>
             {
