@@ -13,12 +13,7 @@ Phases 1–80 have been merged into `main`. See individual PR descriptions and `
 | 82 | Passenger & Cargo Mission System | [#99](https://github.com/Kohgane/skywalking-earthflight/pull/99) | 2026-04-01 |
 | 83 | Dynamic Soundtrack & Adaptive Music System | — | 2026-04-01 |
 | 84 | Voice Command & Cockpit Voice Assistant System | [#104](https://github.com/Kohgane/skywalking-earthflight/pull/104) | 2026-04-01 |
-
-## In Progress (85)
-
-| Phase | Title | Status | PR | Notes |
-|-------|-------|--------|----|-------|
-| 85 | Space Station & Orbital Docking System | ⚠️ WIP/Draft — needs rebuild | [#102](https://github.com/Kohgane/skywalking-earthflight/pull/102) | Rate-limited draft (0 additions); empty shell. Close & recreate. |
+| 85 | Space Station & Orbital Docking System | — | 2026-04-01 |
 
 ## Next Batch — Phase 86–90 (Confirmed)
 
