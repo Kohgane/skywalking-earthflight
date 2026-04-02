@@ -65,6 +65,7 @@ Assets/SWEF/
 │   ├── Localization/     # LocalizationManager, LanguageDatabase, LocalizationUI, LocalizedText, LocalizedImage, FontManager, PluralResolver, RTLTextHandler
 │   ├── Minimap/          # MinimapData, MinimapManager, MinimapRenderer, MinimapIconConfig, MinimapBlipProvider, MinimapCompass, MinimapSettingsUI, RadarOverlay
 │   ├── Mission/          # MissionEnums, MissionConfig, MissionObjective, MissionCheckpoint, MissionReward, MissionResult, MissionData, MissionManager, MissionBriefingUI, MissionTrackerUI
+│   ├── NaturalDisaster/  # DisasterEnums, DisasterConfig, DisasterData, HazardZone, ActiveDisaster, DisasterManager, DisasterFlightModifier, RescueMissionGenerator, DisasterWarningUI, DisasterTrackerUI
 │   ├── Multiplayer/      # MultiplayerManager, NetworkManager2, PlayerSyncController, PlayerSyncSystem, FormationFlyingManager, CoopMissionSystem, MultiplayerWeatherSync, MultiplayerHUD, MultiplayerScoreboard, MultiplayerRace, RoomManager, PlayerAvatar, RemotePlayerRenderer, NetworkTransport, VoiceChatManager, ProximityChat
 │   ├── AdaptiveMusic/    # AdaptiveMusicData, AdaptiveMusicManager, FlightContextAnalyzer, MoodResolver, StemMixer, MusicTransitionController, IntensityController, BeatSyncClock, AdaptiveMusicHUD, AdaptiveMusicUI, MusicPlayerBridge, AdaptiveMusicAnalytics
 │   ├── MusicPlayer/      # MusicPlayerData, MusicPlayerManager, MusicPlaylistController, MusicPlayerUI, MusicLibraryUI, MusicFlightSync, MusicWeatherMixer, MusicVisualizerEffect, MusicMultiplayerSync, MusicEQController, MusicCrossfadeController, MusicSleepTimer, LrcParser, LyricsDatabase, KaraokeController, LyricsDisplayUI, LyricsEditorUI
@@ -2824,3 +2825,84 @@ enum completeness (DockingApproachPhase × 6, OrbitalBody × 6, StationSegmentTy
 ### Localization
 
 40 keys added to all 8 language files: `station_body_*` × 6, `station_segment_*` × 8, `station_dock_phase_*` × 6, `station_port_*` × 4, UI/HUD keys × 16.
+
+---
+
+## Phase 86 — Natural Disaster & Dynamic World Events
+
+### New Scripts (10 files in `Assets/SWEF/Scripts/NaturalDisaster/`)
+
+| # | Script | Purpose |
+|---|--------|---------|
+| 1 | `DisasterEnums.cs` | `DisasterType` (10), `DisasterSeverity` (5), `DisasterPhase` (6), `HazardZoneType` (8), `RescueObjectiveType` (6) enums |
+| 2 | `DisasterConfig.cs` | Static compile-time constants: warning lead times per severity, hazard zone radii, duration ranges, atmospheric effect distances, rescue thresholds, shake intensities, minimap distances |
+| 3 | `DisasterData.cs` | ScriptableObject template (create via *Assets → Create → SWEF/NaturalDisaster/Disaster Data*) — identity, severity/duration, hazard zones, spawn constraints, flight effects, audio/visual refs, rescue mission config |
+| 4 | `HazardZone.cs` | Serializable hazard area — centre, radius, altitude bounds, intensity; `IsPlayerInside()`, `GetIntensityAtPosition()`, `Expand()`, `Contract()` |
+| 5 | `ActiveDisaster.cs` | Runtime MonoBehaviour — phase state machine (Warning→Onset→Peak→Declining→Aftermath), hazard zone lifecycle, screen-shake coroutine (Earthquake/Volcano), VFX integration (`#if SWEF_VFX_AVAILABLE`), minimap blip (`#if SWEF_MINIMAP_AVAILABLE`), `OnPhaseChanged` / `OnDisasterEnded` events |
+| 6 | `DisasterManager.cs` | Singleton (DontDestroyOnLoad) — spawn pool, active list, coroutine check loop, biome/weather compatibility, `SpawnDisaster()`, `ForceSpawnDisaster()`, `EndDisaster()`, aggregate hazard queries (`GetHazardsAtPosition`, `IsInNoFlyZone`, `GetTurbulenceAt`, `GetVisibilityAt`); `OnDisasterSpawned`, `OnDisasterPhaseChanged`, `OnDisasterEnded` events |
+| 7 | `DisasterFlightModifier.cs` | Per-frame hazard effects — turbulence shake, visibility fog, thermal updraft force, speed reduction in ash/debris, warning flash overlay on zone entry |
+| 8 | `RescueMissionGenerator.cs` | Listens to `DisasterManager.OnDisasterPhaseChanged` — rolls against `rescueMissionChance` at Onset/Peak, builds `MissionData` runtime asset with typed objectives + perimeter checkpoints, submits to `MissionManager` (`#if SWEF_MISSION_AVAILABLE`) |
+| 9 | `DisasterWarningUI.cs` | Full-screen fade-in/out warning overlay — disaster icon, name, severity badge, distance, bearing, ETA, "Avoid Area" / "Accept Rescue Mission" buttons, proximity audio volume scaling |
+| 10 | `DisasterTrackerUI.cs` | In-flight HUD — compact card per active disaster (icon, name, phase, distance, severity bar), nearest hazard directional arrow, expandable detail panel, severity colour-coding (green→yellow→orange→red→purple) |
+
+### Architecture Diagram
+
+```
+DisasterManager (Singleton)
+├── SpawnCheckLoop coroutine ──→ BiomeClassifier + WeatherManager compatibility check
+├── ActiveDisaster × N
+│   ├── Phase state machine  Dormant→Warning→Onset→Peak→Declining→Aftermath
+│   ├── HazardZone × M       (NoFlyZone, Turbulence, AshCloud, …)
+│   ├── ScreenShakeCoroutine (Earthquake / Volcano at Peak)
+│   ├── EnvironmentVFXController (ash, smoke — #if SWEF_VFX_AVAILABLE)
+│   └── MinimapManager blip  (#if SWEF_MINIMAP_AVAILABLE)
+├── DisasterFlightModifier   per-frame hazard → flight forces & visibility
+├── RescueMissionGenerator   → MissionManager (auto rescue mission)
+├── DisasterWarningUI        → full-screen overlay on Warning phase
+└── DisasterTrackerUI        → compact HUD cards + directional arrow
+```
+
+### Integration Points
+
+| System | Integration | Guard Symbol |
+|--------|-------------|--------------|
+| `SWEF.Biome.BiomeClassifier` | Spawn biome compatibility check | `#if SWEF_BIOME_AVAILABLE` |
+| `SWEF.Weather.WeatherManager` | Weather-compatible spawn gating; turbulence push to `WeatherFlightModifier` | `#if SWEF_WEATHER_AVAILABLE` |
+| `SWEF.VFX.EnvironmentVFXController` | Activate ash/smoke/debris particle systems | `#if SWEF_VFX_AVAILABLE` |
+| `SWEF.Mission.MissionManager` | Submit auto-generated rescue `MissionData` | `#if SWEF_MISSION_AVAILABLE` |
+| `SWEF.Minimap.MinimapManager` | Register `DangerZone` blip per active disaster | `#if SWEF_MINIMAP_AVAILABLE` |
+
+### Example Usage
+
+```csharp
+// Force-spawn for testing
+DisasterManager.Instance.ForceSpawnDisaster(volcanoData, position, DisasterSeverity.Severe);
+
+// Aggregate hazard queries at player position
+var hazards = DisasterManager.Instance.GetHazardsAtPosition(playerPos, playerAlt);
+bool  noFly     = DisasterManager.Instance.IsInNoFlyZone(playerPos, playerAlt);
+float turbulence = DisasterManager.Instance.GetTurbulenceAt(playerPos, playerAlt);
+float visibility = DisasterManager.Instance.GetVisibilityAt(playerPos, playerAlt);
+
+// Subscribe to events
+DisasterManager.Instance.OnDisasterSpawned += d =>
+    Debug.Log($"New disaster: {d.data.disasterName} at {d.epicenter}");
+```
+
+### Tests
+
+`Assets/Tests/EditMode/NaturalDisasterTests.cs` — NUnit EditMode tests covering:
+enum completeness (`DisasterType` × 10, `DisasterSeverity` × 5, `DisasterPhase` × 6,
+`HazardZoneType` × 8, `RescueObjectiveType` × 6),
+`DisasterConfig` constant ordering/validity (warning lead times, hazard radii, shake intensities,
+duration ranges, probability ranges),
+`DisasterData` default values, list nullability, altitude range ordering,
+`HazardZone` spatial queries (`IsPlayerInside` inside/outside/altitude/inactive),
+`GetIntensityAtPosition` (centre=1, edge=0, halfway=½, outside=0, inactive=0),
+`Expand`/`Contract` clamping to max/zero,
+severity colour helpers, rescue mission config range checks.
+
+### Localization
+
+42 keys added to all 8 language files: `disaster_type_*` × 10, `disaster_severity_*` × 5,
+`disaster_phase_*` × 6, `disaster_hazard_*` × 8, `disaster_rescue_*` × 6, UI keys × 7.
