@@ -16,17 +16,17 @@ Phases 1–80 have been merged into `main`. See individual PR descriptions and `
 | 85 | Space Station & Orbital Docking System | — | 2026-04-01 |
 | 86 | Natural Disaster & Dynamic World Events | — | 2026-04-02 |
 | 87 | Advanced Navigation & Flight Plan System | — | 2026-04-02 |
+| 88 | Competitive Racing & Time Trial System | — | 2026-04-02 |
 
-## Next Batch — Phase 88–91 (Confirmed)
+## Next Batch — Phase 89–91 (Confirmed)
 
 > Approved on 2026-04-01. Execute in order below.
 
 | # | Phase | Title | Rationale | Key Systems |
 |---|-------|-------|-----------|-------------|
-| 1️⃣ | 88 | 🏆 Competitive Racing & Time Trial System | Racing/ dir exists but no course editor/seasons, user retention | Race course editor, checkpoint gates, ghost racing, seasonal leaderboards, multiplayer real-time races, course sharing |
-| 2️⃣ | 89 | 📸 Advanced Photography & Drone Camera System | PhotoMode basic only, drone+AI composition = killer feature | Independent drone camera flight, filter/frame expansion, AI auto-composition, timelapse, panorama, photo challenges |
-| 3️⃣ | 90 | 🔧 Aircraft Workshop & Part Customization | Aircraft/ has skins only, endgame content | Engine/wing/fuselage part customization, performance simulation, paint/decal editor, part unlock tree, custom aircraft sharing |
-| 4️⃣ | 91 | 🌐 Multiplayer Expansion & Social Features | Multiplayer/ exists but lacks cross-session events and social layer | Cross-session events, friend flights, shared waypoints, collaborative flight planning |
+| 1️⃣ | 89 | 📸 Advanced Photography & Drone Camera System | PhotoMode basic only, drone+AI composition = killer feature | Independent drone camera flight, filter/frame expansion, AI auto-composition, timelapse, panorama, photo challenges |
+| 2️⃣ | 90 | 🔧 Aircraft Workshop & Part Customization | Aircraft/ has skins only, endgame content | Engine/wing/fuselage part customization, performance simulation, paint/decal editor, part unlock tree, custom aircraft sharing |
+| 3️⃣ | 91 | 🌐 Multiplayer Expansion & Social Features | Multiplayer/ exists but lacks cross-session events and social layer | Cross-session events, friend flights, shared waypoints, collaborative flight planning |
 
 ## Phase Selection Criteria
 
