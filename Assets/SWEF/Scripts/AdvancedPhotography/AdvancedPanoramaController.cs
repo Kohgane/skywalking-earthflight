@@ -241,11 +241,10 @@ namespace SWEF.AdvancedPhotography
         private int SampleCubeFaceV(float x, float y, float z, int size)
         {
             float ax = Mathf.Abs(x), ay = Mathf.Abs(y), az = Mathf.Abs(z);
-            float sc, tc, ma;
-            if (ax >= ay && ax >= az) { sc = x > 0 ? -z : z; tc = -y; ma = ax; }
-            else if (ay >= az)        { sc = x;                tc = y > 0 ? z : -z; ma = ay; }
-            else                      { sc = z > 0 ? x : -x;  tc = -y; ma = az; }
-            _ = sc; // suppress unused-variable warning
+            float tc, ma;
+            if (ax >= ay && ax >= az)      { tc = -y; ma = ax; }
+            else if (ay >= az)             { tc = y > 0 ? z : -z; ma = ay; }
+            else                           { tc = -y; ma = az; }
             return Mathf.Clamp((int)(((tc / ma + 1f) / 2f) * size), 0, size - 1);
         }
 

@@ -1468,9 +1468,9 @@
   "timelapse_mode_distanceinterval": "距離間隔",
   "timelapse_mode_suntracking": "太陽追跡",
   "timelapse_mode_weatherchange": "天気変化",
-  "timelapse_mode_daynightcycle": "昂夜サイクル",
+  "timelapse_mode_daynightcycle": "昼夜サイクル",
   "photo_hud_composition_score": "構図スコア",
   "photo_hud_battery": "バッテリー",
   "photo_hud_flight_mode": "飛行モード",
-  "photo_hud_nearest_spot": "最対スポット"
+  "photo_hud_nearest_spot": "最寄りスポット"
 }

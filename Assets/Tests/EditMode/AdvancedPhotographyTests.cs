@@ -206,7 +206,7 @@ public class AdvancedPhotographyTests
     }
 
     [Test]
-    public void Config_TimelapsIntervalOrderIsValid()
+    public void Config_TimelapseIntervalOrderIsValid()
     {
         Assert.Less(
             AdvancedPhotographyConfig.TimelapseMinInterval,
