@@ -67,6 +67,7 @@ Assets/SWEF/
 │   ├── Mission/          # MissionEnums, MissionConfig, MissionObjective, MissionCheckpoint, MissionReward, MissionResult, MissionData, MissionManager, MissionBriefingUI, MissionTrackerUI
 │   ├── NaturalDisaster/  # DisasterEnums, DisasterConfig, DisasterData, HazardZone, ActiveDisaster, DisasterManager, DisasterFlightModifier, RescueMissionGenerator, DisasterWarningUI, DisasterTrackerUI
 │   ├── FlightPlan/       # FlightPlanEnums, FlightPlanConfig, FlightPlanData, NavigationDatabase, FlightPlanManager, FMSController, FuelCalculator, ProcedureGenerator, FlightPlanUI, FlightPlanHUD, FlightPlanMapRenderer
+│   ├── CompetitiveRacing/ # CompetitiveRacingEnums, CompetitiveRacingConfig, RaceCourseData, RaceResultData, CourseEditorController, CheckpointGateController, RaceManager, GhostRaceManager, CourseVisualizerRenderer, SeasonalLeaderboardManager, CourseShareManager, RaceHUD, CompetitiveRacingUI, CompetitiveRacingAnalytics
 │   ├── Multiplayer/      # MultiplayerManager, NetworkManager2, PlayerSyncController, PlayerSyncSystem, FormationFlyingManager, CoopMissionSystem, MultiplayerWeatherSync, MultiplayerHUD, MultiplayerScoreboard, MultiplayerRace, RoomManager, PlayerAvatar, RemotePlayerRenderer, NetworkTransport, VoiceChatManager, ProximityChat
 │   ├── AdaptiveMusic/    # AdaptiveMusicData, AdaptiveMusicManager, FlightContextAnalyzer, MoodResolver, StemMixer, MusicTransitionController, IntensityController, BeatSyncClock, AdaptiveMusicHUD, AdaptiveMusicUI, MusicPlayerBridge, AdaptiveMusicAnalytics
 │   ├── MusicPlayer/      # MusicPlayerData, MusicPlayerManager, MusicPlaylistController, MusicPlayerUI, MusicLibraryUI, MusicFlightSync, MusicWeatherMixer, MusicVisualizerEffect, MusicMultiplayerSync, MusicEQController, MusicCrossfadeController, MusicSleepTimer, LrcParser, LyricsDatabase, KaraokeController, LyricsDisplayUI, LyricsEditorUI
@@ -2999,3 +3000,73 @@ FlightPlanManager.Instance.OnPlanAlert += alert => {
 61 keys added to all 8 language files: `flightplan_rule_*` × 4, `flightplan_status_*` × 7,
 `flightplan_cat_*` × 10, `flightplan_fms_*` × 7, `flightplan_hud_*` × 9,
 `flightplan_alert_*` × 8, `flightplan_ui_*` × 16.
+
+---
+
+## Phase 88 — Competitive Racing & Time Trial System
+
+### New Scripts (14 files in `Assets/SWEF/Scripts/CompetitiveRacing/`)
+
+| # | Script | Purpose |
+|---|--------|---------|
+| 1 | `CompetitiveRacingEnums.cs` | `RaceMode` (6: TimeTrial/Sprint/Circuit/Endurance/Relay/Elimination), `RaceStatus` (6), `CheckpointType` (7), `CourseEnvironment` (8), `CourseDifficulty` (5), `SeasonType` (4), `LeaderboardScope` (6), `RaceAlertType` (8) |
+| 2 | `CompetitiveRacingConfig.cs` | Static constants: countdown 3 s, max 200 checkpoints, trigger radius 150 m, elimination interval 30 s, anti-cheat min lap 10 s, season 90 days, leaderboard page 50, max 3 ghosts, course validation (min 3 CPs / 500 m, max 500 km), medal multipliers (85%/100%/120%) |
+| 3 | `RaceCourseData.cs` | `RaceCheckpoint` (serializable — geo position, gate shape, trigger radius, timing, bonus, optional flag), `RaceCourse` (serializable — checkpoints, metadata, lap count, loop, medal thresholds, community stats, share code), `RaceCourseData` ScriptableObject (create via *Assets → Create → SWEF/CompetitiveRacing/Race Course Data*) |
+| 4 | `RaceResultData.cs` | `CheckpointSplit` (index, elapsed, split, delta-to-best), `RaceResult` (totalTime, splits, PB/record flags, replayId), `SeasonEntry` (seasonId, season, year, dates, featured courses) |
+| 5 | `CourseEditorController.cs` | Interactive builder: tap-to-place / drag-to-reposition checkpoints, gate tangent auto-orientation, undo/redo stack, loop auto-detection, validation (min CPs, distances, no overlap), fly-through preview coroutine, medal time estimation (250 m/s average), Haversine distance math |
+| 6 | `CheckpointGateController.cs` | Runtime gate: colour states (upcoming yellow / active-next green / captured blue / missed red flash), proximity detection, wrong-way dot-product filter, split-time floating text, capture/PB VFX pulses, audio chimes |
+| 7 | `RaceManager.cs` | Singleton (DontDestroyOnLoad): countdown coroutine, elapsed timer, checkpoint capture with split recording and bonus application, lap management, wrong-way detection, elimination coroutine, personal-best tracking, `FlightRecorder` auto-start/stop, leaderboard submission, achievement unlocks |
+| 8 | `GhostRaceManager.cs` | Up to 3 simultaneous course-based `GhostRacer` instances (personal best / global best / friend best); `StartGhostRace(course, replays)`, `StopAllGhosts()`, `GetGhostTimeDelta(slot)`, `OnGhostCheckpoint`/`OnGhostFinished` events |
+| 9 | `CourseVisualizerRenderer.cs` | Catmull-Rom spline via `LineRenderer`, gate prefab instances per checkpoint, direction arrow placement, world-space distance labels via `TextMesh`, minimap blip registration/deregistration, `UpdateGateState` colour updates |
+| 10 | `SeasonalLeaderboardManager.cs` | Singleton (DontDestroyOnLoad): real-date season derivation (Spring Mar–May / Summer Jun–Aug / Autumn Sep–Nov / Winter Dec–Feb), per-season featured courses, `GetSeasonalLeaderboard()`, `AwardSeasonRewards()`, `OnSeasonChanged`/`OnSeasonalRewardEarned` events |
+| 11 | `CourseShareManager.cs` | Export `.swefcourse` JSON to persistent data path, import/decode base64 share codes (`ImportCourse`), `GenerateShareCode`, community rating tracker (`RateCourse`), play count (`TrackPlay`), social deep-link via `SWEF.Social.ShareManager` |
+| 12 | `RaceHUD.cs` | Timer (M:SS.ms), checkpoint progress slider, lap counter, speed/altitude labels, medal prediction text, elimination countdown, wrong-way banner with auto-hide, alert banner (3 s auto-dismiss), `GhostRaceHUD` panel reference, compact/full toggle |
+| 13 | `CompetitiveRacingUI.cs` | Course browser (filter by mode/difficulty/environment), detail card (preview image, medal times, PB, leaderboard preview), race mode + ghost selector dropdowns, season overview panel (dates, featured courses), results screen (splits table with delta colours, medal badge, save replay button) |
+| 14 | `CompetitiveRacingAnalytics.cs` | Static: `RecordRaceStart`, `RecordRaceFinish`, `RecordCheckpointSplit`, `RecordPersonalBest`, `RecordNewRecord`, `RecordCourseCreated`, `RecordCourseShared`, `RecordCourseRated` — all guarded by `#if SWEF_ANALYTICS_AVAILABLE` |
+
+### Architecture
+
+```
+RaceManager (Singleton, DontDestroyOnLoad)
+├── StartRace / PauseRace / ResumeRace / AbandonRace
+├── CaptureCheckpoint  →  splits, bonus/penalty, lap advance
+├── FinishRace         →  PB check, recorder stop, leaderboard submit
+├── CountdownCoroutine / EliminationCoroutine
+└── Events: OnRaceStarted, OnCheckpointCaptured, OnLapCompleted,
+            OnRaceFinished, OnPersonalBest, OnNewRecord,
+            OnWrongWay, OnEliminated, OnRaceAlert
+
+SeasonalLeaderboardManager (Singleton, DontDestroyOnLoad)
+├── RefreshSeason  →  current SeasonEntry (real UTC date)
+├── GetFeaturedCourses / GetSeasonalLeaderboard / AwardSeasonRewards
+└── Events: OnSeasonChanged, OnSeasonalRewardEarned
+
+CourseEditorController  →  CreateNewCourse / LoadCourse / SaveCourse / ValidateCourse
+CheckpointGateController  →  gate prefab per checkpoint, proximity + wrong-way
+GhostRaceManager  →  up to 3 GhostRacer instances from ReplayData
+CourseVisualizerRenderer  →  spline + gates + arrows + labels + minimap
+CourseShareManager  →  .swefcourse JSON / base64 share code / community rating
+RaceHUD  →  in-race overlay (timer, progress, medal prediction, alerts)
+CompetitiveRacingUI  →  pre-race browser, season panel, results screen
+CompetitiveRacingAnalytics  →  TelemetryDispatcher events
+```
+
+### Integration Points
+
+| System | Integration | Guard |
+|--------|-------------|-------|
+| `SWEF.Racing` (Phase 62) | Boost/drift/slipstream active during races | Direct |
+| `SWEF.Replay.GhostRacer` | `GhostRaceManager` spawns up to 3 instances | Direct |
+| `SWEF.Recorder.FlightRecorder` | Auto-start/stop recording for ghost replay | Direct |
+| `SWEF.Leaderboard.GlobalLeaderboardService` | Score submit + seasonal queries | `#if SWEF_LEADERBOARD_AVAILABLE` |
+| `SWEF.Minimap.MinimapManager` | Checkpoint blip register/deregister | `#if SWEF_MINIMAP_AVAILABLE` |
+| `SWEF.Achievement.AchievementManager` | `first_race_finish`, `gold_medal`, `season_complete` | `#if SWEF_ACHIEVEMENT_AVAILABLE` |
+| `SWEF.Analytics.TelemetryDispatcher` | All race & course telemetry events | `#if SWEF_ANALYTICS_AVAILABLE` |
+| `SWEF.Social.ShareManager` | Course deep-link sharing | `#if SWEF_SOCIAL_AVAILABLE` |
+| `SWEF.UI.GhostRaceHUD` | Ghost comparison panel inside `RaceHUD` | Direct |
+
+### Localization
+
+60 keys added to all 8 language files: `race_mode_*` × 6, `race_status_*` × 6,
+`checkpoint_type_*` × 7, `course_env_*` × 8, `difficulty_*` × 5, `season_*` × 4,
+`race_alert_*` × 8, `race_hud_*` × 9, `race_ui_*` × 7.
