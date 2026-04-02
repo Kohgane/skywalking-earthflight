@@ -223,7 +223,8 @@ namespace SWEF.FlightPlan
                     mat.color = col;
                 }
 
-                // Shape by category
+                // Shape by category: the marker prefab shows distinct silhouettes at these angles
+                // (VOR = 45° diamond, NDB = 30° triangle, Airport/GPS = 0° square/circle)
                 float yRot = wps[i].category switch
                 {
                     WaypointCategory.VOR         => 45f,

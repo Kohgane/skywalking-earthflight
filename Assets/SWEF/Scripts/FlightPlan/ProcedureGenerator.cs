@@ -69,7 +69,8 @@ namespace SWEF.FlightPlan
             {
                 double lat, lon;
                 ProjectPoint(apLat, apLon, hdg, sidWaypointSpacingNm * i, out lat, out lon);
-                alt += FlightPlanConfig.SIDClimbRateFpm * (sidWaypointSpacingNm / (FlightPlanConfig.DefaultCruiseSpeedKts / 60f));
+                alt += FlightPlanConfig.SIDClimbRateFpm
+                    * (sidWaypointSpacingNm / (FlightPlanConfig.DefaultCruiseSpeedKts * 0.5f / 60f)); // use ~half cruise speed for low-altitude SID climb
                 wps.Add(new FlightPlanWaypoint
                 {
                     waypointId    = $"{prefix}{i:00}",

@@ -237,8 +237,9 @@ namespace SWEF.FlightPlan
             desiredVerticalSpeed = Mathf.Clamp(-verticalDeviationFt * vnavKp,
                                                -maxVNAVVerticalSpeedFpm, maxVNAVVerticalSpeedFpm);
 
-            // Speed management
-            float speedLimit = (currentAltFt < FlightPlanConfig.SpeedLimitBelowFL100 * 100f)
+            // Speed management — FL100 altitude threshold is 10 000 ft
+            const float FL100AltFt = 10000f;
+            float speedLimit = (currentAltFt < FL100AltFt)
                 ? FlightPlanConfig.SpeedLimitBelowFL100Kts
                 : plan.cruiseSpeed;
 
@@ -262,11 +263,12 @@ namespace SWEF.FlightPlan
             var plan = mgr.activePlan;
 
             // TOC: distance needed to climb from departure altitude to cruise altitude
-            float departureAlt = plan.waypoints.Count > 0 ? plan.waypoints[0].altitude : 0f;
-            float climbDist    = (plan.cruiseAltitude - departureAlt)
-                               / FlightPlanConfig.DefaultClimbRateFpm
-                               * (plan.cruiseSpeed / 60f); // nm = min × nm/min
-            distanceToTOCNm = climbDist - (mgr.activePlan.totalDistanceNm - mgr.GetTotalRemainingNm());
+            float departureAlt    = plan.waypoints.Count > 0 ? plan.waypoints[0].altitude : 0f;
+            float climbDist       = (plan.cruiseAltitude - departureAlt)
+                                   / FlightPlanConfig.DefaultClimbRateFpm
+                                   * (plan.cruiseSpeed / 60f); // nm = min × nm/min
+            float distanceFlownNm = mgr.activePlan.totalDistanceNm - mgr.GetTotalRemainingNm();
+            distanceToTOCNm = climbDist - distanceFlownNm;
 
             // TOD: distance needed to descend from cruise to destination altitude
             float destAlt      = plan.waypoints.Count > 0

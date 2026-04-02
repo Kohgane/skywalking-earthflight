@@ -342,7 +342,9 @@ namespace SWEF.FlightPlan
             foreach (var plan in FlightPlanManager.Instance.savedPlans)
             {
                 var row = Instantiate(planLibraryRowPrefab, planLibraryParent);
-                SetChildText(row, "LabelPlanId", plan.planId?.Length >= 8 ? plan.planId.Substring(0, 8) : plan.planId);
+                SetChildText(row, "LabelPlanId", plan.planId != null && plan.planId.Length >= 8
+                    ? plan.planId.Substring(0, 8)
+                    : plan.planId ?? string.Empty);
                 SetChildText(row, "LabelRoute",  $"{plan.departureAirport} → {plan.arrivalAirport}");
 
                 var loadBtn = row.transform.Find("LoadButton")?.GetComponent<Button>();
