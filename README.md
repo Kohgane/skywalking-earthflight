@@ -66,6 +66,7 @@ Assets/SWEF/
 │   ├── Minimap/          # MinimapData, MinimapManager, MinimapRenderer, MinimapIconConfig, MinimapBlipProvider, MinimapCompass, MinimapSettingsUI, RadarOverlay
 │   ├── Mission/          # MissionEnums, MissionConfig, MissionObjective, MissionCheckpoint, MissionReward, MissionResult, MissionData, MissionManager, MissionBriefingUI, MissionTrackerUI
 │   ├── NaturalDisaster/  # DisasterEnums, DisasterConfig, DisasterData, HazardZone, ActiveDisaster, DisasterManager, DisasterFlightModifier, RescueMissionGenerator, DisasterWarningUI, DisasterTrackerUI
+│   ├── FlightPlan/       # FlightPlanEnums, FlightPlanConfig, FlightPlanData, NavigationDatabase, FlightPlanManager, FMSController, FuelCalculator, ProcedureGenerator, FlightPlanUI, FlightPlanHUD, FlightPlanMapRenderer
 │   ├── Multiplayer/      # MultiplayerManager, NetworkManager2, PlayerSyncController, PlayerSyncSystem, FormationFlyingManager, CoopMissionSystem, MultiplayerWeatherSync, MultiplayerHUD, MultiplayerScoreboard, MultiplayerRace, RoomManager, PlayerAvatar, RemotePlayerRenderer, NetworkTransport, VoiceChatManager, ProximityChat
 │   ├── AdaptiveMusic/    # AdaptiveMusicData, AdaptiveMusicManager, FlightContextAnalyzer, MoodResolver, StemMixer, MusicTransitionController, IntensityController, BeatSyncClock, AdaptiveMusicHUD, AdaptiveMusicUI, MusicPlayerBridge, AdaptiveMusicAnalytics
 │   ├── MusicPlayer/      # MusicPlayerData, MusicPlayerManager, MusicPlaylistController, MusicPlayerUI, MusicLibraryUI, MusicFlightSync, MusicWeatherMixer, MusicVisualizerEffect, MusicMultiplayerSync, MusicEQController, MusicCrossfadeController, MusicSleepTimer, LrcParser, LyricsDatabase, KaraokeController, LyricsDisplayUI, LyricsEditorUI
@@ -2906,3 +2907,95 @@ severity colour helpers, rescue mission config range checks.
 
 42 keys added to all 8 language files: `disaster_type_*` × 10, `disaster_severity_*` × 5,
 `disaster_phase_*` × 6, `disaster_hazard_*` × 8, `disaster_rescue_*` × 6, UI keys × 7.
+
+---
+
+## Phase 87 — Advanced Navigation & Flight Plan System
+
+### New Scripts (11 files in `Assets/SWEF/Scripts/FlightPlan/`)
+
+| # | Script | Purpose |
+|---|--------|---------|
+| 1 | `FlightPlanEnums.cs` | `FlightRuleType` (IFR/VFR/SVFR/DVFR), `FlightPlanStatus` (7 states), `WaypointCategory` (10 types), `ProcedureType` (6 types), `FMSMode` (7 modes), `LegType` (6 types), `FlightPlanAlertType` (8 alerts) |
+| 2 | `FlightPlanConfig.cs` | Static compile-time constants: cruise altitude/speed, climb/descent rates, altitude-band fuel burn rates, waypoint capture and turn-anticipation distances, VNAV path angle (3°), speed constraint thresholds, FMS update intervals, ATC format version, fuel warning threshold |
+| 3 | `FlightPlanData.cs` | `FlightPlanWaypoint` (serializable — id, position, altitude/speed constraints, leg geometry, holding/procedure fields), `FlightPlanRoute` (serializable — airports, SID/STAR, waypoints, performance, fuel, timing), `FlightPlanData` ScriptableObject (create via *Assets → Create → SWEF/FlightPlan/Flight Plan Data*) |
+| 4 | `NavigationDatabase.cs` | Singleton — `NavaidEntry` / `ProcedureEntry` data classes; `FindNearest()`, `FindById()`, `GetProceduresForAirport()`, `FindAlongRoute()`; loads from `Resources/FlightPlan/Navaids*.json` and `Resources/FlightPlan/Procedures*.json`; Haversine + cross-track geodesic helpers |
+| 5 | `FlightPlanManager.cs` | Singleton (DontDestroyOnLoad) — `CreatePlan()`, `LoadPlan()`, `FileFlightPlan()` (→ ATCManager), `ActivatePlan()`, `DirectTo()`, `InsertWaypoint()`, `RemoveWaypoint()`, `AdvanceWaypoint()`, `DivertTo()`; `GetDistanceToNextNm()`, `GetETAMinutes()`, `GetTotalRemainingNm()`, `CalculateFuelRequired()`, `ValidatePlan()` (fuel + disaster no-fly check); waypoint proximity + ETA recalc coroutines; `OnPlanStatusChanged`, `OnWaypointCaptured`, `OnWaypointApproaching`, `OnPlanAlert` events |
+| 6 | `FMSController.cs` | LNAV: cross-track error correction, bearing-to-waypoint, wind crab-angle correction (`#if SWEF_WEATHER_AVAILABLE`), disaster avoidance alert (`#if SWEF_DISASTER_AVAILABLE`); VNAV: altitude deviation VS command, speed constraint enforcement, top-of-climb / top-of-descent distance computation, TOC/TOD alert firing; `EngageLNAV()`, `EngageVNAV()`, `Disengage()`, `SetHoldingPattern()` |
+| 7 | `FuelCalculator.cs` | Static utility — `CalculateFuelBurn()` (altitude-banded + wind component), `CalculateRange()`, `CalculateEndurance()`, `CalculateOptimalAltitude()` (distance + weight model), `GetFuelFlowRate()` (linearly interpolated across 5 altitude bands) |
+| 8 | `ProcedureGenerator.cs` | `GenerateSID()`, `GenerateSTAR()`, `GenerateApproach()` (IAF/FAF/MAP), `GenerateHoldingPattern()` (4-point racetrack), `GenerateMissedApproach()`; database-first with procedural fallback; `ProjectPoint()` spherical geodesic helper; integrates with `AirportRegistry` (`#if SWEF_LANDING_AVAILABLE`) |
+| 9 | `FlightPlanUI.cs` | Departure/arrival/alternate search fields; SID/STAR dropdown (populated from NavigationDatabase); waypoint list with per-row delete; fuel/distance/ETE summary panel; IFR/VFR selector; cruise alt/speed/callsign/fuel/pax/cargo fields; File / Validate / Activate / Save buttons; plan library with load button |
+| 10 | `FlightPlanHUD.cs` | Active waypoint name/distance/ETA/alt-constraint/spd-constraint; LNAV+VNAV mode colour indicators; cross-track and vertical deviation bars (screen-space offset); TOD/TOC distance labels with approach-colour highlight; fuel remaining + range label; edge-clamped directional arrow to next waypoint; waypoint progress bar/label; alert banner with 4-second auto-dismiss (`OnPlanAlert` + `OnWaypointCaptured`) |
+| 11 | `FlightPlanMapRenderer.cs` | LineRenderer with per-segment gradient (green=climb, white=cruise, cyan=descent, magenta=SID, cyan=STAR, green=approach, yellow=active leg, grey=completed); waypoint marker pool with category shape/colour; distance/time leg labels (world-space TMP); wind barb sprites at configurable spacing (`#if SWEF_WEATHER_AVAILABLE`); hazard sphere overlays from DisasterManager (`#if SWEF_DISASTER_AVAILABLE`) |
+
+### Architecture
+
+```
+FlightPlanManager (Singleton, DontDestroyOnLoad)
+│   ├── CreatePlan / LoadPlan / FileFlightPlan / ActivatePlan
+│   ├── InsertWaypoint / RemoveWaypoint / DirectTo / DivertTo
+│   ├── WaypointProximityLoop coroutine  →  AdvanceWaypoint()
+│   ├── ETARecalcLoop coroutine
+│   └── Events: OnPlanStatusChanged, OnWaypointCaptured,
+│               OnWaypointApproaching, OnPlanAlert
+│
+├── NavigationDatabase  (Singleton)
+│   ├── NavaidEntry list (VOR, NDB, Intersection, Airport)
+│   ├── ProcedureEntry list (SID, STAR, Approach, …)
+│   └── FindNearest / FindById / GetProceduresForAirport / FindAlongRoute
+│
+├── FMSController       (per-aircraft MonoBehaviour)
+│   ├── LNAV  cross-track correction + wind crab angle
+│   └── VNAV  altitude profile + TOC/TOD computation
+│
+├── FuelCalculator      (static utility)
+│   └── 5-band altitude fuel flow tables + wind component
+│
+├── ProcedureGenerator  (MonoBehaviour)
+│   └── SID / STAR / Approach / Holding / MissedApproach sequences
+│
+├── FlightPlanUI        (pre-flight editor panel)
+├── FlightPlanHUD       (in-flight overlay)
+└── FlightPlanMapRenderer  (world-space 3D visualization)
+```
+
+### Integration Points
+
+| System | Integration | Guard Symbol |
+|--------|-------------|--------------|
+| `SWEF.ATC.ATCManager` | `FileFlightPlan()` calls `NotifyFlightPlanFiled()` | `#if SWEF_ATC_AVAILABLE` |
+| `SWEF.Weather.WeatherManager` | Wind component for fuel calc; LNAV wind crab angle; wind barb renderer | `#if SWEF_WEATHER_AVAILABLE` |
+| `SWEF.NaturalDisaster.DisasterManager` | `ValidatePlan()` no-fly check; FMSController hazard alert; map hazard spheres | `#if SWEF_DISASTER_AVAILABLE` |
+| `SWEF.Landing.AirportRegistry` | ProcedureGenerator airport/runway lookup | `#if SWEF_LANDING_AVAILABLE` |
+| `SWEF.Flight.FlightController` | FlightPlanManager speed read; FMSController steering commands | Direct reference |
+
+### Example Usage
+
+```csharp
+// Create and file a flight plan
+FlightPlanManager.Instance.CreatePlan("RKSI", "RJTT");  // Incheon → Haneda
+FlightPlanManager.Instance.activePlan.flightRule = FlightRuleType.IFR;
+FlightPlanManager.Instance.activePlan.cruiseAltitude = 35000;
+FlightPlanManager.Instance.FileFlightPlan();   // → ATCManager receives plan
+FlightPlanManager.Instance.ActivatePlan();     // → FlightPlanStatus.Active
+
+// FMS engages
+FMSController fms = FindFirstObjectByType<FMSController>();
+fms.EngageLNAV();
+fms.EngageVNAV();
+
+// Subscribe to events
+FlightPlanManager.Instance.OnWaypointCaptured += wp =>
+    Debug.Log($"Captured: {wp.name} at FL{wp.altitude / 100:0}");
+
+FlightPlanManager.Instance.OnPlanAlert += alert => {
+    if (alert == FlightPlanAlertType.TopOfDescent)
+        Debug.Log("Begin descent!");
+};
+```
+
+### Localization
+
+61 keys added to all 8 language files: `flightplan_rule_*` × 4, `flightplan_status_*` × 7,
+`flightplan_cat_*` × 10, `flightplan_fms_*` × 7, `flightplan_hud_*` × 9,
+`flightplan_alert_*` × 8, `flightplan_ui_*` × 16.
