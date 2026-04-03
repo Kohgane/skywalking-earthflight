@@ -3376,3 +3376,55 @@ WorkshopAnalytics  →  TelemetryDispatcher (11 events)
 ### Localization
 
 Keys with prefix `security_`: `security_save_tamper_warning`, `security_rate_limit_warning`, `security_cheat_warning`, `security_kicked`, `security_banned`.
+
+---
+
+## Phase 93 — ♿ Accessibility & Platform Optimization
+
+**Namespace:** `SWEF.Accessibility` | **Directory:** `Assets/SWEF/Scripts/Accessibility/`
+
+### New Scripts (16)
+
+| File | Type | Purpose |
+|------|------|---------|
+| `AccessibilityProfile.cs` | Data | Serializable: all accessibility settings in one profile (colorBlindMode, subtitles, hudScale, textScale, motor, audio) |
+| `PlatformProfile.cs` | Data | Serializable: quality settings per platform (FPS, render scale, shadow, AA, ocean, Cesium cache) |
+| `InputRemapData.cs` | Data | Serializable: custom input mappings + `RemappableActions` registry (25 actions) |
+| `PerformanceMetrics.cs` | Struct | FPS, frame time, memory usage, GPU memory, draw calls, triangle count, tile cache hit rate, particle count |
+| `SubtitleController.cs` | Singleton MB | Subtitles for voice/ATC/assistant/chat; FIFO queue, fade, 4 size tiers, speaker colour coding |
+| `MotorAccessibilityController.cs` | MB | One-handed mode, auto-hover assist, dwell click, input smoothing |
+| `InputRemapController.cs` | Singleton MB | Full keyboard/gamepad/touch remap, conflict detection, reset, `input_remap.json` |
+| `PlatformOptimizer.cs` | Singleton MB | Auto-detect platform, apply quality tier (Ultra/High/Medium/Low/Potato) |
+| `DynamicQualityScaler.cs` | MB | FPS monitoring, auto-adjust quality tier with hysteresis (3 s down / 10 s up / 5 s cooldown) |
+| `MemoryBudgetController.cs` | Singleton MB | Memory budget enforcement, cache cleanup, GC trigger at configurable thresholds |
+| `PerformanceMonitor.cs` | Singleton MB | Rolling FPS average, memory snapshot, optional on-screen debug overlay |
+| `LoadingOptimizer.cs` | Singleton MB | Async loading, tile prefetch queue, concurrent-load limit |
+| `HighContrastMode.cs` | MB | High-contrast palette applied to all registered Text / Image elements |
+| `FlashWarningController.cs` | Singleton MB | Intercepts strobe effects; shows static icon instead when `flashWarning` is enabled |
+| `HUDScaleController.cs` | Singleton MB | Global HUD scale (0.5–2×) and text scale (0.75–2×) |
+| `AudioAccessibilityController.cs` | Singleton MB | Per-channel volume, mono audio, audio descriptions, visual sound indicator |
+| `AccessibilityBridge.cs` | Static | Cross-system bridge: CockpitHUD scale, VoiceCommand → subtitles, Security save-validate |
+| `AccessibilityAnalytics.cs` | Static | 8 telemetry event methods → TelemetryDispatcher |
+
+### Updated Scripts (1)
+
+| File | Changes |
+|------|---------|
+| `AccessibilityManager.cs` | Migrated persistence from PlayerPrefs → `accessibility_settings.json`; updated to new `AccessibilityProfile` fields; added `ApplyProfile`, `GetActiveProfile`, `ResetToDefault`; added `OnColorBlindModeChanged`, `OnSubtitleSettingsChanged` events; added `AccessibilityBridge.NotifyProfileChanged` call |
+
+### Integration Points
+
+| System | Integration | Guard |
+|--------|-------------|-------|
+| `SWEF.CockpitHUD.HUDController` | `SetScale(hudScale)` on profile change | `#if SWEF_COCKPITHUD_AVAILABLE` |
+| `SWEF.Achievement.AchievementManager` | `ReportProgress("accessibility_enabled", 1)` | `#if SWEF_ACHIEVEMENT_AVAILABLE` |
+| `SWEF.Security.SaveFileValidator` | Validate `accessibility_settings.json` on save | `#if SWEF_SECURITY_AVAILABLE` |
+| `SWEF.Analytics.TelemetryDispatcher` | 8 events via `AccessibilityAnalytics` | `#if SWEF_ANALYTICS_AVAILABLE` |
+| `SubtitleController` | Voice transcript feed via `AccessibilityBridge.FeedVoiceSubtitle` | Always |
+
+### Persistence
+
+| File | Contents |
+|------|----------|
+| `accessibility_settings.json` | Full `AccessibilityProfile` (persistent data path) |
+| `input_remap.json` | All custom input bindings (persistent data path) |

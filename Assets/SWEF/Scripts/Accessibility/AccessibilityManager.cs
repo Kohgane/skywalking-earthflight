@@ -26,57 +26,6 @@ namespace SWEF.Accessibility
         FullAssist
     }
 
-    // ── Serialisable profile ─────────────────────────────────────────────────────
-
-    /// <summary>
-    /// Serialisable container for all user accessibility preferences.
-    /// Saved to JSON and loaded on startup.
-    /// </summary>
-    [Serializable]
-    public class AccessibilityProfile
-    {
-        // General
-        public AccessibilityPreset activePreset = AccessibilityPreset.Default;
-
-        // Vision
-        public bool screenReaderEnabled;
-        public bool colorblindFilterEnabled;
-        public int  colorblindMode;          // ColorblindMode enum cast to int for serialisation
-        public bool highContrastEnabled;
-        public float colorblindIntensity = 1f;
-
-        // Motor
-        public bool oneHandedModeEnabled;
-        public bool sequentialInputEnabled;
-        public bool gyroSteeringEnabled;
-        public float deadZoneLeft  = 0.1f;
-        public float deadZoneRight = 0.1f;
-
-        // Hearing
-        public bool subtitlesEnabled;
-        public bool closedCaptionsEnabled;
-        public bool audioToHapticEnabled;
-
-        // UI
-        public float uiScale = 1f;
-        public bool  reducedMotion;
-        public bool  simplifiedUI;
-        public int   textSizeLevel;     // 0=Normal, 1=Large25%, 2=Large50%, 3=Large75%, 4=Large100%
-
-        // Cognitive
-        public bool  simplifiedFlightEnabled;
-        public float gameSpeed = 1f;
-        public int   hudInfoLevel;      // 0=Full, 1=Reduced, 2=Minimal
-        public bool  remindersEnabled = true;
-
-        // Haptic
-        public float hapticIntensityMultiplier = 1f;
-        public bool  hapticEnabled = true;
-
-        // Feature flags (string key → enabled)
-        public List<string> enabledFeatureKeys = new List<string>();
-    }
-
     /// <summary>
     /// Central singleton that owns all accessibility preferences and notifies subsystems
     /// of changes.  Survives scene loads via <c>DontDestroyOnLoad</c>.
@@ -87,8 +36,14 @@ namespace SWEF.Accessibility
         /// <summary>Global singleton instance.</summary>
         public static AccessibilityManager Instance { get; private set; }
 
-        // ── PlayerPrefs keys ─────────────────────────────────────────────────────
-        private const string KeyProfileJson = "SWEF_AccessibilityProfile";
+        // ── Persistence ───────────────────────────────────────────────────────────
+        // Cached on first access to avoid repeated string concatenation.
+        private static string _savePath;
+        private static string SavePath =>
+            _savePath ??= System.IO.Path.Combine(Application.persistentDataPath, "accessibility_settings.json");
+
+        // Legacy PlayerPrefs key (read once for migration, then removed)
+        private const string LegacyKeyProfileJson = "SWEF_AccessibilityProfile";
 
         // ── Serialised fields ─────────────────────────────────────────────────────
         [Header("Defaults")]
@@ -104,6 +59,12 @@ namespace SWEF.Accessibility
         // ── Events ───────────────────────────────────────────────────────────────
         /// <summary>Fired whenever the active profile changes (any field).</summary>
         public event Action OnProfileChanged;
+
+        /// <summary>Fired when the color-blind mode changes.</summary>
+        public event Action<ColorBlindMode> OnColorBlindModeChanged;
+
+        /// <summary>Fired when subtitle settings change.</summary>
+        public event Action<bool> OnSubtitleSettingsChanged;
 
         /// <summary>Fired when an individual feature flag is toggled.</summary>
         public event Action<string, bool> OnFeatureToggled;
@@ -124,10 +85,10 @@ namespace SWEF.Accessibility
             LoadProfile();
         }
 
-        // ── Profile persistence ──────────────────────────────────────────────────
+        // ── Profile persistence ──────────────────────────────────────────────
 
         /// <summary>
-        /// Persists the current profile to <see cref="PlayerPrefs"/> as JSON.
+        /// Persists the current profile to <c>accessibility_settings.json</c>.
         /// </summary>
         public void SaveProfile()
         {
@@ -136,33 +97,52 @@ namespace SWEF.Accessibility
             foreach (var kvp in _featureFlags)
                 if (kvp.Value) _profile.enabledFeatureKeys.Add(kvp.Key);
 
-            string json = JsonUtility.ToJson(_profile, prettyPrint: true);
-            PlayerPrefs.SetString(KeyProfileJson, json);
-            PlayerPrefs.Save();
-            Debug.Log("[SWEF Accessibility] Profile saved.");
+            try
+            {
+                string json = JsonUtility.ToJson(_profile, prettyPrint: true);
+                File.WriteAllText(SavePath, json);
+                Debug.Log("[SWEF] Accessibility: Profile saved.");
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[SWEF] Accessibility: Failed to save profile — {ex.Message}");
+            }
         }
 
         /// <summary>
-        /// Loads the profile from <see cref="PlayerPrefs"/>; falls back to defaults.
+        /// Loads the profile from <c>accessibility_settings.json</c>; falls back to
+        /// legacy PlayerPrefs, then to defaults.
         /// </summary>
         public void LoadProfile()
         {
-            string json = PlayerPrefs.GetString(KeyProfileJson, string.Empty);
-            if (!string.IsNullOrEmpty(json))
+            try
             {
-                try
+                if (File.Exists(SavePath))
                 {
+                    string json = File.ReadAllText(SavePath);
                     _profile = JsonUtility.FromJson<AccessibilityProfile>(json);
                 }
-                catch (Exception ex)
+                else
                 {
-                    Debug.LogWarning($"[SWEF Accessibility] Failed to parse profile JSON: {ex.Message}");
-                    _profile = new AccessibilityProfile();
+                    // Migrate from legacy PlayerPrefs
+                    string legacyJson = PlayerPrefs.GetString(LegacyKeyProfileJson, string.Empty);
+                    if (!string.IsNullOrEmpty(legacyJson))
+                    {
+                        _profile = JsonUtility.FromJson<AccessibilityProfile>(legacyJson);
+                        PlayerPrefs.DeleteKey(LegacyKeyProfileJson);
+                        PlayerPrefs.Save();
+                        SaveProfile(); // write to new location
+                    }
+                    else
+                    {
+                        ApplyPresetDefaults(defaultPreset, notify: false);
+                    }
                 }
             }
-            else
+            catch (Exception ex)
             {
-                ApplyPresetDefaults(defaultPreset, notify: false);
+                Debug.LogWarning($"[SWEF] Accessibility: Failed to load profile — {ex.Message}. Using defaults.");
+                _profile = new AccessibilityProfile();
             }
 
             // Restore feature flags from profile list
@@ -170,7 +150,7 @@ namespace SWEF.Accessibility
             foreach (var key in _profile.enabledFeatureKeys)
                 _featureFlags[key] = true;
 
-            Debug.Log($"[SWEF Accessibility] Profile loaded — preset: {_profile.activePreset}");
+            Debug.Log($"[SWEF] Accessibility: Profile loaded — preset: {_profile.activePreset}");
         }
 
         // ── Preset system ─────────────────────────────────────────────────────────
@@ -196,49 +176,45 @@ namespace SWEF.Accessibility
                     break;
 
                 case AccessibilityPreset.LowVision:
-                    _profile.screenReaderEnabled  = true;
-                    _profile.highContrastEnabled  = true;
-                    _profile.reducedMotion        = true;
-                    _profile.uiScale              = 1.5f;
-                    _profile.textSizeLevel        = 2;
+                    _profile.profileName        = "Low Vision";
+                    _profile.screenReaderEnabled = true;
+                    _profile.highContrastUI      = true;
+                    _profile.reducedMotion       = true;
+                    _profile.hudScale            = 1.5f;
+                    _profile.textScale           = 1.5f;
                     break;
 
                 case AccessibilityPreset.Colorblind:
-                    _profile.colorblindFilterEnabled = true;
-                    _profile.colorblindMode          = (int)ColorblindMode.Deuteranopia;
-                    _profile.colorblindIntensity     = 1f;
+                    _profile.profileName         = "Color Blind Friendly";
+                    _profile.colorBlindMode      = ColorBlindMode.Deuteranopia;
+                    _profile.colorBlindIntensity = 1f;
                     break;
 
                 case AccessibilityPreset.MotorImpaired:
-                    _profile.oneHandedModeEnabled  = true;
-                    _profile.sequentialInputEnabled = false;
-                    _profile.gyroSteeringEnabled   = true;
-                    _profile.deadZoneLeft          = 0.15f;
-                    _profile.deadZoneRight         = 0.15f;
-                    _profile.uiScale               = 1.25f;
+                    _profile.profileName      = "Motor Impaired";
+                    _profile.oneHandedMode    = true;
+                    _profile.autoHoverAssist  = true;
+                    _profile.hudScale         = 1.25f;
                     break;
 
                 case AccessibilityPreset.HearingImpaired:
-                    _profile.subtitlesEnabled      = true;
-                    _profile.closedCaptionsEnabled = true;
-                    _profile.audioToHapticEnabled  = true;
+                    _profile.profileName       = "Hearing Impaired";
+                    _profile.subtitleEnabled   = true;
+                    _profile.audioDescriptions = true;
                     break;
 
                 case AccessibilityPreset.FullAssist:
-                    _profile.screenReaderEnabled      = true;
-                    _profile.highContrastEnabled       = true;
-                    _profile.reducedMotion             = true;
-                    _profile.uiScale                   = 1.5f;
-                    _profile.textSizeLevel             = 2;
-                    _profile.colorblindFilterEnabled   = true;
-                    _profile.oneHandedModeEnabled      = true;
-                    _profile.gyroSteeringEnabled       = true;
-                    _profile.subtitlesEnabled          = true;
-                    _profile.closedCaptionsEnabled     = true;
-                    _profile.audioToHapticEnabled      = true;
-                    _profile.simplifiedFlightEnabled   = true;
-                    _profile.hudInfoLevel              = 1;
-                    _profile.remindersEnabled          = true;
+                    _profile.profileName         = "Full Assist";
+                    _profile.screenReaderEnabled  = true;
+                    _profile.highContrastUI       = true;
+                    _profile.reducedMotion        = true;
+                    _profile.hudScale             = 1.5f;
+                    _profile.textScale            = 1.5f;
+                    _profile.colorBlindMode       = ColorBlindMode.Deuteranopia;
+                    _profile.oneHandedMode        = true;
+                    _profile.autoHoverAssist      = true;
+                    _profile.subtitleEnabled      = true;
+                    _profile.audioDescriptions    = true;
                     break;
             }
 
@@ -287,6 +263,27 @@ namespace SWEF.Accessibility
 
         // ── Direct profile mutations ─────────────────────────────────────────────
 
+        /// <summary>
+        /// Applies a complete profile, saves it, and notifies all subsystems.
+        /// </summary>
+        public void ApplyProfile(AccessibilityProfile profile)
+        {
+            if (profile == null) return;
+            _profile = profile;
+            SaveProfile();
+            NotifyAll();
+            AccessibilityBridge.NotifyProfileChanged(_profile);
+        }
+
+        /// <summary>Returns the currently active accessibility profile.</summary>
+        public AccessibilityProfile GetActiveProfile() => _profile;
+
+        /// <summary>Resets all accessibility settings to the "Default" preset.</summary>
+        public void ResetToDefault()
+        {
+            ApplyPreset(AccessibilityPreset.Default);
+        }
+
         /// <summary>Sets a field on the active profile and broadcasts the change.</summary>
         public void SetProfileValue(Action<AccessibilityProfile> mutator)
         {
@@ -300,6 +297,8 @@ namespace SWEF.Accessibility
         private void NotifyAll()
         {
             OnProfileChanged?.Invoke();
+            OnColorBlindModeChanged?.Invoke(_profile.colorBlindMode);
+            OnSubtitleSettingsChanged?.Invoke(_profile.subtitleEnabled);
         }
     }
 }
