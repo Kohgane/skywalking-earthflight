@@ -1,0 +1,27 @@
+{
+    "name": "SWEF.IntegrationTest",
+    "rootNamespace": "SWEF.IntegrationTest",
+    "references": [
+        "SWEF.Core",
+        "SWEF.Flight",
+        "SWEF.Achievement",
+        "SWEF.Mission",
+        "SWEF.InputSystem"
+    ],
+    "includePlatforms": [
+        "Editor",
+        "StandaloneWindows64",
+        "StandaloneOSX",
+        "StandaloneLinux64",
+        "Android",
+        "iOS"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
