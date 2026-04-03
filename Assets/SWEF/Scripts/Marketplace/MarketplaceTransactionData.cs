@@ -29,8 +29,11 @@ namespace SWEF.Marketplace
         /// <summary>Transaction is being processed.</summary>
         Pending,
 
-        /// <summary>Transaction was refunded.</summary>
+        /// <summary>Transaction was refunded to the buyer.</summary>
         Refunded,
+
+        /// <summary>Creator earnings from this transaction have been withdrawn/settled.</summary>
+        Settled,
     }
 
     /// <summary>

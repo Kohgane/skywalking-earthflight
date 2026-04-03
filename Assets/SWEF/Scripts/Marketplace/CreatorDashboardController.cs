@@ -153,9 +153,9 @@ namespace SWEF.Marketplace
                 return 0;
             }
 
-            // Mark all completed transactions as refunded (= settled) to zero the balance
+            // Mark all completed transactions as Settled to zero the pending balance
             foreach (var t in _earnings.Where(t => t.status == TransactionStatus.Completed))
-                t.status = TransactionStatus.Refunded; // repurposed as "settled"
+                t.status = TransactionStatus.Settled;
 
             SaveEarnings();
             MarketplaceAnalytics.RecordEarningsWithdrawn(LocalPlayerId, balance);
