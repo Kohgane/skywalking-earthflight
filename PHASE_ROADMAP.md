@@ -1,7 +1,7 @@
 # SWEF Phase Roadmap
 
 > This file tracks the planned development phases for Skywalking: Earth Flight.
-> Last updated: 2026-04-03 (Phase 93)
+> Last updated: 2026-04-03 (Phase 94)
 
 ## Completed Phases
 
@@ -22,14 +22,14 @@ Phases 1–80 have been merged into `main`. See individual PR descriptions and `
 | 91 | 🌐 Multiplayer Expansion & Social Features | — | 2026-04-03 |
 | 92 | 🛡️ Anti-Cheat & Security Hardening | — | 2026-04-03 |
 | 93 | ♿ Accessibility & Platform Optimization | — | 2026-04-03 |
+| 94 | 🏪 Community Content Marketplace | — | 2026-04-03 |
 
 ## Next Batch
 
-Phases 94–96 confirmed. Implement in order after Phase 93 is merged.
+Phases 95–96 confirmed. Implement in order after Phase 94 is merged.
 
 | Phase | Title | Priority |
 |-------|-------|----------|
-| 94 | 🏪 Community Content Marketplace | Medium — Workshop + Multiplayer synergy |
 | 95 | 📅 Seasonal Live Events & Battle Pass | Medium — CrossSessionEvents extension |
 | 96 | 🤖 AI Co-Pilot & Smart Assistant | Medium — VoiceCommand + Navigation synergy |
 
