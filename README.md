@@ -3272,3 +3272,59 @@ WorkshopAnalytics  →  TelemetryDispatcher (11 events)
 
 38 keys with prefix `workshop_`: `workshop_tier_*` × 5, `workshop_part_type_*` × 13,
 `workshop_pattern_*` × 10, notification toasts × 10.
+
+---
+
+## Phase 91 — 🌐 Multiplayer Expansion & Social Features
+
+> **⚠️ Feature Freeze:** Phase 91 is the final confirmed phase for v1.0. All core systems are now complete. The project moves into Alpha test flight → closed beta → v1.0 launch.
+
+**Namespace:** `SWEF.Multiplayer` | **Directory:** `Assets/SWEF/Scripts/Multiplayer/`
+
+### New Scripts (17)
+
+| File | Type | Purpose |
+|------|------|---------|
+| `PlayerProfileData.cs` | Data | Serializable player profile (rank, status, position, build) |
+| `FriendData.cs` | Data | Friend record with mutual flight count |
+| `SharedWaypointData.cs` | Data | Community waypoint with category, likes, visibility |
+| `FlightSessionData.cs` | Data | Session record (type, participants, status, waypoints) |
+| `CrossSessionEventData.cs` | Data | Community-wide event (type, schedule, rewards) |
+| `MultiplayerMessageData.cs` | Data | Chat/emote/ping/invite message |
+| `MultiplayerSessionManager.cs` | Singleton MB | Create/join/leave sessions, host migration, position sync |
+| `PlayerProfileManager.cs` | Singleton MB | Local profile management + remote profile cache |
+| `FriendSystemController.cs` | Singleton MB | Friend list, invites, mutual flight tracking |
+| `CrossSessionEventManager.cs` | Singleton MB | Community events, scheduling, rewards |
+| `EventScheduler.cs` | Static | Time-based event template generation (daily/weekly/seasonal) |
+| `SharedWaypointManager.cs` | Singleton MB | Share/import waypoints, proximity search, deep links |
+| `CollaborativeFlightPlanner.cs` | MB | Multi-player flight plan editing with role system |
+| `FriendFlightController.cs` | MB | Formation detection, XP, HUD markers, Follow Me mode |
+| `MultiplayerChatController.cs` | MB | Chat, emotes, pings, system alerts |
+| `MultiplayerBridge.cs` | Static | Integration with Progression, Achievement, Social, Telemetry |
+| `MultiplayerAnalytics.cs` | Static | 14 telemetry event methods |
+
+### Integration Points
+
+| System | Integration | Guard |
+|--------|-------------|-------|
+| `SWEF.Progression.ProgressionManager` | `AddXP` for sessions, formations, waypoints, events | `#if SWEF_PROGRESSION_AVAILABLE` |
+| `SWEF.Achievement.AchievementManager` | 7 achievements: `first_multiplayer_flight`, `formation_master`, `social_butterfly`, `event_champion`, `waypoint_explorer`, `collaborative_planner`, `chat_veteran` | `#if SWEF_ACHIEVEMENT_AVAILABLE` |
+| `SWEF.SocialHub.SocialActivityFeed` | `PostActivity` for sessions, friends, events, waypoints | `#if SWEF_SOCIAL_AVAILABLE` |
+| `SWEF.Analytics.TelemetryDispatcher` | 14 events via `MultiplayerAnalytics` | `#if SWEF_ANALYTICS_AVAILABLE` |
+| `SWEF.Core.DeepLinkHandler` | Routes: `swef://waypoint?id=xxx`, `swef://session?id=xxx` | `#if SWEF_DEEPLINK_AVAILABLE` |
+| `SWEF.Navigation.FlightPlanManager` | `AddWaypointFromMultiplayer` from `CollaborativeFlightPlanner` | `#if SWEF_NAVIGATION_AVAILABLE` |
+
+### Persistence
+
+| File | Contents |
+|------|----------|
+| `player_profile.json` | Local player profile |
+| `friends_list.json` | Friend list + cached profiles |
+| `multiplayer_sessions.json` | Session history (last 50) |
+| `cross_session_events.json` | Community events |
+| `shared_waypoints.json` | All shared/imported waypoints |
+| `chat_history.json` | Last 100 chat messages |
+
+### Localization
+
+31 keys with prefix `multiplayer_`: status × 4, role × 2, emote × 8, session/friend/event/waypoint/formation toasts × 17.
