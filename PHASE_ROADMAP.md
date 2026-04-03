@@ -1,7 +1,7 @@
 # SWEF Phase Roadmap
 
 > This file tracks the planned development phases for Skywalking: Earth Flight.
-> Last updated: 2026-04-03 (Phase 96)
+> Last updated: 2026-04-03 (Phase 97)
 
 ## Completed Phases
 
@@ -25,14 +25,14 @@ Phases 1–80 have been merged into `main`. See individual PR descriptions and `
 | 94 | 🏪 Community Content Marketplace | — | 2026-04-03 |
 | 95 | 🔧 Platform Target Matrix & Build Pipeline | — | 2026-04-03 |
 | 96 | 🧪 Integration Test & QA Framework | — | 2026-04-03 |
+| 97 | 📱 Tablet UI Optimization | — | 2026-04-03 |
 
 ## Next Batch
 
-Production-readiness phases — implement in order after Phase 96.
+Production-readiness phases — implement in order after Phase 97.
 
 | Phase | Title | Priority | Description |
 |-------|-------|----------|-------------|
-| 97 | 📱 Tablet UI Optimization | **High** | iPad/Android tablet layouts, multitasking support |
 | 98 | 🎮 PC Input & Controls Polish | **High** | WASD + mouse flight, gamepad profiles |
 | 99 | 📅 Seasonal Live Events & Battle Pass | Medium | CrossSessionEvents extension |
 | 100 | 🤖 AI Co-Pilot & Smart Assistant | Medium | VoiceCommand + Navigation synergy |
