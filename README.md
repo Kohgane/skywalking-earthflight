@@ -108,6 +108,7 @@ Assets/SWEF/
 │   ├── WeatherChallenge/ # WeatherChallengeData, WeatherChallengeManager, DynamicRouteGenerator, WeatherChallengeUI, RouteVisualizationController, WeatherChallengeAnalyticsBridge
 │   ├── Wildlife/         # WildlifeData, WildlifeManager, AnimalGroupController, BirdFlockController, MarineLifeController, AnimalAnimationController, WildlifeSpawnSystem, WildlifeAudioController, WildlifeJournalIntegration, WildlifeDebugOverlay
 │   ├── Workshop/         # AircraftPartType, PartTier, AircraftPartData, AircraftBuildData, PaintSchemeData, DecalData, WorkshopManager, PartInventoryController, PartUnlockTree, PerformanceSimulator, PaintEditorController, DecalEditorController, AircraftShareManager, WorkshopBridge, WorkshopAnalytics
+│   ├── Security/         # SecurityEventData, SecurityConfig, ValidationResult, SaveFileValidator, SaveFileEncryptor, CheatDetectionManager, SpeedHackDetector, PositionValidator, CurrencyValidator, MultiplayerSecurityController, RateLimiter, InputSanitizer, ProfanityFilter, SecurityLogger, SecurityAnalytics, SecurityBridge
 │   ├── WorldEvent/       # WorldEventType, WorldEventData, RewardData, WorldEventManager, ActiveWorldEvent, EventObjective, EventSpawnZone, QuestChain, EventNotificationUI, WorldEventConfig
 │   └── XR/              # XRPlatformDetector, XRRigManager, XRInputAdapter, XRHandTracker, XRComfortSettings, XRUIAdapter
 └── README_SWEF_SETUP.md
@@ -3277,8 +3278,6 @@ WorkshopAnalytics  →  TelemetryDispatcher (11 events)
 
 ## Phase 91 — 🌐 Multiplayer Expansion & Social Features
 
-> **⚠️ Feature Freeze:** Phase 91 is the final confirmed phase for v1.0. All core systems are now complete. The project moves into Alpha test flight → closed beta → v1.0 launch.
-
 **Namespace:** `SWEF.Multiplayer` | **Directory:** `Assets/SWEF/Scripts/Multiplayer/`
 
 ### New Scripts (17)
@@ -3328,3 +3327,52 @@ WorkshopAnalytics  →  TelemetryDispatcher (11 events)
 ### Localization
 
 31 keys with prefix `multiplayer_`: status × 4, role × 2, emote × 8, session/friend/event/waypoint/formation toasts × 17.
+
+---
+
+## Phase 92 — 🛡️ Anti-Cheat & Security Hardening
+
+**Namespace:** `SWEF.Security` | **Directory:** `Assets/SWEF/Scripts/Security/`
+
+### New Scripts (16)
+
+| File | Type | Purpose |
+|------|------|---------|
+| `SecurityEventData.cs` | Data | Serializable event record (type enum, severity, playerId, timestamp, action) |
+| `SecurityConfig.cs` | Data | All thresholds: speed, teleport, XP/currency rate, rate limits, ban tiers |
+| `ValidationResult.cs` | Struct | isValid, violations[], optional correctedValue |
+| `SaveFileValidator.cs` | Static | SHA-256 checksum, HMAC signing, tamper detection, backup/restore |
+| `SaveFileEncryptor.cs` | Static | AES-256-CBC encryption/decryption with PBKDF2 key derivation |
+| `CheatDetectionManager.cs` | Singleton MB | Coordinates all detectors; periodic 30 s integrity sweeps |
+| `SpeedHackDetector.cs` | MB | Time-scale anomaly + physics-step drift detection |
+| `PositionValidator.cs` | MB | Ring-buffer position history; teleport-jump flagging |
+| `CurrencyValidator.cs` | Static | Transaction log; expected vs actual balance reconciliation |
+| `MultiplayerSecurityController.cs` | Singleton MB | Packet validation, rate limiting, replay prevention, kick/ban |
+| `RateLimiter.cs` | Class | Sliding-window rate limiter with repeat-offender backoff |
+| `InputSanitizer.cs` | Static | Display name, chat, waypoint, coordinate and build-data sanitization |
+| `ProfanityFilter.cs` | Static | Word-list filter with leet-speak normalisation |
+| `SecurityLogger.cs` | Singleton MB | Rolling `security_log.json` (max 1 000 entries), export report |
+| `SecurityAnalytics.cs` | Static | 8 telemetry event methods → TelemetryDispatcher |
+| `SecurityBridge.cs` | Static | Integration bridge for save/load, kick/ban, XP/currency, Workshop, Achievement |
+
+### Integration Points
+
+| System | Integration | Guard |
+|--------|-------------|-------|
+| `SWEF.Multiplayer.MultiplayerSessionManager` | `KickParticipant` | `#if SWEF_MULTIPLAYER_AVAILABLE` |
+| `SWEF.Achievement.AchievementManager` | `ReportProgress("clean_record", n)` — 1 000 clean flights | `#if SWEF_ACHIEVEMENT_AVAILABLE` |
+| `SWEF.SocialHub.SocialActivityFeed` | Admin notifications for kick/ban/restore | `#if SWEF_SOCIAL_AVAILABLE` |
+| `SWEF.Analytics.TelemetryDispatcher` | 8 events via `SecurityAnalytics` | `#if SWEF_ANALYTICS_AVAILABLE` |
+| `SWEF.Workshop.WorkshopManager` | `ValidateBuildData` on build load | `#if SWEF_WORKSHOP_AVAILABLE` |
+| `SWEF.Progression.ProgressionManager` | `OnXpGain`, `OnCurrencyChange` validation hooks | `#if SWEF_PROGRESSION_AVAILABLE` |
+
+### Persistence
+
+| File | Contents |
+|------|----------|
+| `security_log.json` | Rolling security event log (max 1 000 entries) |
+| `Assets/SWEF/Resources/Security/profanity_wordlist.json` | Extensible profanity word list |
+
+### Localization
+
+Keys with prefix `security_`: `security_save_tamper_warning`, `security_rate_limit_warning`, `security_cheat_warning`, `security_kicked`, `security_banned`.
