@@ -95,6 +95,7 @@ The HMAC is appended as an HTML comment footer so it is ignored by `JsonUtility.
 |-------|-------|
 | Password | `SystemInfo.deviceUniqueIdentifier + "SWEF_AES_APP_SECRET_v1"` |
 | Salt | SHA-256 of `"SWEF_SALT:" + password` (first 16 bytes) |
+| PBKDF2 hash | SHA-256 (explicitly specified via `HashAlgorithmName.SHA256`) |
 | Key size | 256-bit |
 | IV | Randomly generated per call, prepended to cipher-text |
 | Output format | Base-64 (`[IV(16)] + [cipher-text]`) |

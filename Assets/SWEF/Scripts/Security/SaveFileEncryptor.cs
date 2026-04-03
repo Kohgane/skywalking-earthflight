@@ -115,12 +115,13 @@ namespace SWEF.Security
         private static byte[] DeriveKey()
         {
             string seed = SystemInfo.deviceUniqueIdentifier + AppSecret;
-            // Use PBKDF2 (Rfc2898DeriveBytes) with SHA-256 and a fixed salt derived from the seed.
+            // Use PBKDF2 (Rfc2898DeriveBytes) with explicit SHA-256 and a fixed salt derived from the seed.
             byte[] salt = DeriveStaticSalt(seed);
             using (var rfc = new Rfc2898DeriveBytes(
-                password: Encoding.UTF8.GetBytes(seed),
-                salt:      salt,
-                iterations: KeyIterations))
+                password:      Encoding.UTF8.GetBytes(seed),
+                salt:          salt,
+                iterations:    KeyIterations,
+                hashAlgorithm: System.Security.Cryptography.HashAlgorithmName.SHA256))
             {
                 return rfc.GetBytes(KeySizeBytes);
             }

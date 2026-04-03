@@ -184,10 +184,9 @@ namespace SWEF.Security
                     $"(max allowed: {Config.maxSpeedThreshold * Config.speedToleranceMultiplier:F1})");
 
             // Altitude plausibility (y-axis in Unity world space)
-            if (!InputSanitizer.ValidateAltitude(reportedPosition.y) &&
-                reportedPosition.y < -10_000f)
+            if (!InputSanitizer.ValidateAltitude(reportedPosition.y))
                 return ValidationResult.Invalid(
-                    $"Player {playerId} reported implausible altitude: {reportedPosition.y:F1}");
+                    $"Player {playerId} reported invalid altitude: {reportedPosition.y:F1}");
 
             return ValidationResult.Valid();
         }
