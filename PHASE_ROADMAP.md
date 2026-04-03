@@ -1,7 +1,7 @@
 # SWEF Phase Roadmap
 
 > This file tracks the planned development phases for Skywalking: Earth Flight.
-> Last updated: 2026-04-01
+> Last updated: 2026-04-02
 
 ## Completed Phases
 
@@ -17,16 +17,16 @@ Phases 1–80 have been merged into `main`. See individual PR descriptions and `
 | 86 | Natural Disaster & Dynamic World Events | — | 2026-04-02 |
 | 87 | Advanced Navigation & Flight Plan System | — | 2026-04-02 |
 | 88 | Competitive Racing & Time Trial System | — | 2026-04-02 |
+| 89 | Advanced Photography & Drone Camera System | — | 2026-04-02 |
 
-## Next Batch — Phase 89–91 (Confirmed)
+## Next Batch — Phase 90–91 (Confirmed)
 
 > Approved on 2026-04-01. Execute in order below.
 
 | # | Phase | Title | Rationale | Key Systems |
 |---|-------|-------|-----------|-------------|
-| 1️⃣ | 89 | 📸 Advanced Photography & Drone Camera System | PhotoMode basic only, drone+AI composition = killer feature | Independent drone camera flight, filter/frame expansion, AI auto-composition, timelapse, panorama, photo challenges |
-| 2️⃣ | 90 | 🔧 Aircraft Workshop & Part Customization | Aircraft/ has skins only, endgame content | Engine/wing/fuselage part customization, performance simulation, paint/decal editor, part unlock tree, custom aircraft sharing |
-| 3️⃣ | 91 | 🌐 Multiplayer Expansion & Social Features | Multiplayer/ exists but lacks cross-session events and social layer | Cross-session events, friend flights, shared waypoints, collaborative flight planning |
+| 1️⃣ | 90 | 🔧 Aircraft Workshop & Part Customization | Aircraft/ has skins only, endgame content | Engine/wing/fuselage part customization, performance simulation, paint/decal editor, part unlock tree, custom aircraft sharing |
+| 2️⃣ | 91 | 🌐 Multiplayer Expansion & Social Features | Multiplayer/ exists but lacks cross-session events and social layer | Cross-session events, friend flights, shared waypoints, collaborative flight planning |
 
 ## Phase Selection Criteria
 

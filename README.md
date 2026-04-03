@@ -32,6 +32,7 @@ Assets/SWEF/
 │   ├── AchievementNotification/ # AchievementNotificationData, NotificationQueueManager, ToastNotificationController, UnlockAnimationController, RewardDisplayManager, AchievementPopupUI, NotificationSoundController, AchievementNotificationAnalytics
 │   ├── Aircraft/         # AircraftData, AircraftSkinRegistry, AircraftCustomizationManager, AircraftUnlockEvaluator, AircraftVisualController, AircraftTrailController, AircraftHangarUI, AircraftSkinCardUI, AircraftPreviewController, AircraftMultiplayerSync, AircraftAchievementBridge, AircraftSettingsBridge
 │   ├── Analytics/        # TelemetryEvent, TelemetryDispatcher, FlightTelemetryCollector, PerformanceTelemetryCollector, UserBehaviorTracker, ABTestManager, PrivacyConsentManager, AnalyticsDashboardData
+│   ├── AdvancedPhotography/ # AdvancedPhotographyEnums, AdvancedPhotographyConfig, AdvancedPhotographyData, DroneAutonomyController, AICompositionAssistant, AdvancedPanoramaController, AdvancedTimelapseController, PhotoContestManager, PhotoSpotDiscovery, DronePathEditor, AdvancedPhotographyHUD, AdvancedPhotographyUI, AdvancedPhotographyAnalytics
 │   ├── Airshow/          # AirshowEnums, AirshowRoutineData, AirshowManager, AirshowPerformer, AirshowSmokeSystem, AirshowScoreCalculator, SpectatorCameraController, AirshowAudienceSystem, AirshowHUD, AirshowAnalytics
 │   ├── Atmosphere/       # AtmosphereController, CloudLayer, DayNightCycle, WeatherController, WindController, ComfortVignette, ReentryEffect
 │   ├── Audio/            # AudioManager, AudioMixerController, AudioEventTrigger, AltitudeAudioTrigger, AltitudeSoundscapeController, WindAudioGenerator, DopplerEffectController, SonicBoomController, EnvironmentReverbController, AudioOcclusionSystem, SpatialAudioManager, MusicLayerSystem, AudioVisualizerData
@@ -3070,3 +3071,119 @@ CompetitiveRacingAnalytics  →  TelemetryDispatcher events
 60 keys added to all 8 language files: `race_mode_*` × 6, `race_status_*` × 6,
 `checkpoint_type_*` × 7, `course_env_*` × 8, `difficulty_*` × 5, `season_*` × 4,
 `race_alert_*` × 8, `race_hud_*` × 9, `race_ui_*` × 7.
+
+---
+
+## Phase 89 — Advanced Photography & Drone Camera System
+
+### New Scripts (13 files in `Assets/SWEF/Scripts/AdvancedPhotography/`)
+
+| # | Script | Purpose |
+|---|--------|---------|
+| 1 | `AdvancedPhotographyEnums.cs` | `DroneFlightMode` (8: FreeRoam/Orbit/Flyby/Follow/Waypoint/Tracking/Cinematic/ReturnHome), `CompositionRule` (7), `PhotoSubject` (10), `ChallengeCategory` (5), `PhotoRating` (1–5), `PanoramaType` (4), `TimelapseMode` (5), `AIAssistLevel` (4) |
+| 2 | `AdvancedPhotographyConfig.cs` | Static constants: drone max range 500 m, max altitude 200 m, battery 300 s, low-battery threshold 10 %, orbit defaults (50 m / 30°/s), AI score thresholds (good 0.65 / excellent 0.85), challenge durations (daily 24 h / weekly 168 h), panorama face resolution 2048 / overlap 30 %, timelapse min/max intervals (0.5 s / 300 s), photo spot discovery radius 5000 m, contest page size 50 |
+| 3 | `AdvancedPhotographyData.cs` | `DroneWaypoint` (position, rotation, speed, holdTime, lookAtTarget), `DroneFlightPath` (waypoints, loop, totalDuration), `CompositionAnalysis` (rule, score 0–1, suggestion, guidePoints Vector2[]), `PhotoMetadata` (timestamp, GPS lat/lon/alt, biome, weather, filter, frame, FOV, aperture, ISO, compositionScore, subjects list), `PhotoChallenge` ScriptableObject (challengeId, title, description, category, criteria, targetSubject, targetBiome, requiredCompositionRule, rewardXP), `PhotoSpot` (spotId, position, recommendedSubjects, bestTimeOfDayRange, bestWeather, bestSeason, difficulty, discovered) |
+| 4 | `DroneAutonomyController.cs` | Singleton (DontDestroyOnLoad): Orbit/Flyby/Follow/Waypoint/Tracking/Cinematic/FreeRoam/ReturnHome modes, battery drain + auto-return at 10 %, collision avoidance raycasts, `WaypointFlightCoroutine` with hold-time, `SetOrbitTarget`, `StartWaypointPath`, `SetTrackingSubject`, `GetBatteryPercent`; `#if SWEF_PHOTOMODE_AVAILABLE` |
+| 5 | `AICompositionAssistant.cs` | Singleton (DontDestroyOnLoad): screen-space RuleOfThirds/GoldenRatio/Symmetry/CenterWeighted scoring heuristics, FOV-sweep auto-frame coroutine, 0.5 s update loop with delta-threshold, `AnalyzeComposition()`, `AutoFrame(rule)`, `SetAssistLevel(level)`, `GetCurrentScore()` |
+| 6 | `AdvancedPanoramaController.cs` | Horizontal/Vertical multi-strip capture, Full360 cubemap→equirectangular (pixel-perfect mapping), LittlePlanet stereographic projection, configurable face resolution, progress events, gallery save via `#if SWEF_PHOTOMODE_AVAILABLE` |
+| 7 | `AdvancedTimelapseController.cs` | TimeInterval/DistanceInterval/SunTracking/WeatherChange/DayNightCycle modes, `TimelapseConfig` serializable settings, frame buffer up to 600 frames, pause/resume, `OnTimelapseComplete(Texture2D[])`, `#if SWEF_WEATHER_AVAILABLE` |
+| 8 | `PhotoContestManager.cs` | Singleton (DontDestroyOnLoad): Upcoming→Active→Judging→Complete lifecycle, AI scoring formula (composition 40 % + subject 30 % + biome 20 % + creativity 10 %), community vote simulation, JSON persistence to `persistentDataPath/PhotoContests/`, `#if SWEF_ACHIEVEMENT_AVAILABLE` |
+| 9 | `PhotoSpotDiscovery.cs` | Singleton (DontDestroyOnLoad): `PhotoSpot` registry, 2 s proximity discovery loop, scored recommendation (proximity 25 % + undiscovered 20 % + time-of-day 20 % + weather 20 % + difficulty 10 % + biome 5 %), `RegisterSpot`, `GetNearbySpots`, `GetRecommendedSpots`, minimap marker registration |
+| 10 | `DronePathEditor.cs` | `RequireComponent(LineRenderer)`: tap-to-place/drag-to-reposition waypoints, undo/redo stack, per-waypoint speed & hold time, Catmull-Rom spline preview, path validation (max range + no-underground), `GetFlightPath()` → `DroneFlightPath` |
+| 11 | `AdvancedPhotographyHUD.cs` | UGUI overlay: composition guide image, composition score `Slider`, AI suggestion `Text`, drone status panel (battery slider + label, flight mode, altitude, distance), challenge progress, photo spot direction arrow + distance, histogram placeholder |
+| 12 | `AdvancedPhotographyUI.cs` | Full-screen five-panel menu: Gallery Browser (grid + metadata), Challenge List, Contest Panel (submit/vote/leaderboard), Filter Editor (tint/saturation/contrast/vignette/exposure sliders), Settings Panel (AI assist dropdown, guide overlay toggle, auto-save toggle) |
+| 13 | `AdvancedPhotographyAnalytics.cs` | Static: `RecordDroneFlightStarted`, `RecordDroneFlightEnded`, `RecordDroneBatteryDepleted`, `RecordAICompositionUsed`, `RecordAutoFrameUsed`, `RecordPanoramaCaptured`, `RecordTimelapseCompleted`, `RecordPhotoSubmittedToContest`, `RecordPhotoSpotDiscovered`, `RecordDronePathCreated`, `RecordChallengeCompleted` — guarded by `#if SWEF_ANALYTICS_AVAILABLE` |
+
+### Architecture
+
+```
+DroneAutonomyController (Singleton, DontDestroyOnLoad)
+│   ├── SetFlightMode / SetOrbitTarget / StartWaypointPath / ReturnToPlayer
+│   ├── WaypointFlightCoroutine  →  OnWaypointReached
+│   ├── Battery drain  →  OnBatteryLow / OnBatteryDepleted / ReturnToPlayer
+│   └── Events: OnFlightModeChanged, OnBatteryLow, OnBatteryDepleted,
+│               OnWaypointReached, OnCollisionAvoided
+
+AICompositionAssistant (Singleton, DontDestroyOnLoad)
+│   ├── AnalyzeComposition  →  CompositionAnalysis
+│   ├── AutoFrame (FOV sweep coroutine)  →  OnAutoFrameComplete
+│   └── Events: OnCompositionScoreChanged, OnAutoFrameComplete, OnSuggestionUpdated
+
+PhotoContestManager (Singleton, DontDestroyOnLoad)
+│   ├── GetActiveContests / SubmitPhoto / GetLeaderboard / VoteForPhoto
+│   └── Events: OnContestStarted, OnPhotoSubmitted, OnContestEnded, OnResultsAvailable
+
+PhotoSpotDiscovery (Singleton, DontDestroyOnLoad)
+│   ├── RegisterSpot / DiscoverSpot / GetNearbySpots / GetRecommendedSpots
+│   └── Events: OnPhotoSpotDiscovered, OnPhotoSpotRecommended
+
+AdvancedPanoramaController  →  StartCapture / CancelCapture / SetFaceResolution
+AdvancedTimelapseController →  StartTimelapse / StopTimelapse / PauseTimelapse
+DronePathEditor             →  AddWaypoint / Undo / Redo / ValidatePath / GetFlightPath
+AdvancedPhotographyHUD      →  subscribes to all manager events
+AdvancedPhotographyUI       →  five-panel full-screen menu
+AdvancedPhotographyAnalytics→  static TelemetryDispatcher forwarding
+```
+
+### Integration Points
+
+| System | Integration | Guard |
+|--------|-------------|-------|
+| `SWEF.PhotoMode.DroneCameraController` | Base drone camera referenced by `DroneAutonomyController` | `#if SWEF_PHOTOMODE_AVAILABLE` |
+| `SWEF.PhotoMode.PhotoGalleryManager` | Panorama result saved to gallery | `#if SWEF_PHOTOMODE_AVAILABLE` |
+| `SWEF.Weather.WeatherManager` | Weather condition for timelapse trigger & spot scoring | `#if SWEF_WEATHER_AVAILABLE` |
+| `SWEF.Biome.BiomeClassifier` | Biome data used in spot scoring | `#if SWEF_BIOME_AVAILABLE` |
+| `SWEF.Narration.LandmarkDatabase` | Landmark lookup for photo spot seeding | `#if SWEF_NARRATION_AVAILABLE` |
+| `SWEF.Minimap.MinimapManager` | `RegisterMarker` for photo spots | `#if SWEF_MINIMAP_AVAILABLE` |
+| `SWEF.Achievement.AchievementManager` | `TryUnlock("photo_contest_winner")` | `#if SWEF_ACHIEVEMENT_AVAILABLE` |
+| `SWEF.Analytics.TelemetryDispatcher` | 11 telemetry events | `#if SWEF_ANALYTICS_AVAILABLE` |
+
+### Example Usage
+
+```csharp
+// Enter orbit mode around a landmark
+DroneAutonomyController.Instance.SetOrbitTarget(landmarkPos, radius: 80f);
+DroneAutonomyController.Instance.SetFlightMode(DroneFlightMode.Orbit);
+
+// Enable AI composition suggestions
+AICompositionAssistant.Instance.SetAssistLevel(AIAssistLevel.Suggestions);
+AICompositionAssistant.Instance.OnSuggestionUpdated += txt => hud.suggestionLabel.text = txt;
+
+// Capture a Full360 panorama
+var panorama = FindFirstObjectByType<AdvancedPanoramaController>();
+panorama.OnPanoramaCaptureComplete += tex => Debug.Log($"Done: {tex.width}×{tex.height}");
+panorama.StartCapture(PanoramaType.Full360);
+
+// Build and fly a drone path
+DronePathEditor editor = FindFirstObjectByType<DronePathEditor>();
+editor.AddWaypoint(new Vector3(100, 50, 0));
+editor.AddWaypoint(new Vector3(200, 80, 100));
+if (editor.ValidatePath())
+{
+    var path = editor.GetFlightPath();
+    DroneAutonomyController.Instance.StartWaypointPath(path);
+    DroneAutonomyController.Instance.SetFlightMode(DroneFlightMode.Waypoint);
+}
+```
+
+### Tests
+
+`Assets/Tests/EditMode/AdvancedPhotographyTests.cs` — NUnit EditMode tests covering:
+enum completeness (`DroneFlightMode` × 8, `CompositionRule` × 7, `PhotoSubject` × 10,
+`ChallengeCategory` × 5, `PhotoRating` × 5 with integer value assertions, `PanoramaType` × 4,
+`TimelapseMode` × 5, `AIAssistLevel` × 4, `ContestState` × 4),
+`AdvancedPhotographyConfig` constant validity (ranges, ordering, positivity),
+`DroneWaypoint` defaults (speed positive, holdTime non-negative),
+`DroneFlightPath` defaults (empty list, loop=false, add-waypoints),
+`CompositionAnalysis` defaults (score=0, suggestion not null, guidePoints not null),
+`PhotoMetadata` defaults (subjects list not null, compositionScore=0, FOV positive),
+`PhotoSpot` defaults (not discovered, recommendedSubjects not null, difficulty 1–5),
+`TimelapseConfig` defaults (mode, interval, distance interval match config constants),
+`ContestSubmission` defaults (voteCount=0, aiScore=0),
+`ActiveContest` defaults (state=Upcoming, submissions not null).
+
+### Localization
+
+43 keys added to all 8 language files: `drone_mode_*` × 8, `composition_rule_*` × 7,
+`photo_subject_*` × 10, `challenge_cat_*` × 5, `panorama_type_*` × 4,
+`timelapse_mode_*` × 5, `photo_hud_*` × 4.
