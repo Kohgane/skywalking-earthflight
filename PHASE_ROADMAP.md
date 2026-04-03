@@ -19,14 +19,11 @@ Phases 1–80 have been merged into `main`. See individual PR descriptions and `
 | 88 | Competitive Racing & Time Trial System | — | 2026-04-02 |
 | 89 | Advanced Photography & Drone Camera System | — | 2026-04-02 |
 | 90 | Aircraft Workshop & Part Customization | — | 2026-04-03 |
+| 91 | 🌐 Multiplayer Expansion & Social Features | — | 2026-04-03 |
 
-## Next Batch — Phase 91 (Confirmed)
+## Next Batch
 
-> Approved on 2026-04-01. Execute in order below.
-
-| # | Phase | Title | Rationale | Key Systems |
-|---|-------|-------|-----------|-------------|
-| 1️⃣ | 91 | 🌐 Multiplayer Expansion & Social Features | Multiplayer/ exists but lacks cross-session events and social layer | Cross-session events, friend flights, shared waypoints, collaborative flight planning |
+All confirmed phases complete. Next batch TBD — discuss with @copilot after Alpha test flight.
 
 ## Phase Selection Criteria
 
