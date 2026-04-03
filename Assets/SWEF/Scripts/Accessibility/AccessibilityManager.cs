@@ -37,8 +37,10 @@ namespace SWEF.Accessibility
         public static AccessibilityManager Instance { get; private set; }
 
         // ── Persistence ───────────────────────────────────────────────────────────
+        // Cached on first access to avoid repeated string concatenation.
+        private static string _savePath;
         private static string SavePath =>
-            Path.Combine(Application.persistentDataPath, "accessibility_settings.json");
+            _savePath ??= System.IO.Path.Combine(Application.persistentDataPath, "accessibility_settings.json");
 
         // Legacy PlayerPrefs key (read once for migration, then removed)
         private const string LegacyKeyProfileJson = "SWEF_AccessibilityProfile";

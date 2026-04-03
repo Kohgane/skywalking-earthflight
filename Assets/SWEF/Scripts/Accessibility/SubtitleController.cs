@@ -7,8 +7,8 @@ using UnityEngine.UI;
 
 namespace SWEF.Accessibility
 {
-    // SubtitlePosition enum is defined in SubtitleSystem.cs (Top / Center / Bottom)
-    // SubtitleSize enum is defined in AccessibilityProfile.cs (Small / Medium / Large / ExtraLarge)
+    // SubtitlePosition enum is defined in SubtitleSystem.cs (Top / Center / Bottom) — same SWEF.Accessibility namespace.
+    // SubtitleSize enum is defined in AccessibilityProfile.cs (Small / Medium / Large / ExtraLarge) — same SWEF.Accessibility namespace.
 
     /// <summary>
     /// Singleton MonoBehaviour that renders subtitles for voice commands, ATC audio,

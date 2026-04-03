@@ -31,7 +31,11 @@ namespace SWEF.Accessibility
         [SerializeField] private Text overlayText;
 
         // ── Runtime state ─────────────────────────────────────────────────────────
-        private readonly float[] _fpsSamples = new float[120];
+        // ── FPS sample buffer ─────────────────────────────────────────────────────
+        // The buffer is allocated at the maximum supported count (120 samples).
+        // fpsSampleCount controls how many of those samples are averaged;
+        // it is clamped to [1, 120] at snapshot time.
+        private readonly float[] _fpsSamples = new float[120]; // max buffer; actual count = fpsSampleCount
         private int   _sampleIndex;
         private float _broadcastTimer;
 
@@ -65,7 +69,8 @@ namespace SWEF.Accessibility
 
         private void Snapshot()
         {
-            int count = Mathf.Min(_sampleIndex, fpsSampleCount);
+            // Clamp sample count to valid range
+            int count = Mathf.Clamp(Mathf.Min(_sampleIndex, fpsSampleCount), 1, _fpsSamples.Length);
             float sum = 0f;
             for (int i = 0; i < count; i++)
                 sum += _fpsSamples[(_sampleIndex - 1 - i + _fpsSamples.Length) % _fpsSamples.Length];

@@ -38,6 +38,9 @@ namespace SWEF.Accessibility
         {
             if (autoDiscover)
             {
+                // Note: FindObjectsOfType is an O(n) scene scan; used only once on Start
+                // so that elements present at scene load are automatically registered.
+                // Elements spawned after Start must call Register() explicitly.
                 _texts.AddRange(FindObjectsOfType<Text>());
                 _images.AddRange(FindObjectsOfType<Image>());
             }

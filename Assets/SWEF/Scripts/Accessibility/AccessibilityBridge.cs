@@ -101,7 +101,9 @@ namespace SWEF.Accessibility
         public static void OnSettingsSaved(string filePath)
         {
 #if SWEF_SECURITY_AVAILABLE
-            SWEF.Security.SaveFileValidator.VerifySaveFile(filePath);
+            bool valid = SWEF.Security.SaveFileValidator.VerifySaveFile(filePath);
+            if (!valid)
+                Debug.LogWarning($"[SWEF] Accessibility: Save integrity check failed for {filePath}.");
 #endif
             Debug.Log($"[SWEF] Accessibility: Settings saved → {filePath}");
         }
