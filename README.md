@@ -20,7 +20,22 @@ A mobile flight-experience app powered by Google Photorealistic 3D Tiles via Ces
 | Earth Data | Google Photorealistic 3D Tiles (Map Tiles API) |
 | Tile Renderer | Cesium for Unity |
 | Location | GPS (foreground) |
-| Platforms | iOS, Android, XR (Meta Quest, Vision Pro planned) |
+| Platforms | Windows PC, macOS, iOS, Android, iPad, Android Tablet, XR (Meta Quest, Vision Pro planned) |
+
+## Supported Platforms
+
+SWEF is a **cross-platform** application. It is not exclusive to any single device category.
+
+| Platform | Priority | Status |
+|----------|----------|--------|
+| ✅ Windows PC | **Primary** | Keyboard + mouse + gamepad; PlatformOptimizer (Phase 93) |
+| ✅ macOS | **Primary** | Unity cross-compile from same codebase |
+| ✅ iOS / iPhone | **Primary** | TouchInputRouter + GPS (Phase 1/Flight) |
+| ✅ Android / Phone | **Primary** | TouchInputRouter + GPS (Phase 1/Flight) |
+| ✅ iPad | **High Priority** | Tablet UI layout planned (Phase 97) |
+| ✅ Android Tablet | **High Priority** | Tablet UI layout planned (Phase 97) |
+| 🔜 Meta Quest / XR | Secondary (Planned) | XR module exists; full integration in future phase |
+| 🔜 Apple Vision Pro | Secondary (Planned) | Requires visionOS adaptation |
 
 ## Project Structure
 ```
@@ -28,6 +43,7 @@ Assets/SWEF/
 ├── Scenes/               # Boot.unity + World.unity (created in Unity Editor)
 ├── Scripts/
 │   ├── Accessibility/    # AccessibilityManager, AdaptiveInputManager, ColorblindFilter, SubtitleSystem, UIScalingSystem, HapticAccessibility, CognitiveAssistSystem, ScreenReaderBridge
+│   ├── BuildPipeline/    # PlatformTargetMatrix, BuildProfileConfig, CIBuildRunner, PlatformBootstrapper, PlatformFeatureGate
 │   ├── Achievement/      # AchievementDefinition, AchievementState, AchievementManager, AchievementTracker, AchievementNotificationUI, AchievementPanelUI, AchievementCardUI, AchievementShareController, MilestoneDefinition, MilestoneTracker, AchievementData, AchievementUI
 │   ├── AchievementNotification/ # AchievementNotificationData, NotificationQueueManager, ToastNotificationController, UnlockAnimationController, RewardDisplayManager, AchievementPopupUI, NotificationSoundController, AchievementNotificationAnalytics
 │   ├── Aircraft/         # AircraftData, AircraftSkinRegistry, AircraftCustomizationManager, AircraftUnlockEvaluator, AircraftVisualController, AircraftTrailController, AircraftHangarUI, AircraftSkinCardUI, AircraftPreviewController, AircraftMultiplayerSync, AircraftAchievementBridge, AircraftSettingsBridge
@@ -3496,3 +3512,46 @@ Keys with prefix `security_`: `security_save_tamper_warning`, `security_rate_lim
 ### Localization
 
 Keys with prefix `marketplace_`: `marketplace_category_aircraft_build`, `marketplace_category_livery`, `marketplace_category_decal`, `marketplace_category_flight_route`, `marketplace_category_race_track`, `marketplace_category_waypoint_pack`, `marketplace_category_photo_preset`, `marketplace_notif_sale_title`, `marketplace_search_placeholder`, `marketplace_publish_success`, `marketplace_purchase_failed`.
+
+## Phase 95 — 🔧 Platform Target Matrix & Build Pipeline
+
+### Overview
+
+Phase 95 marks the transition from **feature development** (Phases 1–94) to **production readiness**.
+The primary goal is to establish a robust cross-platform build pipeline and feature-flag system that
+ensures SWEF runs on **all primary platforms** — Windows PC, macOS, iOS, Android — with high-priority
+support for tablets and secondary support for XR headsets.
+
+### Files Added
+
+| File | Type | Purpose |
+|------|------|---------|
+| `BuildPipeline/PlatformTargetMatrix.cs` | Static class | Platform detection, category classification, tablet heuristic, per-platform feature flags |
+| `BuildPipeline/BuildProfileConfig.cs` | ScriptableObject | Per-platform build settings (quality, FPS, input subsystems, XR, texture limits) |
+| `BuildPipeline/CIBuildRunner.cs` | Static class (Editor-only) | `BuildWindows()`, `BuildMacOS()`, `BuildiOS()`, `BuildAndroid()`, `BuildAll()` for CI/CD `-executeMethod` |
+| `BuildPipeline/PlatformBootstrapper.cs` | MonoBehaviour | Detects platform on Awake, applies quality settings, configures input subsystems, fires `OnPlatformDetected` event |
+| `BuildPipeline/PlatformFeatureGate.cs` | Static class | `IsEnabled(featureId)` runtime feature flags with per-profile overrides |
+| `.github/workflows/build-matrix.yml` | GitHub Actions | 4-platform matrix build (Windows, macOS, iOS, Android) with artifact upload |
+| `Assets/Tests/EditMode/PlatformTargetMatrixTests.cs` | NUnit tests | 40+ tests covering platform detection, feature gates, tablet heuristic, build profiles |
+
+### Platform Matrix
+
+| Platform | Category | Primary | XR | Gyro | GPS | Touch | Keyboard | Gamepad |
+|----------|----------|---------|-----|------|-----|-------|----------|---------|
+| Windows PC | PC | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| macOS | PC | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| iOS | Mobile | ✅ | ❌ | ✅ | ✅ | ✅ | ❌ | ✅ |
+| Android | Mobile | ✅ | ❌ | ✅ | ✅ | ✅ | ❌ | ✅ |
+| iPad | Tablet | ⬜ (High) | ❌ | ✅ | ✅ | ✅ | ❌ | ✅ |
+| Android Tablet | Tablet | ⬜ (High) | ❌ | ✅ | ✅ | ✅ | ❌ | ✅ |
+| Meta Quest | XR | ⬜ (Planned) | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ |
+| Vision Pro | XR | ⬜ (Planned) | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ |
+
+### Integration Points
+
+| System | Integration |
+|--------|-------------|
+| `SWEF.Accessibility.PlatformOptimizer` | `PlatformBootstrapper` soft-forwards quality tier via `#if SWEF_ACCESSIBILITY_AVAILABLE` |
+| `SWEF.Accessibility.AdaptiveInputManager` | Feature gate overrides consumed at runtime |
+| CI/CD | `CIBuildRunner` invoked via Unity `-executeMethod` in `build-matrix.yml` |
+| Unity Test Framework | NUnit EditMode tests in `Assets/Tests/EditMode/PlatformTargetMatrixTests.cs` |
