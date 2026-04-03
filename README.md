@@ -3428,3 +3428,71 @@ Keys with prefix `security_`: `security_save_tamper_warning`, `security_rate_lim
 |------|----------|
 | `accessibility_settings.json` | Full `AccessibilityProfile` (persistent data path) |
 | `input_remap.json` | All custom input bindings (persistent data path) |
+
+---
+
+## Phase 94 — 🏪 Community Content Marketplace
+
+**Namespace:** `SWEF.Marketplace` | **Directory:** `Assets/SWEF/Scripts/Marketplace/`
+
+### New Scripts (16)
+
+| File | Type | Purpose |
+|------|------|---------|
+| `MarketplaceCategory.cs` | Enum | 7 content categories: AircraftBuild, Livery, Decal, FlightRoute, RaceTrack, WaypointPack, PhotoPreset |
+| `MarketplaceListingData.cs` | Data | Serializable listing record (id, seller, title, description, category, price, tags, contentData, stats, flags) |
+| `MarketplaceReviewData.cs` | Data | Serializable review record (id, listingId, reviewer, rating, comment, helpfulCount) |
+| `MarketplaceSearchQuery.cs` | Data | Serializable search/filter query (text, category, sortBy, minRating, maxPrice, tags, pagination) |
+| `MarketplaceTransactionData.cs` | Data | Serializable transaction record (type: Purchase/Free/Gift/Refund, status: Completed/Pending/Refunded) |
+| `CreatorProfileData.cs` | Data | Serializable creator profile (stats, bio, followerCount, featuredListings) |
+| `MarketplaceBrowseData.cs` | Static | Category cards with icon paths, featured banners, trending tags |
+| `MarketplaceNotificationData.cs` | Data | Notifications for sales, reviews, follows, featured |
+| `MarketplaceManager.cs` | Singleton MB | Publish/unpublish/update listings; purchase/download content; library management; persistence |
+| `MarketplaceSearchController.cs` | MB | Full-text search, 7 sort options, trending/featured/recommended surfaces, history & suggestions |
+| `ContentPackager.cs` | Static | Pack/unpack Workshop/Navigation/Racing/Multiplayer content; integrity validation |
+| `ReviewManager.cs` | Singleton MB | Submit/edit/delete reviews; rating aggregation; helpful votes; profanity filter; `marketplace_reviews.json` |
+| `CreatorDashboardController.cs` | MB | Earnings tracking, per-listing analytics, follow system; `creator_profile.json`, `creator_earnings.json` |
+| `ContentModerationController.cs` | Singleton MB | Auto-validate on publish; community reports; auto-flag at threshold; `moderation_reports.json` |
+| `MarketplaceBridge.cs` | Static | Cross-system integration: Progression, Workshop, Multiplayer, Achievement, Social, Security |
+| `MarketplaceAnalytics.cs` | Static | 9 telemetry event methods → TelemetryDispatcher |
+
+### Integration Points
+
+| System | Integration | Guard |
+|--------|-------------|-------|
+| `SWEF.Progression.ProgressionManager` | `AddCurrency` (deduct on purchase, award on withdraw), `AddXP` on purchase | `#if SWEF_PROGRESSION_AVAILABLE` |
+| `SWEF.Workshop.WorkshopManager` | `ImportBuild` for purchased aircraft builds | `#if SWEF_WORKSHOP_AVAILABLE` |
+| `SWEF.Workshop.PaintEditorController` | `ImportScheme` for purchased liveries | `#if SWEF_WORKSHOP_AVAILABLE` |
+| `SWEF.Workshop.DecalEditorController` | `ImportDecal` for purchased decal sets | `#if SWEF_WORKSHOP_AVAILABLE` |
+| `SWEF.Multiplayer.SharedWaypointManager` | `AddWaypoint` for purchased waypoint packs | `#if SWEF_MULTIPLAYER_AVAILABLE` |
+| `SWEF.Achievement.AchievementManager` | `ReportProgress` — 6 achievements | `#if SWEF_ACHIEVEMENT_AVAILABLE` |
+| `SWEF.SocialHub.SocialActivityFeed` | `PostActivity` on publish/purchase/review/follow | `#if SWEF_SOCIAL_AVAILABLE` |
+| `SWEF.Analytics.TelemetryDispatcher` | 9 events via `MarketplaceAnalytics` | `#if SWEF_ANALYTICS_AVAILABLE` |
+| `SWEF.Security.ProfanityFilter` | Title/description/comment validation | `#if SWEF_SECURITY_AVAILABLE` |
+| `SWEF.Security.InputSanitizer` | Content-data payload validation | `#if SWEF_SECURITY_AVAILABLE` |
+
+### Achievements
+
+| Key | Description | Threshold |
+|-----|-------------|-----------|
+| `first_listing` | Publish first listing | 1 |
+| `first_purchase` | Make first purchase/download | 1 |
+| `top_creator` | Cumulative downloads reach 100 | 100 |
+| `marketplace_mogul` | Cumulative sales reach 50 | 50 |
+| `five_star_creator` | Receive a 5-star review | 1 |
+| `content_collector` | Acquire 25 marketplace items | 25 |
+
+### Persistence
+
+| File | Contents |
+|------|----------|
+| `marketplace_listings.json` | All published listings |
+| `marketplace_library.json` | Player's acquired content library |
+| `marketplace_reviews.json` | All community reviews |
+| `creator_profile.json` | Creator profile and stats |
+| `creator_earnings.json` | Sales transaction ledger |
+| `moderation_reports.json` | Community moderation reports |
+
+### Localization
+
+Keys with prefix `marketplace_`: `marketplace_category_aircraft_build`, `marketplace_category_livery`, `marketplace_category_decal`, `marketplace_category_flight_route`, `marketplace_category_race_track`, `marketplace_category_waypoint_pack`, `marketplace_category_photo_preset`, `marketplace_notif_sale_title`, `marketplace_search_placeholder`, `marketplace_publish_success`, `marketplace_purchase_failed`.
