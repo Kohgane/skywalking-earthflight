@@ -278,9 +278,6 @@ internal sealed class StubTestCase : IntegrationTestCase
     public override IntegrationTestResult Setup()   => null;
     public override IntegrationTestResult Execute() => Pass("stub");
     public override void Teardown() { }
-
-    // LINQ helpers used in registry tests.
-    internal bool All(Func<StubTestCase, bool> predicate) => predicate(this);
 }
 
 // Extension to make LINQ .All() work on IReadOnlyList<IntegrationTestCase>

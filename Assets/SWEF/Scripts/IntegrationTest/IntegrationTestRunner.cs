@@ -160,6 +160,9 @@ namespace SWEF.IntegrationTest
                     executeResult = IntegrationTestResult.Fail(testCase.ModuleName, testCase.TestName,
                         "Execute() returned null.");
 
+                // NOTE: This post-hoc duration check marks a slow test as Timeout after it
+                // returns, but does NOT abort a synchronous Execute() call mid-flight.
+                // True cancellation would require async/threading — deferred to a future phase.
                 if (duration > testTimeoutSeconds)
                     executeResult = IntegrationTestResult.Timeout(testCase.ModuleName, testCase.TestName, testTimeoutSeconds);
             }
