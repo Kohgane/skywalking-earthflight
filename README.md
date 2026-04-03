@@ -107,6 +107,7 @@ Assets/SWEF/
 │   ├── Weather/          # WeatherData, WeatherCondition, WeatherManager, WeatherAPIClient, WeatherDataService, WeatherStateManager, WeatherLightingController, WeatherSkyboxController, WeatherFogController, WeatherVFXController, WeatherAudioController, WeatherSoundController, WeatherFlightModifier, PrecipitationSystem, WindSystem, WeatherUI
 │   ├── WeatherChallenge/ # WeatherChallengeData, WeatherChallengeManager, DynamicRouteGenerator, WeatherChallengeUI, RouteVisualizationController, WeatherChallengeAnalyticsBridge
 │   ├── Wildlife/         # WildlifeData, WildlifeManager, AnimalGroupController, BirdFlockController, MarineLifeController, AnimalAnimationController, WildlifeSpawnSystem, WildlifeAudioController, WildlifeJournalIntegration, WildlifeDebugOverlay
+│   ├── Workshop/         # AircraftPartType, PartTier, AircraftPartData, AircraftBuildData, PaintSchemeData, DecalData, WorkshopManager, PartInventoryController, PartUnlockTree, PerformanceSimulator, PaintEditorController, DecalEditorController, AircraftShareManager, WorkshopBridge, WorkshopAnalytics
 │   ├── WorldEvent/       # WorldEventType, WorldEventData, RewardData, WorldEventManager, ActiveWorldEvent, EventObjective, EventSpawnZone, QuestChain, EventNotificationUI, WorldEventConfig
 │   └── XR/              # XRPlatformDetector, XRRigManager, XRInputAdapter, XRHandTracker, XRComfortSettings, XRUIAdapter
 └── README_SWEF_SETUP.md
@@ -3187,3 +3188,87 @@ enum completeness (`DroneFlightMode` × 8, `CompositionRule` × 7, `PhotoSubject
 43 keys added to all 8 language files: `drone_mode_*` × 8, `composition_rule_*` × 7,
 `photo_subject_*` × 10, `challenge_cat_*` × 5, `panorama_type_*` × 4,
 `timelapse_mode_*` × 5, `photo_hud_*` × 4.
+
+---
+
+## Phase 90 — Aircraft Workshop & Part Customization
+
+### New Scripts (15 files in `Assets/SWEF/Scripts/Workshop/`)
+
+| # | File | Purpose |
+|---|------|---------|
+| 1 | `AircraftPartType.cs` | Enum: Engine, Wing, Fuselage, Tail, LandingGear, Aileron, Rudder, Elevator, Cockpit, Propeller, Intake, Exhaust, FuelTank |
+| 2 | `PartTier.cs` | Enum: Common/Uncommon/Rare/Epic/Legendary with `ToColorHex()` + `ToLocKey()` extensions |
+| 3 | `AircraftPartData.cs` | Serialisable data record — partId, partName, partType, tier, weight, dragCoefficient, liftModifier, thrustModifier, durability, description, iconPath, unlockRequirement, isUnlocked |
+| 4 | `AircraftBuildData.cs` | Serialisable complete build — equippedPartIds, paintScheme, decals, cached stat fields |
+| 5 | `PaintSchemeData.cs` | Serialisable livery data — primaryColor, secondaryColor, accentColor, metallic, roughness, PaintPattern |
+| 6 | `DecalData.cs` | Serialisable decal placement — texturePath, uvPosition, rotation, scale, layerIndex |
+| 7 | `WorkshopManager.cs` | Singleton (DontDestroyOnLoad): open/close workshop, equip/unequip parts, save/load builds, apply to active aircraft; JSON → `workshop_builds.json` |
+| 8 | `PartInventoryController.cs` | Singleton (DontDestroyOnLoad): AddPart, RemovePart, HasPart, GetPartsByType/Tier; JSON → `workshop_inventory.json` |
+| 9 | `PartUnlockTree.cs` | Singleton (DontDestroyOnLoad): CanUnlock, UnlockPart, GetUnlockProgress, GetNextUnlockable — level / currency / achievement / mission / prerequisite gates |
+| 10 | `PerformanceSimulator.cs` | Static — ComputeMaxSpeed, ComputeClimbRate, ComputeManeuverability, ComputeFuelEfficiency, ComputeStructuralIntegrity, ComputeWeightBalance, CompareBuilds |
+| 11 | `PaintEditorController.cs` | MonoBehaviour — live paint preview, ApplyPaintScheme, ResetToDefault, SaveScheme, LoadScheme |
+| 12 | `DecalEditorController.cs` | MonoBehaviour — AddDecal, RemoveDecal, MoveDecal, RotateDecal, ScaleDecal; max 10 decals |
+| 13 | `AircraftShareManager.cs` | Static — ExportBuild → Base-64, ImportBuild, ShareBuild (clipboard + social), ValidateImportedBuild |
+| 14 | `WorkshopBridge.cs` | Integration bridge → ProgressionManager, AchievementManager, SocialActivityFeed |
+| 15 | `WorkshopAnalytics.cs` | Static telemetry helper — 11 event types guarded by `#if SWEF_ANALYTICS_AVAILABLE` |
+
+### Architecture
+
+```
+WorkshopManager (Singleton, DontDestroyOnLoad)
+│   ├── OpenWorkshop / CloseWorkshop
+│   ├── EquipPart / UnequipPartByType
+│   ├── SaveBuild / LoadBuildById / GetAllBuilds
+│   ├── ApplyActiveBuild  →  PerformanceSimulator  →  AircraftBuildData.cached*
+│   └── JSON persistence: workshop_builds.json
+│
+PartInventoryController (Singleton)
+│   ├── AddPart / RemovePart / HasPart / GetPartsByType / GetPartsByTier
+│   └── JSON persistence: workshop_inventory.json
+│
+PartUnlockTree (Singleton)
+│   ├── CanUnlock  (level + currency + achievements + missions + prerequisites)
+│   ├── UnlockPart →  PartInventoryController.AddPart
+│   └── GetUnlockProgress / GetNextUnlockable
+│
+PerformanceSimulator (static)
+│   ├── ComputeMaxSpeed  =  BaseSpeed × (thrust/drag) × weightPenalty
+│   ├── ComputeClimbRate =  BaseClimbRate × (thrust/weight) × lift
+│   ├── ComputeManeuverability, ComputeFuelEfficiency, ComputeStructuralIntegrity
+│   ├── ComputeWeightBalance  →  nose/tail mass ratio
+│   └── CompareBuilds  →  BuildComparison struct (per-stat deltas)
+│
+PaintEditorController / DecalEditorController (MonoBehaviours)
+│   ├── Live preview via Renderer.material shader properties
+│   └── SyncToActiveBuild  →  AircraftBuildData.paintScheme / .decals
+│
+AircraftShareManager (static)
+│   ├── ExportBuild  →  Base-64 JSON
+│   ├── ImportBuild  →  decode + validate
+│   └── ShareBuild   →  clipboard + SocialActivityFeed.PostActivity
+│
+WorkshopBridge  →  ProgressionManager / AchievementManager / SocialActivityFeed
+WorkshopAnalytics  →  TelemetryDispatcher (11 events)
+```
+
+### Integration Points
+
+| System | Integration | Guard |
+|--------|-------------|-------|
+| `SWEF.Progression.ProgressionManager` | `AddXP` on part equip / build save / share | `#if SWEF_PROGRESSION_AVAILABLE` |
+| `SWEF.Achievement.AchievementManager` | `ReportProgress` for `first_custom_build`, `all_parts_unlocked`, `legendary_collector`, `shared_build` | `#if SWEF_ACHIEVEMENT_AVAILABLE` |
+| `SWEF.SocialHub.SocialActivityFeed` | `PostActivity("workshop_build_shared", …)` | `#if SWEF_SOCIAL_AVAILABLE` |
+| `SWEF.Analytics.TelemetryDispatcher` | 11 telemetry events via `WorkshopAnalytics` | `#if SWEF_ANALYTICS_AVAILABLE` |
+
+### Persistence
+
+| File | Contents |
+|------|----------|
+| `workshop_builds.json` | All named build presets |
+| `workshop_inventory.json` | Player's unlocked part collection |
+
+### Localization
+
+38 keys with prefix `workshop_`: `workshop_tier_*` × 5, `workshop_part_type_*` × 13,
+`workshop_pattern_*` × 10, notification toasts × 10.
