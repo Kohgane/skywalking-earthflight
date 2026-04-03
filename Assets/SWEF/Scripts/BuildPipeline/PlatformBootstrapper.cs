@@ -134,7 +134,8 @@ namespace SWEF.BuildPipeline
         private static void CoordinateWithPlatformOptimizer(BuildProfileConfig profile)
         {
             // Soft reference to SWEF.Accessibility.PlatformOptimizer (Phase 93).
-            // We use reflection to avoid a hard compile-time dependency.
+            // The #if guard below is a compile-time conditional that avoids a hard
+            // dependency on the Accessibility assembly when it is not present.
 #if SWEF_ACCESSIBILITY_AVAILABLE
             var optimizer = FindObjectOfType<SWEF.Accessibility.PlatformOptimizer>();
             if (optimizer != null)

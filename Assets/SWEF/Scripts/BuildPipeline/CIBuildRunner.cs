@@ -88,7 +88,6 @@ namespace SWEF.BuildPipeline
                 target      = unityTarget,
                 options     = profile.buildOptions
             };
-
             DateTime start = DateTime.UtcNow;
             Debug.Log($"[CIBuildRunner] Starting {swefTarget} build → {outputPath}");
 
@@ -140,11 +139,6 @@ namespace SWEF.BuildPipeline
 
             if (profile.targetFrameRate > 0)
                 Application.targetFrameRate = profile.targetFrameRate;
-
-            if (profile.maxTextureResolution > 0)
-                PlayerSettings.SetGraphicsAPIs(
-                    EditorUserBuildSettings.activeBuildTarget,
-                    PlayerSettings.GetGraphicsAPIs(EditorUserBuildSettings.activeBuildTarget));
         }
 
         /// <summary>Returns all scenes currently enabled in Build Settings.</summary>

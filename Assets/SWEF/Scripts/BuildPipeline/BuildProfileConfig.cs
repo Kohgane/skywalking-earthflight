@@ -3,6 +3,7 @@
 using UnityEngine;
 
 #if UNITY_EDITOR
+using UnityEditor;
 using UnityEditor.Build;
 #endif
 
@@ -54,8 +55,14 @@ namespace SWEF.BuildPipeline
         // ── Build options ─────────────────────────────────────────────────────────
 
         [Header("Build Options")]
+#if UNITY_EDITOR
         [Tooltip("Unity BuildOptions flags (bitfield). Development, AutoRunPlayer, etc.")]
         public BuildOptions buildOptions = BuildOptions.None;
+#else
+        // BuildOptions is an Editor-only type; store as int at runtime.
+        [HideInInspector]
+        public int buildOptionsRaw = 0;
+#endif
 
         // ── Quality ───────────────────────────────────────────────────────────────
 

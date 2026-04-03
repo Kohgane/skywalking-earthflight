@@ -11,6 +11,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   build:
     name: Build ${{ matrix.targetPlatform }}
@@ -19,11 +22,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        targetPlatform:
-          - StandaloneWindows64   # Windows PC (primary)
-          - StandaloneOSX         # macOS (primary)
-          - iOS                   # iPhone / iPadOS (primary)
-          - Android               # Android phone / tablet (primary)
+        include:
+          - targetPlatform: StandaloneWindows64
+            buildMethod: SWEF.BuildPipeline.CIBuildRunner.BuildWindows
+          - targetPlatform: StandaloneOSX
+            buildMethod: SWEF.BuildPipeline.CIBuildRunner.BuildMacOS
+          - targetPlatform: iOS
+            buildMethod: SWEF.BuildPipeline.CIBuildRunner.BuildiOS
+          - targetPlatform: Android
+            buildMethod: SWEF.BuildPipeline.CIBuildRunner.BuildAndroid
 
     steps:
       # ── Checkout ──────────────────────────────────────────────────────────────
@@ -53,7 +60,7 @@ jobs:
         with:
           unityVersion:       6000.3.11f1
           targetPlatform:     ${{ matrix.targetPlatform }}
-          buildMethod:        SWEF.BuildPipeline.CIBuildRunner.BuildAll
+          buildMethod:        ${{ matrix.buildMethod }}
           allowDirtyBuild:    false
           versioning:         Semantic
 
