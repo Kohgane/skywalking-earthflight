@@ -1,0 +1,86 @@
+name: SWEF Build Matrix
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel in-flight runs for the same ref to save minutes
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build ${{ matrix.targetPlatform }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - targetPlatform: StandaloneWindows64
+            buildMethod: SWEF.BuildPipeline.CIBuildRunner.BuildWindows
+          - targetPlatform: StandaloneOSX
+            buildMethod: SWEF.BuildPipeline.CIBuildRunner.BuildMacOS
+          - targetPlatform: iOS
+            buildMethod: SWEF.BuildPipeline.CIBuildRunner.BuildiOS
+          - targetPlatform: Android
+            buildMethod: SWEF.BuildPipeline.CIBuildRunner.BuildAndroid
+
+    steps:
+      # ── Checkout ──────────────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true
+
+      # ── Cache Library ─────────────────────────────────────────────────────────
+      - name: Cache Unity Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-${{ matrix.targetPlatform }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Library-${{ matrix.targetPlatform }}-
+            Library-
+
+      # ── Build ─────────────────────────────────────────────────────────────────
+      - name: Build — ${{ matrix.targetPlatform }}
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE:      ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL:        ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD:     ${{ secrets.UNITY_PASSWORD }}
+        with:
+          unityVersion:       6000.3.11f1
+          targetPlatform:     ${{ matrix.targetPlatform }}
+          buildMethod:        ${{ matrix.buildMethod }}
+          allowDirtyBuild:    false
+          versioning:         Semantic
+
+      # ── Upload artifacts ──────────────────────────────────────────────────────
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: SWEF-${{ matrix.targetPlatform }}-${{ github.run_number }}
+          path: build/${{ matrix.targetPlatform }}
+          retention-days: 14
+
+      # ── Build status summary ──────────────────────────────────────────────────
+      - name: Report build status
+        if: always()
+        run: |
+          echo "## Build Status: ${{ matrix.targetPlatform }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ **${{ matrix.targetPlatform }}** build succeeded." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **${{ matrix.targetPlatform }}** build failed." >> $GITHUB_STEP_SUMMARY
+          fi
