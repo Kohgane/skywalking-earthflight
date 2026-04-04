@@ -1,7 +1,7 @@
 # SWEF Phase Roadmap
 
 > This file tracks the planned development phases for Skywalking: Earth Flight.
-> Last updated: 2026-04-04 (Phase 98)
+> Last updated: 2026-04-04 (Phase 99)
 
 ## Completed Phases
 
@@ -30,7 +30,7 @@ Phases 1–80 have been merged into `main`. See individual PR descriptions and `
 
 ## Current Phase
 
-**Phase 98: 🎮 PC Input & Controls Polish** — WASD + mouse flight, gamepad profiles, camera controls, keybind remapping.
+**Phase 99: 📅 Seasonal Live Events & Battle Pass** — Season rotation, battle pass (free + premium tracks), weekly/daily challenges, live events, UI, reward ceremony.
 
 ## Next Batch
 
@@ -38,7 +38,6 @@ Production-readiness phases — implement in order after Phase 98.
 
 | Phase | Title | Priority | Description |
 |-------|-------|----------|-------------|
-| 99 | 📅 Seasonal Live Events & Battle Pass | Medium | CrossSessionEvents extension |
 | 100 | 🤖 AI Co-Pilot & Smart Assistant | Medium | VoiceCommand + Navigation synergy |
 | 101 | 🔧 CI/CD Pipeline Fix & Assembly Reference Cleanup | **High** | Fix ReplayTheater assembly refs, Unity UI resolve in CI |
 | 102 | 🎯 Final QA & Release Candidate Prep | **High** | Full platform test pass, store submission prep |
