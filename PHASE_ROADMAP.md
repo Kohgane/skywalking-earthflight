@@ -51,7 +51,6 @@ Phases 1–80 have been merged into `main`. See individual PR descriptions and `
 | Phase | Title | Category | Issue | Status |
 |-------|-------|----------|-------|--------|
 | 107 | 📺 Live Streaming & Spectator Mode | Social | [#130](https://github.com/Kohgane/skywalking-earthflight/issues/130) | Planned |
-| 107 | 📺 Live Streaming & Spectator Mode | Social | [#130](https://github.com/Kohgane/skywalking-earthflight/issues/130) | Planned |
 | 108 | 🏗️ User-Generated Content (UGC) Editor | UGC | [#131](https://github.com/Kohgane/skywalking-earthflight/issues/131) | Planned |
 | 109 | 🤝 Clan/Squadron System | Social | [#132](https://github.com/Kohgane/skywalking-earthflight/issues/132) | Planned |
 | 110 | 🎭 Dynamic NPC & Air Traffic Ecosystem | AI | [#133](https://github.com/Kohgane/skywalking-earthflight/issues/133) | Planned |
