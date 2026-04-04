@@ -3741,7 +3741,86 @@ Development:      false (release build)
 
 ---
 
-## 🏁 All 102 Phases Complete — Entering Launch Preparation
+## Phase 106 — 🛸 Historical & Sci-Fi Flight Mode
+
+Phase 106 adds the Historical & Sci-Fi Flight Mode system — a self-contained module that lets
+players pilot iconic aircraft from aviation history and explore Sci-Fi environments (Moon, Mars,
+near-Earth orbit) through special scenario missions.
+
+### New Scripts — `Assets/SWEF/Scripts/HistoricalSciFi/` — namespace `SWEF.HistoricalSciFi`
+
+#### Models (`Models/`)
+
+| File | Type | Purpose |
+|------|------|---------|
+| `Models/HistoricalAircraftData.cs` | C# | Aircraft data model: id, era, speed, altitude, maneuverability, special abilities |
+| `Models/SciFiEnvironmentData.cs` | C# | Environment data model: celestial body, gravity multiplier, atmosphere density |
+| `Models/SpecialMissionData.cs` | C# | Mission data model: objectives, required aircraft/environment, rewards |
+
+#### Systems (`Systems/`)
+
+| File | Type | Purpose |
+|------|------|---------|
+| `Systems/HistoricalAircraftRegistry.cs` | C# | Built-in registry of 6 iconic aircraft; unlock/query API |
+| `Systems/SciFiEnvironmentController.cs` | C# | Catalogue of 4 environments; Earth→Space→Moon/Mars transitions |
+| `Systems/SpecialMissionManager.cs` | C# | Catalogue of 6 missions; start/complete/fail lifecycle management |
+
+#### Manager
+
+| File | Type | Purpose |
+|------|------|---------|
+| `HistoricalSciFiModeManager.cs` | C# | Central singleton MonoBehaviour coordinating all three sub-systems |
+| `SWEF.HistoricalSciFi.asmdef` | Assembly | Assembly definition for the HistoricalSciFi module |
+
+#### Tests
+
+| File | Type | Purpose |
+|------|------|---------|
+| `Assets/Tests/EditMode/HistoricalSciFiTests.cs` | NUnit | 30+ EditMode tests covering all models and systems |
+
+### Historical Aircraft
+
+| ID | Name | Year | Era | Max Speed | Max Altitude |
+|----|------|------|-----|-----------|--------------|
+| `wright_flyer` | Wright Flyer | 1903 | Pioneer | 48 km/h | 9 m |
+| `spirit_of_st_louis` | Spirit of St. Louis | 1927 | Golden Age | 209 km/h | 4,570 m |
+| `spitfire` | Supermarine Spitfire | 1938 | WWII | 594 km/h | 11,125 m |
+| `sr71_blackbird` | SR-71 Blackbird | 1966 | Cold War | 3,540 km/h | 25,908 m |
+| `concorde` | Concorde | 1969 | Supersonic | 2,179 km/h | 18,300 m |
+| `space_shuttle` | Space Shuttle | 1981 | Space Age | 28,000 km/h | 400,000 m |
+
+### Sci-Fi Environments
+
+| ID | Name | Body | Gravity | Atmosphere |
+|----|------|------|---------|------------|
+| `earth` | Earth | Earth | ×1.0 | ×1.0 |
+| `space` | Low Earth Orbit | Space | ×0.0 | ×0.0 |
+| `moon_surface` | Lunar Surface | Moon | ×0.165 | ×0.0 |
+| `mars_surface` | Mars Surface | Mars | ×0.376 | ×0.016 |
+
+### Special Missions
+
+| ID | Title | Category | Aircraft | Environment |
+|----|-------|----------|----------|-------------|
+| `first_flight` | First Flight | Historical | Wright Flyer | Earth |
+| `cross_the_atlantic` | Cross the Atlantic | Historical | Spirit of St. Louis | Earth |
+| `mach3_recon` | Mach 3 Recon | Historical | SR-71 Blackbird | Earth |
+| `orbital_reentry` | Orbital Re-entry | Historical | Space Shuttle | Space |
+| `lunar_survey` | Lunar Survey | Sci-Fi | Space Shuttle | Moon |
+| `mars_colony_supply_run` | Mars Colony Supply Run | Sci-Fi | Space Shuttle | Mars |
+
+### Architecture
+
+```
+HistoricalSciFiModeManager (MonoBehaviour, singleton)
+├── HistoricalAircraftRegistry  (singleton — aircraft catalogue & unlock state)
+├── SciFiEnvironmentController  (singleton — environment catalogue & transitions)
+└── SpecialMissionManager       (singleton — mission catalogue & lifecycle)
+```
+
+---
+
+## 🏁 All 106 Phases Complete (Post-Launch Active)
 
 > **Target launch: 2026-11~12 (Season 1 "Sky Pioneer")**
 

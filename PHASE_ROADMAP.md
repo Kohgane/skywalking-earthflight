@@ -1,7 +1,7 @@
 # SWEF Phase Roadmap
 
 > This file tracks the planned development phases for Skywalking: Earth Flight.
-> Last updated: 2026-04-04 (Phase 102 — all phases complete)
+> Last updated: 2026-04-04 (Phase 106 — Historical & Sci-Fi Flight Mode)
 
 ## Completed Phases
 
@@ -31,16 +31,18 @@ Phases 1–80 have been merged into `main`. See individual PR descriptions and `
 | 100 | 🤖 AI Co-Pilot & Smart Assistant (ARIA) | [#122](https://github.com/Kohgane/skywalking-earthflight/pull/122) | 2026-04-04 |
 | 101 | 🔧 CI/CD Pipeline Fix & Assembly Reference Cleanup | — | 2026-04-04 |
 | 102 | 🎯 Final QA & Release Candidate Prep | — | 2026-04-04 |
+| 103 | 🌍 Live Flight Tracking & Real-World Data Overlay | — | 2026-04-04 |
+| 104 | 🎓 Flight Academy & Certification System | — | 2026-04-04 |
+| 105 | 🌋 Dynamic Terrain Events & Geological Phenomena | — | 2026-04-04 |
+| 106 | 🛸 Historical & Sci-Fi Flight Mode | — | 2026-04-04 |
 
 ## Current Phase
 
-**All 102 phases complete. The project is now in 🏁 Launch Preparation.**
+**Phase 106 — 🛸 Historical & Sci-Fi Flight Mode** (Closes [#129](https://github.com/Kohgane/skywalking-earthflight/issues/129))
 
-See `RELEASE_NOTES_v1.0.0-rc1.md` for a full summary of all phases and the v1.0.0-rc1 release candidate.
+## Next Phase
 
-## Next Batch
-
-*(No further feature phases planned for v1.0. Post-launch phases will be tracked separately.)*
+**Phase 107 — 📺 Live Streaming & Spectator Mode** ([#130](https://github.com/Kohgane/skywalking-earthflight/issues/130))
 
 ## Post-Launch Phases (v2.0+)
 
@@ -48,18 +50,15 @@ See `RELEASE_NOTES_v1.0.0-rc1.md` for a full summary of all phases and the v1.0.
 
 | Phase | Title | Category | Issue | Status |
 |-------|-------|----------|-------|--------|
-| 103 | 🌍 Live Flight Tracking & Real-World Data Overlay | Content | [#126](https://github.com/Kohgane/skywalking-earthflight/issues/126) | Planned |
-| 104 | 🎓 Flight Academy & Certification System | Education | [#127](https://github.com/Kohgane/skywalking-earthflight/issues/127) | Planned |
-| 105 | 🌋 Dynamic Terrain Events & Geological Phenomena | World | [#128](https://github.com/Kohgane/skywalking-earthflight/issues/128) | Planned |
-| 106 | 🛸 Historical & Sci-Fi Flight Mode | Special Mode | [#129](https://github.com/Kohgane/skywalking-earthflight/issues/129) | Planned |
+| 107 | 📺 Live Streaming & Spectator Mode | Social | [#130](https://github.com/Kohgane/skywalking-earthflight/issues/130) | Planned |
 | 107 | 📺 Live Streaming & Spectator Mode | Social | [#130](https://github.com/Kohgane/skywalking-earthflight/issues/130) | Planned |
 | 108 | 🏗️ User-Generated Content (UGC) Editor | UGC | [#131](https://github.com/Kohgane/skywalking-earthflight/issues/131) | Planned |
 | 109 | 🤝 Clan/Squadron System | Social | [#132](https://github.com/Kohgane/skywalking-earthflight/issues/132) | Planned |
 | 110 | 🎭 Dynamic NPC & Air Traffic Ecosystem | AI | [#133](https://github.com/Kohgane/skywalking-earthflight/issues/133) | Planned |
 
-## 🏁 Launch Preparation ← ACTIVE
+## 🏁 Launch Preparation
 
-All 102 development phases are complete. The project has entered launch preparation.
+All base development phases are complete. Post-launch phases (103+) are tracked above.
 
 ## Phase Selection Criteria
 
