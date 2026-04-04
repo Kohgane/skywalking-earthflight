@@ -152,8 +152,6 @@ namespace SWEF.Academy
 
         private void FinishSession()
         {
-            SetPhase(SessionPhase.Debrief);
-
             float theoryScore    = 0f;
             float practicalScore = 0f;
             bool  theoryPassed   = true;
