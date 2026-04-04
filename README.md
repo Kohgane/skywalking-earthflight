@@ -139,6 +139,15 @@ See [`Assets/SWEF/README_SWEF_SETUP.md`](Assets/SWEF/README_SWEF_SETUP.md) for d
 - **iOS Bundle ID**: `com.kohgane.swef.earthflight`
 - **Android applicationId**: `com.kohgane.swef.earthflight`
 
+## 📚 Guides (가이드)
+
+| 문서 | 설명 |
+|------|------|
+| [SCENE_SETUP_GUIDE.md](./SCENE_SETUP_GUIDE.md) | 씬 셋업 가이드 — Unity Editor에서 첫 테스트 비행까지 |
+| [BUG_TRACKING_GUIDE.md](./BUG_TRACKING_GUIDE.md) | 버그 트래킹 가이드 — 버그 리포트 템플릿, 라벨, 체크리스트 |
+| [PHASE_ROADMAP.md](./PHASE_ROADMAP.md) | 개발 로드맵 — 전체 102개 완료 페이즈 + 포스트 런치 Phase 103–110 |
+| [RELEASE_NOTES_v1.0.0-rc1.md](./RELEASE_NOTES_v1.0.0-rc1.md) | 릴리즈 노트 — v1.0.0-rc1 전체 변경사항 요약 |
+
 ## License
 TBD
 

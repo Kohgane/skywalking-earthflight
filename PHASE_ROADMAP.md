@@ -42,6 +42,21 @@ See `RELEASE_NOTES_v1.0.0-rc1.md` for a full summary of all phases and the v1.0.
 
 *(No further feature phases planned for v1.0. Post-launch phases will be tracked separately.)*
 
+## Post-Launch Phases (v2.0+)
+
+> Master roadmap issue: [#125 — 🗺️ Post-Launch Feature Roadmap: Phase 103+ Overview](https://github.com/Kohgane/skywalking-earthflight/issues/125)
+
+| Phase | Title | Category | Issue | Status |
+|-------|-------|----------|-------|--------|
+| 103 | 🌍 Live Flight Tracking & Real-World Data Overlay | Content | [#126](https://github.com/Kohgane/skywalking-earthflight/issues/126) | Planned |
+| 104 | 🎓 Flight Academy & Certification System | Education | [#127](https://github.com/Kohgane/skywalking-earthflight/issues/127) | Planned |
+| 105 | 🌋 Dynamic Terrain Events & Geological Phenomena | World | [#128](https://github.com/Kohgane/skywalking-earthflight/issues/128) | Planned |
+| 106 | 🛸 Historical & Sci-Fi Flight Mode | Special Mode | [#129](https://github.com/Kohgane/skywalking-earthflight/issues/129) | Planned |
+| 107 | 📺 Live Streaming & Spectator Mode | Social | [#130](https://github.com/Kohgane/skywalking-earthflight/issues/130) | Planned |
+| 108 | 🏗️ User-Generated Content (UGC) Editor | UGC | [#131](https://github.com/Kohgane/skywalking-earthflight/issues/131) | Planned |
+| 109 | 🤝 Clan/Squadron System | Social | [#132](https://github.com/Kohgane/skywalking-earthflight/issues/132) | Planned |
+| 110 | 🎭 Dynamic NPC & Air Traffic Ecosystem | AI | [#133](https://github.com/Kohgane/skywalking-earthflight/issues/133) | Planned |
+
 ## 🏁 Launch Preparation ← ACTIVE
 
 All 102 development phases are complete. The project has entered launch preparation.
