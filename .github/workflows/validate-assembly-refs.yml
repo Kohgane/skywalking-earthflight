@@ -1,0 +1,141 @@
+name: Validate Assembly References
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate .asmdef files
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate all .asmdef files are valid JSON
+        run: |
+          echo "## Assembly Definition Validation" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          FAIL=0
+          COUNT=0
+
+          while IFS= read -r -d '' file; do
+            COUNT=$((COUNT + 1))
+            if python3 -c "import json, sys; json.load(open('$file'))" 2>/dev/null; then
+              echo "  ✅ $(basename $file)" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "  ❌ INVALID JSON: $file" >> $GITHUB_STEP_SUMMARY
+              echo "::error file=$file::Invalid JSON in assembly definition"
+              FAIL=$((FAIL + 1))
+            fi
+          done < <(find Assets -name "*.asmdef" -print0 | sort -z)
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Scanned **$COUNT** .asmdef files." >> $GITHUB_STEP_SUMMARY
+
+          if [ $FAIL -ne 0 ]; then
+            echo "❌ **$FAIL file(s) failed JSON validation.**" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+          echo "✅ **All .asmdef files are valid JSON.**" >> $GITHUB_STEP_SUMMARY
+
+      - name: Validate all SWEF assembly cross-references resolve
+        run: |
+          python3 << 'PYEOF'
+          import json, os, sys, glob
+
+          root = "Assets"
+          asmdef_files = glob.glob(f"{root}/**/*.asmdef", recursive=True)
+
+          # Build a set of all known assembly names
+          known = set()
+          asmdef_data = {}
+          for path in asmdef_files:
+              with open(path) as f:
+                  data = json.load(f)
+              name = data.get("name", "")
+              known.add(name)
+              asmdef_data[path] = data
+
+          # Unity built-in / package assemblies that don't need a local .asmdef
+          EXTERNAL = {
+              "Unity.TextMeshPro",
+              "UnityEngine.UI",
+              "UnityEngine.UIElements",
+              "Unity.InputSystem",
+              "Unity.Addressables",
+              "Unity.ResourceManager",
+              "Unity.Test.Framework",
+              "UnityEditor.TestRunner",
+          }
+
+          errors = []
+          for path, data in sorted(asmdef_data.items()):
+              for ref in data.get("references", []):
+                  if ref in EXTERNAL:
+                      continue
+                  if ref not in known:
+                      errors.append(f"{path}: unresolved reference '{ref}'")
+
+          if errors:
+              print("❌ Unresolved assembly references found:")
+              for e in errors:
+                  print(f"  {e}")
+                  # Also emit GitHub Actions annotation
+                  filepath = e.split(":")[0]
+                  msg = ":".join(e.split(":")[1:]).strip()
+                  print(f"::error file={filepath}::{msg}")
+              sys.exit(1)
+
+          print(f"✅ All {len(asmdef_data)} assembly definitions have valid cross-references.")
+          PYEOF
+
+      - name: Validate every script directory has an .asmdef
+        run: |
+          python3 << 'PYEOF'
+          import os, sys, glob
+
+          script_root = "Assets/SWEF/Scripts"
+          missing = []
+
+          for entry in sorted(os.scandir(script_root), key=lambda e: e.name):
+              if not entry.is_dir():
+                  continue
+              has_cs = any(
+                  f.endswith(".cs")
+                  for f in os.listdir(entry.path)
+              )
+              if not has_cs:
+                  continue
+              has_asmdef = any(
+                  f.endswith(".asmdef")
+                  for f in os.listdir(entry.path)
+              )
+              if not has_asmdef:
+                  missing.append(entry.name)
+
+          if missing:
+              print("❌ Script directories without .asmdef:")
+              for m in missing:
+                  print(f"  Assets/SWEF/Scripts/{m}/")
+              sys.exit(1)
+
+          print(f"✅ All script directories have an assembly definition file.")
+          PYEOF
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ **Assembly reference validation passed.**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Assembly reference validation failed — see details above.**" >> $GITHUB_STEP_SUMMARY
+          fi

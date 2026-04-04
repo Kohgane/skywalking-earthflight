@@ -1,14 +1,18 @@
 {
-    "name": "SWEF.ReplayTheater",
-    "rootNamespace": "SWEF.ReplayTheater",
+    "name": "SWEF.Racing",
+    "rootNamespace": "SWEF.Racing",
     "references": [
         "SWEF.Core",
-        "SWEF.Recorder",
-        "SWEF.Replay",
-        "SWEF.Cinema",
-        "UnityEngine.UI"
+        "SWEF.Flight"
     ],
-    "includePlatforms": [],
+    "includePlatforms": [
+        "Editor",
+        "StandaloneWindows64",
+        "StandaloneOSX",
+        "StandaloneLinux64",
+        "Android",
+        "iOS"
+    ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,

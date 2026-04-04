@@ -1,14 +1,20 @@
 {
-    "name": "SWEF.ReplayTheater",
-    "rootNamespace": "SWEF.ReplayTheater",
+    "name": "SWEF.Progression",
+    "rootNamespace": "SWEF.Progression",
     "references": [
         "SWEF.Core",
-        "SWEF.Recorder",
-        "SWEF.Replay",
-        "SWEF.Cinema",
+        "SWEF.Achievement",
+        "Unity.TextMeshPro",
         "UnityEngine.UI"
     ],
-    "includePlatforms": [],
+    "includePlatforms": [
+        "Editor",
+        "StandaloneWindows64",
+        "StandaloneOSX",
+        "StandaloneLinux64",
+        "Android",
+        "iOS"
+    ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,

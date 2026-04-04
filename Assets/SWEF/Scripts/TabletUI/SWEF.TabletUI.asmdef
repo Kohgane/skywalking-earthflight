@@ -6,7 +6,8 @@
         "SWEF.UI",
         "SWEF.InputSystem",
         "SWEF.CockpitHUD",
-        "SWEF.Accessibility"
+        "SWEF.Accessibility",
+        "UnityEngine.UI"
     ],
     "includePlatforms": [
         "Editor",

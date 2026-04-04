@@ -1,15 +1,10 @@
 {
-    "name": "SWEF.SeasonalEvents",
-    "rootNamespace": "SWEF.SeasonalEvents",
+    "name": "SWEF.FlightPlan",
+    "rootNamespace": "SWEF.FlightPlan",
     "references": [
         "SWEF.Core",
-        "SWEF.Achievement",
-        "SWEF.Progression",
-        "SWEF.DailyChallenge",
-        "SWEF.IAP",
-        "SWEF.Leaderboard",
-        "SWEF.UI",
-        "SWEF.Events",
+        "SWEF.Flight",
+        "SWEF.Autopilot",
         "Unity.TextMeshPro",
         "UnityEngine.UI"
     ],

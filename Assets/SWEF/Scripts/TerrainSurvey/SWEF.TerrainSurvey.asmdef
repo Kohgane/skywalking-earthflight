@@ -1,14 +1,20 @@
 {
-    "name": "SWEF.ReplayTheater",
-    "rootNamespace": "SWEF.ReplayTheater",
+    "name": "SWEF.TerrainSurvey",
+    "rootNamespace": "SWEF.TerrainSurvey",
     "references": [
         "SWEF.Core",
-        "SWEF.Recorder",
-        "SWEF.Replay",
-        "SWEF.Cinema",
+        "SWEF.Terrain",
+        "SWEF.Journal",
         "UnityEngine.UI"
     ],
-    "includePlatforms": [],
+    "includePlatforms": [
+        "Editor",
+        "StandaloneWindows64",
+        "StandaloneOSX",
+        "StandaloneLinux64",
+        "Android",
+        "iOS"
+    ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,

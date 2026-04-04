@@ -10,7 +10,8 @@
         "SWEF.VoiceCommand",
         "SWEF.CockpitHUD",
         "SWEF.Weather",
-        "SWEF.UI"
+        "SWEF.UI",
+        "UnityEngine.UI"
     ],
     "includePlatforms": [
         "Editor",
