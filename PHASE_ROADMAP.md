@@ -1,7 +1,7 @@
 # SWEF Phase Roadmap
 
 > This file tracks the planned development phases for Skywalking: Earth Flight.
-> Last updated: 2026-04-04 (Phase 99)
+> Last updated: 2026-04-04 (Phase 100)
 
 ## Completed Phases
 
@@ -27,20 +27,24 @@ Phases 1–80 have been merged into `main`. See individual PR descriptions and `
 | 96 | 🧪 Integration Test & QA Framework | — | 2026-04-03 |
 | 97 | 📱 Tablet UI Optimization | — | 2026-04-03 |
 | 98 | 🎮 PC Input & Controls Polish | — | 2026-04-04 |
+| 99 | 📅 Seasonal Live Events & Battle Pass | — | 2026-04-04 |
 
 ## Current Phase
 
-**Phase 99: 📅 Seasonal Live Events & Battle Pass** — Season rotation, battle pass (free + premium tracks), weekly/daily challenges, live events, UI, reward ceremony.
+**Phase 100: 🤖 AI Co-Pilot & Smart Assistant** — ARIA (Aerial Intelligence & Routing Assistant): flight advisor, navigation assistant, emergency advisor, dialogue manager, UI panel, smart autopilot bridge, personality profiles, and settings.
 
 ## Next Batch
 
-Production-readiness phases — implement in order after Phase 98.
+Production-readiness phases — implement in order after Phase 100.
 
 | Phase | Title | Priority | Description |
 |-------|-------|----------|-------------|
-| 100 | 🤖 AI Co-Pilot & Smart Assistant | Medium | VoiceCommand + Navigation synergy |
-| 101 | 🔧 CI/CD Pipeline Fix & Assembly Reference Cleanup | **High** | Fix ReplayTheater assembly refs, Unity UI resolve in CI |
+| 101 | 🔧 CI/CD Pipeline Fix & Assembly Reference Cleanup | **High** | Fix all assembly refs, Unity UI resolve, green CI |
 | 102 | 🎯 Final QA & Release Candidate Prep | **High** | Full platform test pass, store submission prep |
+
+## 🏁 Launch Preparation
+
+After Phase 102, the project enters launch preparation. All 100 feature phases will be complete.
 
 ## Phase Selection Criteria
 

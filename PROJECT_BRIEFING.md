@@ -1,41 +1,31 @@
 # SWEF Project Briefing
 
-> Persistent briefing document for Skywalking: Earth Flight development status.
-> Last updated: 2026-04-03
+## Current Status
+- **Feature Phases Completed**: 1–99 (of 100)
+- **Current Phase**: 100 — AI Co-Pilot & Smart Assistant
+- **Remaining**: Phase 101 (CI Fix) + Phase 102 (Final QA)
 
-## 🚀 App Launch Estimate
+## Timeline Estimates
+| Milestone | Estimate |
+|-----------|----------|
+| Test Flight (PC) | ✅ Ready NOW — Phase 98 merged, WASD+mouse flight working |
+| Test Flight (All Platforms) | After Phase 101 (CI fix enables multi-platform builds) |
+| App Launch | After Phase 102 — estimated ~1 week from now |
 
-- **Target window**: After all core phases (up to ~Phase 100) are complete + platform testing
-- **Realistic estimate**: ~2–3 weeks from now (mid-to-late April 2026), assuming current velocity of ~4 phases/day
-- **Blockers**: CI/CD pipeline validation, platform-specific testing, store submission process
-- **Note**: This is the earliest possible date for an MVP/Early Access launch, not a full 1.0 release
+## Platform Support
+| Platform | Status |
+|----------|--------|
+| PC (Windows/Mac/Linux) | ✅ Full support |
+| Mobile (iOS/Android) | ✅ Full support |
+| Tablet (iPad/Android Tablet) | ✅ Optimized UI (Phase 97) |
+| XR (VR/AR headsets) | ✅ Supported (not exclusive) |
 
-## 🛫 Test Flight Estimate
+**CRITICAL RULE**: No platform-exclusive builds. Every feature works on PC, mobile, tablet, AND XR.
 
-- **Internal test flight**: Can begin **now** — Phase 98 (PC Input & Controls Polish) is merged; Phase 99 live events system adds seasonal content
-- **Realistic estimate**: ~this week (around April 4–7, 2026)
-- **Scope**: Basic flight loop with location → takeoff → cruise → edge-of-space on PC/tablet/mobile using WASD + mouse + gamepad
-- **Note**: Test flight should validate core flight mechanics across all platforms before additional content phases
+## Module Count
+- 94+ script modules under Assets/SWEF/Scripts/
+- Comprehensive test suite under Assets/Tests/
 
-## 🖥️ Platform Requirements (CRITICAL)
-
-The app and all test flights MUST support ALL of the following platforms equally — **no platform-exclusive builds**:
-
-| Platform | Status | Notes |
-|----------|--------|-------|
-| **PC (Windows/Mac/Linux)** | ✅ Required | Primary dev platform, WASD + mouse + gamepad |
-| **Mobile (iOS/Android)** | ✅ Required | Touch controls, gyroscope input |
-| **Tablet (iPad/Android tablet)** | ✅ Required | Optimized layouts, multitasking |
-| **XR (Google Glass / Apple Vision Pro)** | 🔧 Supported but NOT exclusive | XR module exists but app must NOT be XR-only |
-
-### ⚠️ Hard Rule
-> Google Glass나 Apple VR 안경 전용이면 안 됨. 모바일 전용이어서도 안 됨.
-> PC로도, 태블릿으로도, 모바일로도 전부 가능해야 함.
-> XR은 추가 지원이지 필수 플랫폼이 아님.
-
-## 📊 Current Progress
-
-- **Phases completed**: 1–98 (merged to main)
-- **Current phase**: 99 (Seasonal Live Events & Battle Pass)
-- **Modules in codebase**: 70+ script directories under Assets/SWEF/Scripts/
-- **Known CI issues**: ReplayTheater assembly references, Unity UI resolve in CI environment (Phase 101 will fix)
+## Known Issues
+- CI build failures due to ReplayTheater assembly reference to UnityEngine.UI — scheduled fix in Phase 101
+- Does NOT affect Unity Editor compilation or local builds

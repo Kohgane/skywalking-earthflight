@@ -1,0 +1,31 @@
+{
+    "name": "SWEF.AICoPilot",
+    "rootNamespace": "SWEF.AICoPilot",
+    "references": [
+        "SWEF.Core",
+        "SWEF.Flight",
+        "SWEF.Autopilot",
+        "SWEF.FlightPlan",
+        "SWEF.Emergency",
+        "SWEF.VoiceCommand",
+        "SWEF.CockpitHUD",
+        "SWEF.Weather",
+        "SWEF.UI"
+    ],
+    "includePlatforms": [
+        "Editor",
+        "StandaloneWindows64",
+        "StandaloneOSX",
+        "StandaloneLinux64",
+        "Android",
+        "iOS"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
