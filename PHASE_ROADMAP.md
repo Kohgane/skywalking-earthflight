@@ -1,7 +1,7 @@
 # SWEF Phase Roadmap
 
 > This file tracks the planned development phases for Skywalking: Earth Flight.
-> Last updated: 2026-04-04 (Phase 100)
+> Last updated: 2026-04-04 (Phase 101)
 
 ## Completed Phases
 
@@ -28,18 +28,17 @@ Phases 1–80 have been merged into `main`. See individual PR descriptions and `
 | 97 | 📱 Tablet UI Optimization | — | 2026-04-03 |
 | 98 | 🎮 PC Input & Controls Polish | — | 2026-04-04 |
 | 99 | 📅 Seasonal Live Events & Battle Pass | — | 2026-04-04 |
+| 100 | 🤖 AI Co-Pilot & Smart Assistant (ARIA) | [#122](https://github.com/Kohgane/skywalking-earthflight/pull/122) | 2026-04-04 |
+| 101 | 🔧 CI/CD Pipeline Fix & Assembly Reference Cleanup | — | 2026-04-04 |
 
 ## Current Phase
 
-**Phase 100: 🤖 AI Co-Pilot & Smart Assistant** — ARIA (Aerial Intelligence & Routing Assistant): flight advisor, navigation assistant, emergency advisor, dialogue manager, UI panel, smart autopilot bridge, personality profiles, and settings.
+**Phase 102: 🎯 Final QA & Release Candidate Prep** — Full platform test pass, store submission prep, release candidate build.
 
 ## Next Batch
 
-Production-readiness phases — implement in order after Phase 100.
-
 | Phase | Title | Priority | Description |
 |-------|-------|----------|-------------|
-| 101 | 🔧 CI/CD Pipeline Fix & Assembly Reference Cleanup | **High** | Fix all assembly refs, Unity UI resolve, green CI |
 | 102 | 🎯 Final QA & Release Candidate Prep | **High** | Full platform test pass, store submission prep |
 
 ## 🏁 Launch Preparation

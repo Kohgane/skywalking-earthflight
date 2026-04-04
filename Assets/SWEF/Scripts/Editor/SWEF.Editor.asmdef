@@ -1,14 +1,12 @@
 {
-    "name": "SWEF.ReplayTheater",
-    "rootNamespace": "SWEF.ReplayTheater",
+    "name": "SWEF.Editor",
+    "rootNamespace": "SWEF.Editor",
     "references": [
-        "SWEF.Core",
-        "SWEF.Recorder",
-        "SWEF.Replay",
-        "SWEF.Cinema",
-        "UnityEngine.UI"
+        "SWEF.Core"
     ],
-    "includePlatforms": [],
+    "includePlatforms": [
+        "Editor"
+    ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,
