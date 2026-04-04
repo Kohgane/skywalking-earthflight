@@ -327,7 +327,6 @@ namespace SWEF.LiveFlight
 
         private string BuildUrl(double minLat, double minLon, double maxLat, double maxLon)
         {
-            string inv = System.Globalization.CultureInfo.InvariantCulture.ToString();
             switch (config.apiProvider)
             {
                 case LiveFlightDataSource.ADS_B_Exchange:

@@ -27,11 +27,11 @@ namespace SWEF.LiveFlight
         /// <summary>
         /// Call when the player begins following an aircraft.
         /// </summary>
-        /// <param name="callsign">The callsign of the followed aircraft.</param>
-        public static void TrackAircraftFollowed(string callsign)
+        /// <param name="icao24">The ICAO24 code of the followed aircraft.</param>
+        public static void TrackAircraftFollowed(string icao24)
         {
             var props = BuildBaseProps();
-            props["callsign"] = callsign ?? "";
+            props["icao24"] = icao24 ?? "";
             Dispatch("live_flight_aircraft_followed", props);
         }
 

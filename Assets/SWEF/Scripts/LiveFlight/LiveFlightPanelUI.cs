@@ -38,6 +38,7 @@ namespace SWEF.LiveFlight
         private SortMode               _sortMode    = SortMode.Distance;
         private string                 _searchQuery = "";
         private bool                   _liveVisible = true;
+        private LiveFlightFollowController _followController;
 
         // ── Unity lifecycle ───────────────────────────────────────────────────────
         private void Start()
@@ -52,6 +53,8 @@ namespace SWEF.LiveFlight
 
             if (searchInputField != null)
                 searchInputField.onValueChanged.AddListener(OnSearchChanged);
+
+            _followController = FindFirstObjectByType<LiveFlightFollowController>();
 
             if (panelRoot != null) panelRoot.SetActive(false);
         }
@@ -192,8 +195,9 @@ namespace SWEF.LiveFlight
                 string icao = info.icao24;
                 btn.onClick.AddListener(() =>
                 {
-                    var follow = FindFirstObjectByType<LiveFlightFollowController>();
-                    follow?.FollowAircraft(icao);
+                    if (_followController == null)
+                        _followController = FindFirstObjectByType<LiveFlightFollowController>();
+                    _followController?.FollowAircraft(icao);
                 });
             }
         }

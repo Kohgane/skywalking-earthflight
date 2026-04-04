@@ -43,6 +43,7 @@ namespace SWEF.LiveFlight
         private List<LiveAircraftInfo> _lastData    = new List<LiveAircraftInfo>();
         private LiveAircraftInfo       _selectedAircraft;
         private bool                   _hudVisible  = true;
+        private LiveFlightFollowController _followController;
 
 #if SWEF_MINIMAP_AVAILABLE
         [Header("Minimap (optional)")]
@@ -58,6 +59,8 @@ namespace SWEF.LiveFlight
             if (infoPopup != null)  infoPopup.SetActive(false);
             if (followButton != null)
                 followButton.onClick.AddListener(OnFollowButtonClicked);
+
+            _followController = FindFirstObjectByType<LiveFlightFollowController>();
         }
 
         private void OnDestroy()
@@ -188,8 +191,9 @@ namespace SWEF.LiveFlight
         private void OnFollowButtonClicked()
         {
             if (string.IsNullOrEmpty(_selectedAircraft.icao24)) return;
-            var follow = FindFirstObjectByType<LiveFlightFollowController>();
-            follow?.FollowAircraft(_selectedAircraft.icao24);
+            if (_followController == null)
+                _followController = FindFirstObjectByType<LiveFlightFollowController>();
+            _followController?.FollowAircraft(_selectedAircraft.icao24);
         }
     }
 }

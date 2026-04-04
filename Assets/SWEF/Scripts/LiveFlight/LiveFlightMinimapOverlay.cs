@@ -36,12 +36,15 @@ namespace SWEF.LiveFlight
         private readonly List<GameObject>       _blipPool   = new List<GameObject>();
         private readonly List<GameObject>       _activeBlips = new List<GameObject>();
         private List<LiveAircraftInfo>          _lastData   = new List<LiveAircraftInfo>();
+        private LiveFlightHUD                   _hudCache;
 
         // ── Unity lifecycle ───────────────────────────────────────────────────────
         private void Start()
         {
             if (LiveFlightAPIClient.Instance != null)
                 LiveFlightAPIClient.Instance.OnAircraftDataReceived += OnDataReceived;
+
+            _hudCache = FindFirstObjectByType<LiveFlightHUD>();
         }
 
         private void OnDestroy()
@@ -131,8 +134,8 @@ namespace SWEF.LiveFlight
                     btn.onClick.RemoveAllListeners();
                     btn.onClick.AddListener(() =>
                     {
-                        var hud = FindFirstObjectByType<LiveFlightHUD>();
-                        hud?.SelectAircraft(icao);
+                        if (_hudCache == null) _hudCache = FindFirstObjectByType<LiveFlightHUD>();
+                        _hudCache?.SelectAircraft(icao);
                     });
                 }
 
