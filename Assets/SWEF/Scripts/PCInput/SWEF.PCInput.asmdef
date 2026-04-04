@@ -1,0 +1,28 @@
+{
+    "name": "SWEF.PCInput",
+    "rootNamespace": "SWEF.PCInput",
+    "references": [
+        "SWEF.Core",
+        "SWEF.Flight",
+        "SWEF.InputSystem",
+        "SWEF.CockpitHUD",
+        "SWEF.Autopilot",
+        "SWEF.DebugOverlay"
+    ],
+    "includePlatforms": [
+        "Editor",
+        "StandaloneWindows64",
+        "StandaloneOSX",
+        "StandaloneLinux64",
+        "Android",
+        "iOS"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
