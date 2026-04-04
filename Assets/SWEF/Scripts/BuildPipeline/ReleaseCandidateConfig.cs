@@ -206,16 +206,36 @@ namespace SWEF.BuildPipeline
         private static void Apply(RCPlatformProfile profile)
         {
             // Identity
-            PlayerSettings.companyName               = ReleaseCandidateVersion.CompanyName;
-            PlayerSettings.productName               = ReleaseCandidateVersion.ProductName;
-            PlayerSettings.bundleVersion             = ReleaseCandidateVersion.Version;
-            PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.Unknown, profile.BundleIdentifier);
+            PlayerSettings.companyName   = ReleaseCandidateVersion.CompanyName;
+            PlayerSettings.productName   = ReleaseCandidateVersion.ProductName;
+            PlayerSettings.bundleVersion = ReleaseCandidateVersion.Version;
+
+            // Set bundle identifier for the correct platform target group.
+            var group = GetBuildTargetGroup(profile.UnityBuildTarget);
+            if (group != BuildTargetGroup.Unknown)
+                PlayerSettings.SetApplicationIdentifier(group, profile.BundleIdentifier);
 
             // Quality / FPS (runtime; also set here as default)
             Application.targetFrameRate = profile.TargetFps;
 
             Debug.Log($"[SWEF RC] Applied RC player settings for {profile.PlatformName} — " +
                       $"v{ReleaseCandidateVersion.Version} ({ReleaseCandidateVersion.BuildNumber}).");
+        }
+
+        private static BuildTargetGroup GetBuildTargetGroup(string unityBuildTarget)
+        {
+            switch (unityBuildTarget)
+            {
+                case "StandaloneWindows64":
+                case "StandaloneOSX":
+                    return BuildTargetGroup.Standalone;
+                case "iOS":
+                    return BuildTargetGroup.iOS;
+                case "Android":
+                    return BuildTargetGroup.Android;
+                default:
+                    return BuildTargetGroup.Unknown;
+            }
         }
 
         private static RCPlatformProfile GetProfileForActiveBuildTarget()

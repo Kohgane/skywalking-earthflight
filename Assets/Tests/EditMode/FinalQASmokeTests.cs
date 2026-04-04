@@ -681,7 +681,10 @@ public class ReleaseCandidateConfigTests
     [Test]
     public void iOS_TargetFps_Is60()
     {
-        // iOS RC targets 60 fps (ProMotion capped from 120 for battery); mobile benchmark floor is 30.
+        // RCPlatformSettings.iOS.TargetFps is the Unity Application.targetFrameRate target applied
+        // at build time (60, allowing ProMotion displays to run at 60 fps with vsync).
+        // The PerformanceBenchmarkConfig.iOS.TargetFps (30) is the *minimum QA pass threshold*
+        // on reference hardware (iPhone 12). These are different values serving different purposes.
         Assert.AreEqual(60, RCPlatformSettings.iOS.TargetFps);
     }
 
