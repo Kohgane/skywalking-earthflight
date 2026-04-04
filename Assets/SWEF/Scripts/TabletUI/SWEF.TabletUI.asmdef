@@ -1,0 +1,27 @@
+{
+    "name": "SWEF.TabletUI",
+    "rootNamespace": "SWEF.TabletUI",
+    "references": [
+        "SWEF.Core",
+        "SWEF.UI",
+        "SWEF.InputSystem",
+        "SWEF.CockpitHUD",
+        "SWEF.Accessibility"
+    ],
+    "includePlatforms": [
+        "Editor",
+        "StandaloneWindows64",
+        "StandaloneOSX",
+        "StandaloneLinux64",
+        "Android",
+        "iOS"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
