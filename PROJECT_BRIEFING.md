@@ -12,9 +12,9 @@
 
 ## 🛫 Test Flight Estimate
 
-- **Internal test flight**: Can begin as soon as Phase 98 (PC Input & Controls Polish) is merged
-- **Realistic estimate**: ~1 week from now (around April 10, 2026)
-- **Scope**: Basic flight loop with location → takeoff → cruise → edge-of-space on PC/tablet/mobile
+- **Internal test flight**: Can begin **now** — Phase 98 (PC Input & Controls Polish) is merged
+- **Realistic estimate**: ~this week (around April 4–7, 2026)
+- **Scope**: Basic flight loop with location → takeoff → cruise → edge-of-space on PC/tablet/mobile using WASD + mouse + gamepad
 - **Note**: Test flight should validate core flight mechanics across all platforms before additional content phases
 
 ## 🖥️ Platform Requirements (CRITICAL)
@@ -35,7 +35,7 @@ The app and all test flights MUST support ALL of the following platforms equally
 
 ## 📊 Current Progress
 
-- **Phases completed**: 1–96 (merged to main)
-- **Current phase**: 97 (Tablet UI Optimization)
+- **Phases completed**: 1–97 (merged to main)
+- **Current phase**: 98 (PC Input & Controls Polish)
 - **Modules in codebase**: 70+ script directories under Assets/SWEF/Scripts/
-- **Known CI issues**: ReplayTheater assembly references, Unity UI resolve in CI environment
+- **Known CI issues**: ReplayTheater assembly references, Unity UI resolve in CI environment (Phase 101 will fix)
