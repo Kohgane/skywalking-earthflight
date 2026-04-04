@@ -1,0 +1,128 @@
+{
+  "_comment": "SWEF v1.0.0-rc1 — Google Play Store submission template. Complete all fields in the Play Console before submitting for review.",
+  "store": "Google Play Store",
+  "platform": "Android",
+  "versionName": "1.0.0",
+  "versionCode": 1,
+  "applicationId": "com.kohgane.swef",
+  "targetSdkVersion": 34,
+  "minSdkVersion": 26,
+
+  "metadata": {
+    "appTitle": "Skywalking: Earth Flight",
+    "shortDescription": "Fly from your real GPS location to the edge of space in stunning 3D.",
+    "category": "Games > Simulation",
+    "contentRating": "Everyone",
+    "privacyPolicyUrl": "https://kohgane.com/swef/privacy",
+    "supportEmail": "support@kohgane.com",
+    "websiteUrl": "https://kohgane.com/swef"
+  },
+
+  "localizations": {
+    "en-US": {
+      "fullDescription": "Take off from your real-world GPS location and fly through stunning photorealistic 3D terrain powered by Google Photorealistic Tiles and Cesium for Unity.\n\nSkywalking: Earth Flight lets you soar from your backyard to the edge of space — through troposphere, stratosphere, and the Kármán line — in a single seamless flight.\n\n★ KEY FEATURES ★\n✈ GPS-accurate takeoff from your real location\n🌍 Photorealistic 3D terrain via Google Maps Tiles\n🤖 ARIA AI Co-Pilot: smart flight advisor\n🌦 Dynamic weather: clouds, wind, storms\n🌅 Full 24-hour day/night cycle\n🗼 ATC radio and ILS approach\n🏆 Battle Pass with seasonal challenges\n👥 Multiplayer formation flying\n📷 Photo Mode with drone camera\n🎖 100+ achievements\n💻 PC, Android, Android Tablet — play anywhere",
+      "releaseNotes": "Version 1.0.0 — Launch Release!\n• All 100+ feature systems complete\n• GPS-accurate takeoff from your real location\n• ARIA AI Co-Pilot assistant\n• Battle Pass Season 1: Sky Pioneer\n• Full multi-platform support"
+    },
+    "ja-JP": {
+      "fullDescription": "あなたのGPS位置から宇宙の端まで飛ぼう。",
+      "releaseNotes": "バージョン1.0.0 — 正式リリース！"
+    },
+    "ko-KR": {
+      "fullDescription": "내 GPS 위치에서 우주 끝까지 날아가보세요.",
+      "releaseNotes": "버전 1.0.0 — 공식 출시!"
+    },
+    "zh-CN": {
+      "fullDescription": "从您的GPS位置起飞，一路飞向太空边缘。",
+      "releaseNotes": "版本1.0.0 — 正式发布！"
+    }
+  },
+
+  "androidManifestPermissions": {
+    "required": [
+      {
+        "name": "android.permission.INTERNET",
+        "type": "normal",
+        "reason": "Cesium 3D tile streaming and multiplayer connectivity."
+      },
+      {
+        "name": "android.permission.ACCESS_NETWORK_STATE",
+        "type": "normal",
+        "reason": "Detect offline state for graceful fallback."
+      },
+      {
+        "name": "android.permission.VIBRATE",
+        "type": "normal",
+        "reason": "Haptic feedback for flight events and notifications."
+      },
+      {
+        "name": "android.permission.ACCESS_FINE_LOCATION",
+        "type": "dangerous",
+        "requestAtRuntime": true,
+        "reason": "GPS-accurate takeoff spawn position."
+      },
+      {
+        "name": "android.permission.CAMERA",
+        "type": "dangerous",
+        "requestAtRuntime": true,
+        "reason": "In-flight photo mode and augmented reality features."
+      },
+      {
+        "name": "android.permission.RECORD_AUDIO",
+        "type": "dangerous",
+        "requestAtRuntime": true,
+        "reason": "Voice commands and in-flight multiplayer voice chat."
+      }
+    ],
+    "removedOrNotNeeded": [
+      {
+        "name": "android.permission.WRITE_EXTERNAL_STORAGE",
+        "reason": "Not needed on API 29+; save data written to app-private directory."
+      },
+      {
+        "name": "android.permission.READ_EXTERNAL_STORAGE",
+        "reason": "Not needed; media read via MediaStore on API 29+."
+      }
+    ]
+  },
+
+  "dataSafetyForm": {
+    "dataTypesCollected": [
+      {
+        "category": "Location",
+        "type": "Precise location",
+        "purposes": ["App functionality"],
+        "ephemeral": false,
+        "userCanDelete": true,
+        "sharedWithThirdParties": false
+      },
+      {
+        "category": "Photos and videos",
+        "type": "Photos",
+        "purposes": ["App functionality"],
+        "ephemeral": false,
+        "userCanDelete": true,
+        "sharedWithThirdParties": false
+      },
+      {
+        "category": "Audio",
+        "type": "Voice or sound recordings",
+        "purposes": ["App functionality"],
+        "ephemeral": true,
+        "userCanDelete": false,
+        "sharedWithThirdParties": false
+      }
+    ],
+    "securityPractices": {
+      "dataEncryptedInTransit": true,
+      "dataCanBeDeleted": true
+    }
+  },
+
+  "assetChecklist": {
+    "icon_512x512": "TODO: Export 512×512 px PNG, no rounded corners applied (Play Store applies them).",
+    "featureGraphic_1024x500": "TODO: Create 1024×500 px JPEG/PNG key art. No status bar or device frame.",
+    "screenshots_phone_min2": "TODO: At least 2 screenshots at 1080×1920 px or higher (16:9 or 9:16).",
+    "screenshots_tablet_7in": "Optional: 1+ screenshots at 1200×1920 px.",
+    "screenshots_tablet_10in": "Optional: 1+ screenshots at 1600×2560 px."
+  }
+}

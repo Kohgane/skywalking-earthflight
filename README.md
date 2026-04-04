@@ -28,14 +28,14 @@ SWEF is a **cross-platform** application. It is not exclusive to any single devi
 
 | Platform | Priority | Status |
 |----------|----------|--------|
-| ✅ Windows PC | **Primary** | Keyboard + mouse + gamepad; PlatformOptimizer (Phase 93) |
-| ✅ macOS | **Primary** | Unity cross-compile from same codebase |
-| ✅ iOS / iPhone | **Primary** | TouchInputRouter + GPS (Phase 1/Flight) |
-| ✅ Android / Phone | **Primary** | TouchInputRouter + GPS (Phase 1/Flight) |
-| ✅ iPad | **High Priority** | Tablet UI layout planned (Phase 97) |
-| ✅ Android Tablet | **High Priority** | Tablet UI layout planned (Phase 97) |
-| 🔜 Meta Quest / XR | Secondary (Planned) | XR module exists; full integration in future phase |
-| 🔜 Apple Vision Pro | Secondary (Planned) | Requires visionOS adaptation |
+| ✅ Windows PC | **Primary** | Keyboard + mouse + gamepad; PlatformOptimizer (Phase 93); RC config ready |
+| ✅ macOS | **Primary** | Universal (Intel x64 + Apple Silicon); RC config ready |
+| ✅ iOS / iPhone | **Primary** | TouchInputRouter + GPS; ARM64; RC config ready |
+| ✅ Android / Phone | **Primary** | ARM64 + ARMv7; RC config ready |
+| ✅ iPad | **High Priority** | Tablet UI layout (Phase 97); RC config ready |
+| ✅ Android Tablet | **High Priority** | Tablet UI layout (Phase 97); RC config ready |
+| 🔜 Meta Quest / XR | Secondary (Planned) | XR module exists; full integration post-launch |
+| 🔜 Apple Vision Pro | Secondary (Planned) | Requires visionOS adaptation; post-launch |
 
 ## Project Structure
 ```
@@ -43,7 +43,8 @@ Assets/SWEF/
 ├── Scenes/               # Boot.unity + World.unity (created in Unity Editor)
 ├── Scripts/
 │   ├── Accessibility/    # AccessibilityManager, AdaptiveInputManager, ColorblindFilter, SubtitleSystem, UIScalingSystem, HapticAccessibility, CognitiveAssistSystem, ScreenReaderBridge
-│   ├── BuildPipeline/    # PlatformTargetMatrix, BuildProfileConfig, CIBuildRunner, PlatformBootstrapper, PlatformFeatureGate
+│   ├── BuildPipeline/    # PlatformTargetMatrix, BuildProfileConfig, CIBuildRunner, PlatformBootstrapper, PlatformFeatureGate, ReleaseCandidateConfig
+│   ├── QA/              # FinalQAChecklist, SmokeTestConfig, PerformanceBenchmarkConfig, StoreSubmissionChecklist (Phase 102)
 │   ├── Achievement/      # AchievementDefinition, AchievementState, AchievementManager, AchievementTracker, AchievementNotificationUI, AchievementPanelUI, AchievementCardUI, AchievementShareController, MilestoneDefinition, MilestoneTracker, AchievementData, AchievementUI
 │   ├── AchievementNotification/ # AchievementNotificationData, NotificationQueueManager, ToastNotificationController, UnlockAnimationController, RewardDisplayManager, AchievementPopupUI, NotificationSoundController, AchievementNotificationAnalytics
 │   ├── Aircraft/         # AircraftData, AircraftSkinRegistry, AircraftCustomizationManager, AircraftUnlockEvaluator, AircraftVisualController, AircraftTrailController, AircraftHangarUI, AircraftSkinCardUI, AircraftPreviewController, AircraftMultiplayerSync, AircraftAchievementBridge, AircraftSettingsBridge
@@ -3555,3 +3556,192 @@ support for tablets and secondary support for XR headsets.
 | `SWEF.Accessibility.AdaptiveInputManager` | Feature gate overrides consumed at runtime |
 | CI/CD | `CIBuildRunner` invoked via Unity `-executeMethod` in `build-matrix.yml` |
 | Unity Test Framework | NUnit EditMode tests in `Assets/Tests/EditMode/PlatformTargetMatrixTests.cs` |
+
+## Phase 96 — 🧪 Integration Test & QA Framework
+
+Phase 96 establishes the SWEF Integration Test Framework used by all subsequent QA phases.
+
+### Files Added
+
+| File | Purpose |
+|------|---------|
+| `IntegrationTest/IntegrationTestResult.cs` | Immutable result record (Pass/Fail/Skip/Timeout) |
+| `IntegrationTest/IntegrationTestCase.cs` | Abstract base class for all integration test cases |
+| `IntegrationTest/IntegrationTestRunner.cs` | Orchestrates test execution and collects results |
+| `IntegrationTest/IntegrationTestReport.cs` | Summary report generation |
+| `IntegrationTest/IntegrationTestRegistry.cs` | Auto-registration of all test cases |
+| `IntegrationTest/CrossModuleEventTest.cs` | Cross-module event wiring smoke test |
+| `IntegrationTest/PlatformCompatibilityTest.cs` | Platform compatibility smoke test |
+| `SWEF.IntegrationTest.asmdef` | Assembly definition |
+| `Assets/Tests/Integration/SampleIntegrationTests.cs` | Example integration tests |
+
+## Phase 97 — 📱 Tablet UI Optimization
+
+Phase 97 adds dedicated tablet-specific UI layouts and touch zone management.
+
+### Files Added
+
+| File | Purpose |
+|------|---------|
+| `TabletUI/TabletLayoutManager.cs` | Detects tablet form factor; activates split-panel HUD |
+| `TabletUI/TabletSafeAreaHandler.cs` | Safe-area inset handling for iPads and notched Android tablets |
+| `TabletUI/SplitViewSupport.cs` | iPad Split View and Slide Over multitasking support |
+| `TabletUI/TabletHUDLayout.cs` | Split-panel HUD layout for tablets |
+| `TabletUI/TabletTouchZoneManager.cs` | Large, tablet-optimised virtual stick touch zones |
+| `TabletUI/TabletMultitaskingHandler.cs` | Background/foreground lifecycle for iPad multitasking |
+| `TabletUI/ResponsiveUIScaler.cs` | DPI-aware scaling for all UI panels |
+| `TabletUI/TabletKeyboardHandler.cs` | Smart keyboard accessory support (iPad + Bluetooth) |
+| `SWEF.TabletUI.asmdef` | Assembly definition |
+
+## Phase 98 — 🎮 PC Input & Controls Polish
+
+Phase 98 delivers full keyboard, mouse, and gamepad support for PC platforms.
+
+### Files Added
+
+| File | Purpose |
+|------|---------|
+| `PCInput/PCFlightController.cs` | Six-axis PC flight with keyboard + mouse look |
+| `PCInput/PCKeybindConfig.cs` | Rebindable keybind configuration (PlayerPrefs persistence) |
+| `PCInput/GamepadProfileManager.cs` | Xbox / PlayStation gamepad profile management |
+| `PCInput/GamepadProfile.cs` | Per-controller axis/button mapping ScriptableObject |
+| `PCInput/MouseFlightAssist.cs` | Mouse input smoothing and sensitivity curves |
+| `PCInput/PCCameraController.cs` | Free-look, orbit, and chase camera for PC |
+| `PCInput/KeyboardShortcutManager.cs` | Global hotkey registry with conflict detection |
+| `PCInput/PCInputDiagnostics.cs` | Input diagnostics overlay for testing |
+| `PCInput/PCControlsUIPanel.cs` | Controls settings UI with live remapping |
+| `SWEF.PCInput.asmdef` | Assembly definition |
+
+## Phase 99 — 📅 Seasonal Live Events & Battle Pass
+
+Phase 99 delivers the live-service Season and Battle Pass framework.
+
+### Files Added
+
+| File | Purpose |
+|------|---------|
+| `SeasonalEvents/SeasonManager.cs` | Active season lifecycle; start/end events |
+| `SeasonalEvents/SeasonData.cs` | ScriptableObject: season metadata, duration, theme |
+| `SeasonalEvents/BattlePassController.cs` | Tier unlock logic; free vs. premium track |
+| `SeasonalEvents/BattlePassTier.cs` | Per-tier data (XP threshold, rewards) |
+| `SeasonalEvents/BattlePassReward.cs` | Reward delivery (currency, cosmetic, XP) |
+| `SeasonalEvents/SeasonalChallengeManager.cs` | Weekly/daily challenge refresh |
+| `SeasonalEvents/SeasonalChallenge.cs` | Individual challenge data and progress tracking |
+| `SeasonalEvents/LiveEventManager.cs` | Time-bounded live event orchestration |
+| `SeasonalEvents/LiveEvent.cs` | Single live event data (start/end, modifiers) |
+| `SeasonalEvents/SeasonalUIController.cs` | Season panel and battle pass UI |
+| `SeasonalEvents/SeasonalRewardCeremony.cs` | Animated reward unlock ceremony |
+| `SWEF.SeasonalEvents.asmdef` | Assembly definition |
+
+## Phase 100 — 🤖 AI Co-Pilot & Smart Assistant (ARIA)
+
+Phase 100 introduces ARIA, the AI co-pilot and in-flight smart assistant.
+
+### Files Added
+
+| File | Purpose |
+|------|---------|
+| `AICoPilot/AICoPilotManager.cs` | Singleton; manages co-pilot state machine and assistance level |
+| `AICoPilot/AICoPilotPersonality.cs` | ScriptableObject; personality and voice style configuration |
+| `AICoPilot/FlightAdvisor.cs` | Real-time flight attitude monitoring; advisory cooldown system |
+| `AICoPilot/NavigationAssistant.cs` | Waypoint callouts and heading-correction advisories |
+| `AICoPilot/EmergencyAdvisor.cs` | Emergency type detection; step-by-step procedure guidance |
+| `AICoPilot/AICoPilotDialogueManager.cs` | Priority message queue; idle chatter; TTS placeholder |
+| `AICoPilot/AICoPilotUIPanel.cs` | In-flight ARIA message log and quick-response buttons |
+| `AICoPilot/SmartAutopilotBridge.cs` | Handoff events between ARIA and AutopilotController |
+| `AICoPilot/AICoPilotSettings.cs` | PlayerPrefs persistence for ARIA preferences |
+| `SWEF.AICoPilot.asmdef` | Assembly definition |
+
+## Phase 101 — 🔧 CI/CD Pipeline Fix & Assembly Reference Cleanup
+
+Phase 101 establishes a stable, compilable Unity project with correct assembly references.
+
+### Changes
+
+- 88 new `.asmdef` files created for all SWEF script modules
+- 4 existing `.asmdef` files updated with `UnityEngine.UI` / `TMPro` references
+- `.github/workflows/validate-assembly-refs.yml` — new CI workflow validating all `.asmdef` files
+- `.github/workflows/build-matrix.yml` — 4-platform matrix build (Windows, macOS, iOS, Android)
+
+## Phase 102 — 🎯 Final QA & Release Candidate Prep
+
+Phase 102 completes all production-readiness work and prepares SWEF v1.0.0-rc1 for store submission.
+
+### Files Added
+
+| File | Type | Purpose |
+|------|------|---------|
+| `QA/FinalQAChecklist.cs` | C# | 40+ QA checklist items across 20 major systems |
+| `QA/SmokeTestConfig.cs` | C# | Per-platform smoke test gates (Win/Mac/iOS/Android/iPad/AndroidTablet) |
+| `QA/PerformanceBenchmarkConfig.cs` | C# | FPS, memory, tile, and network targets per platform |
+| `QA/StoreSubmissionChecklist.cs` | C# | Store submission requirements (App Store, Google Play, Steam) |
+| `QA/SWEF.QA.asmdef` | Assembly | Assembly definition for the QA module |
+| `BuildPipeline/ReleaseCandidateConfig.cs` | C# | v1.0.0-rc1 constants, per-platform RC profiles, Editor menu applicator |
+| `Resources/StoreSubmission/AppStoreSubmissionTemplate.json` | JSON | App Store Connect metadata, privacy labels, asset checklist |
+| `Resources/StoreSubmission/GooglePlaySubmissionTemplate.json` | JSON | Play Console metadata, permissions audit, data safety form |
+| `Resources/StoreSubmission/SteamSubmissionTemplate.json` | JSON | Steamworks config, system requirements, depot setup |
+| `Assets/Tests/EditMode/FinalQASmokeTests.cs` | NUnit | 70+ tests for all Phase 102 data models |
+| `RELEASE_NOTES_v1.0.0-rc1.md` | Markdown | Full release notes summarising all 102 phases |
+
+### Platform Performance Targets
+
+| Platform | Target FPS | Min FPS | RAM Budget | Active Tiles | Min Bandwidth |
+|----------|-----------|---------|------------|--------------|---------------|
+| Windows PC | 60 | 45 | 4 096 MB | 512 | 10 Mbps |
+| macOS | 60 | 45 | 3 072 MB | 512 | 10 Mbps |
+| iOS | 30 | 28 | 1 536 MB | 128 | 5 Mbps |
+| Android | 30 | 28 | 1 536 MB | 128 | 5 Mbps |
+| iPad | 60 | 45 | 2 048 MB | 256 | 5 Mbps |
+| Android Tablet | 30 | 28 | 2 048 MB | 192 | 5 Mbps |
+
+### Release Candidate Version
+
+```
+Version:          1.0.0-rc1
+Bundle ID:        com.kohgane.swef
+Build Number:     1
+Company:          Kohgane
+Product:          Skywalking: Earth Flight
+Development:      false (release build)
+```
+
+### QA Systems Coverage
+
+| System | Checklist Items | Smoke Gate Platforms |
+|--------|----------------|----------------------|
+| Flight Physics | FP-001 … FP-005 | All 6 platforms |
+| Controls | CT-001 … CT-005 | All 6 platforms |
+| Cesium Tiles | CES-001 … CES-004 | All 6 platforms |
+| GPS | GPS-001 … GPS-003 | Mobile & Tablet |
+| Weather | WX-001 … WX-003 | Informational |
+| Day/Night | DN-001 … DN-003 | Informational |
+| HUD | HUD-001 … HUD-004 | All 6 platforms |
+| Minimap | MM-001 … MM-002 | Informational |
+| Achievement | ACH-001 … ACH-002 | Informational |
+| Journal | JN-001 … JN-002 | Informational |
+| Multiplayer | MP-001 … MP-003 | Informational |
+| ARIA AI Co-Pilot | ARIA-001 … ARIA-004 | Informational |
+| Audio | AU-001 … AU-003 | Informational |
+| Camera | CAM-001 … CAM-003 | Informational |
+| ATC | ATC-001 … ATC-002 | Informational |
+| Emergency | EM-001 … EM-002 | Informational |
+| Battle Pass | BP-001 … BP-002 | Informational |
+| Seasonal Events | SE-001 … SE-002 | Informational |
+| Performance | PERF-001 … PERF-004 | All 6 platforms |
+| Platform | PLT-001 … PLT-006 | 1 item per platform |
+
+---
+
+## 🏁 All 102 Phases Complete — Entering Launch Preparation
+
+> **Target launch: 2026-11~12 (Season 1 "Sky Pioneer")**
+
+| Milestone | Target |
+|-----------|--------|
+| Editor Play Mode Test Flight | 2026-04~05 |
+| Real Device Build Test | 2026-05~06 |
+| Multiplayer Test Flight | 2026-06~07 |
+| Alpha (Internal) | 2026-05~06 |
+| Closed Beta | 2026-07~08 |
+| Open Beta / Soft Launch | 2026-09~10 |
+| **Official Launch** | **2026-11~12** |

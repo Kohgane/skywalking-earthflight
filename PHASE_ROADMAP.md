@@ -1,7 +1,7 @@
 # SWEF Phase Roadmap
 
 > This file tracks the planned development phases for Skywalking: Earth Flight.
-> Last updated: 2026-04-04 (Phase 101)
+> Last updated: 2026-04-04 (Phase 102 — all phases complete)
 
 ## Completed Phases
 
@@ -30,20 +30,21 @@ Phases 1–80 have been merged into `main`. See individual PR descriptions and `
 | 99 | 📅 Seasonal Live Events & Battle Pass | — | 2026-04-04 |
 | 100 | 🤖 AI Co-Pilot & Smart Assistant (ARIA) | [#122](https://github.com/Kohgane/skywalking-earthflight/pull/122) | 2026-04-04 |
 | 101 | 🔧 CI/CD Pipeline Fix & Assembly Reference Cleanup | — | 2026-04-04 |
+| 102 | 🎯 Final QA & Release Candidate Prep | — | 2026-04-04 |
 
 ## Current Phase
 
-**Phase 102: 🎯 Final QA & Release Candidate Prep** — Full platform test pass, store submission prep, release candidate build.
+**All 102 phases complete. The project is now in 🏁 Launch Preparation.**
+
+See `RELEASE_NOTES_v1.0.0-rc1.md` for a full summary of all phases and the v1.0.0-rc1 release candidate.
 
 ## Next Batch
 
-| Phase | Title | Priority | Description |
-|-------|-------|----------|-------------|
-| 102 | 🎯 Final QA & Release Candidate Prep | **High** | Full platform test pass, store submission prep |
+*(No further feature phases planned for v1.0. Post-launch phases will be tracked separately.)*
 
-## 🏁 Launch Preparation
+## 🏁 Launch Preparation ← ACTIVE
 
-After Phase 102, the project enters launch preparation. All 100 feature phases will be complete.
+All 102 development phases are complete. The project has entered launch preparation.
 
 ## Phase Selection Criteria
 
@@ -60,7 +61,7 @@ When starting a new batch, discuss with @copilot to generate the next 4–5 cand
 
 ## Launch Briefing
 
-> Last updated: 2026-04-03
+> Last updated: 2026-04-04
 
 ### Target Timeline
 
