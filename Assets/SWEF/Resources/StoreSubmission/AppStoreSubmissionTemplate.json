@@ -1,0 +1,93 @@
+{
+  "_comment": "SWEF v1.0.0-rc1 — App Store (iOS) submission template. Fill in all fields before submitting to App Store Connect.",
+  "store": "Apple App Store",
+  "platform": "iOS / iPadOS",
+  "version": "1.0.0",
+  "buildNumber": 1,
+  "bundleId": "com.kohgane.swef",
+
+  "metadata": {
+    "appName": "Skywalking: Earth Flight",
+    "subtitle": "Fly from your location to space",
+    "category": "Games",
+    "subCategory": "Simulation",
+    "privacyPolicyUrl": "https://kohgane.com/swef/privacy",
+    "supportUrl": "https://kohgane.com/swef/support",
+    "marketingUrl": "https://kohgane.com/swef",
+    "copyright": "© 2026 Kohgane. All rights reserved."
+  },
+
+  "localizations": {
+    "en-US": {
+      "description": "Take off from your real-world GPS location and fly through stunning photorealistic 3D terrain powered by Google Photorealistic Tiles and Cesium for Unity.\n\nSkywalking: Earth Flight lets you soar from your backyard to the edge of space — through troposphere, stratosphere, and the Kármán line — in a single seamless flight.\n\nKEY FEATURES\n• GPS-accurate takeoff from your real location\n• Photorealistic 3D terrain via Google Maps Tiles (Cesium)\n• ARIA AI Co-Pilot: smart flight advisor and emergency guide\n• Dynamic weather: clouds, wind, storms, lightning\n• Full 24-hour day/night cycle\n• ATC radio communication and ILS approach\n• Battle Pass with seasonal challenges and rewards\n• Multiplayer formation flying and voice chat\n• Photo Mode with drone camera and filters\n• Achievement system with 100+ milestones\n• PC, iOS, Android, iPad — play anywhere",
+      "keywords": "flight,simulator,GPS,earth,space,cesium,3D,pilot,aviation,arcade",
+      "releaseNotes": "Version 1.0.0 — Launch Release!\n• All 100+ feature systems complete\n• GPS-accurate takeoff\n• ARIA AI Co-Pilot\n• Battle Pass Season 1: Sky Pioneer\n• Full multi-platform support"
+    },
+    "ja": {
+      "description": "あなたのGPS位置から宇宙の端まで飛ぼう。Googleフォトリアリスティック3DタイルとCesiumによる圧倒的なリアルな地球を、スカイウォーキング: アースフライトで体験してください。",
+      "keywords": "フライト,シミュレーター,GPS,地球,宇宙,Cesium,3D,パイロット,航空",
+      "releaseNotes": "バージョン1.0.0 — 正式リリース！"
+    },
+    "ko": {
+      "description": "내 GPS 위치에서 우주 끝까지 날아가보세요. 스카이워킹: 어스 플라이트는 Google 포토리얼리스틱 3D 타일과 Cesium으로 구동되는 실사 3D 지형을 통해 지구 어디서든 이륙할 수 있는 비행 시뮬레이션입니다.",
+      "keywords": "비행,시뮬레이터,GPS,지구,우주,Cesium,3D,조종사",
+      "releaseNotes": "버전 1.0.0 — 공식 출시!"
+    },
+    "zh-Hans": {
+      "description": "从您的GPS位置起飞，一路飞向太空边缘。天行者：地球飞行由谷歌逼真3D地图瓦片和Cesium驱动，让您体验真实3D地形上的完整飞行之旅。",
+      "keywords": "飞行,模拟器,GPS,地球,太空,Cesium,3D,飞行员",
+      "releaseNotes": "版本1.0.0 — 正式发布！"
+    }
+  },
+
+  "contentRating": {
+    "ageRating": "4+",
+    "violenceCartoonOrFantasy": false,
+    "violenceRealistic": false,
+    "sexualContent": false,
+    "profanity": false,
+    "gambling": false,
+    "alcoholTobaccoDrugs": false,
+    "horrorOrFear": false,
+    "matureOrSuggestiveThemes": false,
+    "unrestrictedWebAccess": false
+  },
+
+  "privacyNutritionLabels": {
+    "dataLinkedToIdentity": [
+      {
+        "type": "Location",
+        "subtype": "Precise Location",
+        "purpose": "App Functionality",
+        "linked": true
+      }
+    ],
+    "dataNotLinkedToIdentity": [
+      {
+        "type": "Photos or Videos",
+        "subtype": "Photos",
+        "purpose": "App Functionality"
+      },
+      {
+        "type": "Audio",
+        "subtype": "Voice or Sound Recordings",
+        "purpose": "App Functionality"
+      }
+    ],
+    "dataNotCollected": []
+  },
+
+  "infoPlistRequirements": {
+    "NSLocationWhenInUseUsageDescription": "SWEF uses your location to start your flight from your real-world position using GPS.",
+    "NSCameraUsageDescription": "SWEF accesses your camera to capture in-flight photos and support augmented reality features.",
+    "NSMicrophoneUsageDescription": "SWEF accesses your microphone for voice commands and in-flight voice chat with other pilots.",
+    "NSPhotoLibraryAddUsageDescription": "SWEF saves your in-flight photos to your photo library."
+  },
+
+  "assetChecklist": {
+    "appIcon_1024x1024": "TODO: Export from SWEF icon source at 1024×1024 px, no alpha channel.",
+    "screenshots_iphone_6_9in": "TODO: Capture 3–10 screenshots at 1320×2868 px (iPhone 16 Pro Max).",
+    "screenshots_ipad_13in": "TODO: Capture 3–10 screenshots at 2064×2752 px (iPad Pro 13-inch).",
+    "appPreviewVideo_iphone": "Optional: 30 s 1080p video of GPS takeoff, flight, and space transition."
+  }
+}

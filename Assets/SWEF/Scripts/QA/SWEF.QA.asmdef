@@ -1,0 +1,17 @@
+{
+  "name": "SWEF.QA",
+  "rootNamespace": "SWEF.QA",
+  "references": [
+    "SWEF.BuildPipeline",
+    "SWEF.IntegrationTest"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

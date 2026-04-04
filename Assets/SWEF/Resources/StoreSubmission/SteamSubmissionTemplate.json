@@ -1,0 +1,156 @@
+{
+  "_comment": "SWEF v1.0.0-rc1 — Steam (Steamworks) submission configuration template. Complete all fields in the Steamworks partner portal before requesting a store review.",
+  "store": "Steam",
+  "platforms": ["Windows PC (x64)", "macOS (Universal)"],
+  "version": "1.0.0",
+  "buildNumber": 1,
+  "appId": "TODO: Assign App ID from Steamworks partner portal",
+
+  "storePageConfig": {
+    "gameTitle": "Skywalking: Earth Flight",
+    "shortDescription": "Fly from your real GPS location through photorealistic 3D Earth and into space.",
+    "genre": ["Simulation", "Casual", "Exploration"],
+    "features": [
+      "Single-player",
+      "Multi-player",
+      "Online PvP",
+      "Online Co-op",
+      "Full controller support",
+      "Cloud saves",
+      "Steam Achievements",
+      "Steam Leaderboards"
+    ],
+    "tags": [
+      "Flight", "Simulation", "3D", "Realistic", "Casual",
+      "Space", "Atmospheric", "GPS", "Procedural Generation", "Co-op"
+    ],
+    "languages": ["English", "Japanese", "Korean", "Simplified Chinese"],
+    "releaseDate": "2026-11-XX (TBD)"
+  },
+
+  "systemRequirements": {
+    "windows": {
+      "minimum": {
+        "os": "Windows 10 64-bit",
+        "cpu": "Intel Core i5-6600K / AMD Ryzen 5 2600",
+        "ram": "8 GB",
+        "gpu": "NVIDIA GeForce GTX 1060 6GB / AMD RX 580",
+        "vram": "4 GB",
+        "storage": "4 GB SSD",
+        "directX": "DirectX 12",
+        "network": "Broadband 10 Mbps (required for Cesium tile streaming)"
+      },
+      "recommended": {
+        "os": "Windows 10/11 64-bit",
+        "cpu": "Intel Core i7-9700K / AMD Ryzen 7 3700X",
+        "ram": "16 GB",
+        "gpu": "NVIDIA GeForce RTX 2070 / AMD RX 6700 XT",
+        "vram": "8 GB",
+        "storage": "8 GB NVMe SSD",
+        "directX": "DirectX 12",
+        "network": "Broadband 50 Mbps"
+      }
+    },
+    "macos": {
+      "minimum": {
+        "os": "macOS 13.0 (Ventura)",
+        "cpu": "Apple M1 or Intel Core i7 (2018+)",
+        "ram": "8 GB",
+        "storage": "4 GB SSD",
+        "network": "Broadband 10 Mbps"
+      },
+      "recommended": {
+        "os": "macOS 14.0 (Sonoma) or later",
+        "cpu": "Apple M2 or Intel Core i9 (2020+)",
+        "ram": "16 GB",
+        "storage": "8 GB NVMe SSD",
+        "network": "Broadband 50 Mbps"
+      }
+    }
+  },
+
+  "depotConfig": {
+    "baseDepotId": "TODO: Assign depot IDs in Steamworks",
+    "depots": [
+      {
+        "name": "Windows x64",
+        "buildTarget": "StandaloneWindows64",
+        "depotId": "TODO"
+      },
+      {
+        "name": "macOS Universal",
+        "buildTarget": "StandaloneOSX",
+        "depotId": "TODO"
+      }
+    ]
+  },
+
+  "steamFeatures": {
+    "steamCloudSave": {
+      "enabled": true,
+      "quotaMB": 50,
+      "paths": [
+        {
+          "platform": "Windows",
+          "path": "%USERPROFILE%/AppData/LocalLow/Kohgane/SkyWalkingEarthFlight",
+          "pattern": "*.json"
+        },
+        {
+          "platform": "macOS",
+          "path": "~/Library/Application Support/com.kohgane.swef",
+          "pattern": "*.json"
+        }
+      ]
+    },
+    "steamAchievements": {
+      "enabled": true,
+      "totalCount": "100+",
+      "note": "Map AchievementManager achievement keys to Steam stat names. See Assets/SWEF/Scripts/Achievement/ for key list."
+    },
+    "steamLeaderboards": {
+      "enabled": true,
+      "boards": [
+        { "name": "AllTime_MaxAltitude",       "displayName": "Maximum Altitude (All Time)",    "sortMethod": "Descending" },
+        { "name": "Weekly_MaxSpeed",            "displayName": "Maximum Speed (Weekly)",          "sortMethod": "Descending" },
+        { "name": "Season1_BattlePassLevel",    "displayName": "Season 1 Battle Pass Level",      "sortMethod": "Descending" },
+        { "name": "AllTime_RaceTime_Course01",  "displayName": "Race Time — Course 01 (All Time)", "sortMethod": "Ascending"  }
+      ]
+    },
+    "steamWorkshop": {
+      "enabled": false,
+      "note": "Community Content Marketplace (Phase 94) uses in-game marketplace, not Steam Workshop. Consider enabling in a future patch."
+    }
+  },
+
+  "legalAndContent": {
+    "eulaUrl": "https://kohgane.com/swef/eula",
+    "privacyPolicyUrl": "https://kohgane.com/swef/privacy",
+    "thirdPartyLicences": [
+      "Unity Engine (Unity Technologies)",
+      "Cesium for Unity (Cesium GS, Inc.) — Apache 2.0",
+      "Google Maps Tiles API (Google LLC) — subject to Maps Platform ToS",
+      "Newtonsoft.Json — MIT",
+      "NUnit — MIT"
+    ],
+    "contentDescriptor": "This game uses GPS location data and requires an internet connection for tile streaming."
+  },
+
+  "assetChecklist": {
+    "capsuleHeader_460x215": "TODO: Key art with logo. No text covering more than 25% of image.",
+    "capsuleSmall_231x87": "TODO: Logo-only or minimal text capsule.",
+    "capsuleMain_616x353": "TODO: Main capsule art — primary store page hero.",
+    "libraryHero_3840x1240": "TODO: Full-bleed hero for Steam Library.",
+    "libraryCapsule_600x900": "TODO: Portrait capsule for Steam Library.",
+    "screenshots_min5": "TODO: At least 5 screenshots at 1920×1080 px showing key features.",
+    "trailer_1080p": "TODO: Upload 1–3 minute trailer video to Steamworks."
+  },
+
+  "pricing": {
+    "model": "Free-to-Play with Battle Pass",
+    "basePriceTier": "Free",
+    "dlc": [
+      { "name": "Battle Pass — Season 1: Sky Pioneer", "priceTier": "Tier 5 (~USD 4.99)" },
+      { "name": "Premium Livery Pack — Pioneer Edition", "priceTier": "Tier 3 (~USD 2.99)" }
+    ]
+  }
+}
