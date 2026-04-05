@@ -3,7 +3,6 @@
 ## Current Status
 - **Feature Phases Completed**: 1–111 (of 120 planned)
 - **Current Phase**: 112 — VR/XR Flight Experience
-- **Remaining v3.0+**: Phases 113–120 (planned)
 - **Post-Launch v3.0+**: Phases 113–120 (planned)
 
 ## Timeline Estimates

@@ -4121,7 +4121,7 @@ immersive Meta Quest / Apple Vision Pro flight cockpit with hand tracking, gestu
 
 ### Tests
 
-`Assets/SWEF/Scripts/XR/Tests/XRFlightTests.cs` — 60+ NUnit EditMode tests covering all enums,
+`Assets/SWEF/Scripts/XR/Tests/XRFlightTests.cs` — 78 NUnit EditMode tests covering all enums,
 ScriptableObject defaults, data models, GenericXRAdapter lifecycle, cockpit interaction,
 gesture recognition, comfort presets, calibration, recenter, camera rig clamping,
 instrument panel, spatial audio, weather effects, analytics, photo mode, VR UI, and flight phases.
