@@ -1,7 +1,7 @@
 # SWEF Phase Roadmap
 
 > This file tracks the planned development phases for Skywalking: Earth Flight.
-> Last updated: 2026-04-05 (Phase 108 — User-Generated Content (UGC) Editor)
+> Last updated: 2026-04-05 (Phase 109 — Clan/Squadron System)
 
 ## Completed Phases
 
@@ -40,11 +40,11 @@ Phases 1–80 have been merged into `main`. See individual PR descriptions and `
 
 ## Current Phase
 
-**Phase 108 — 🏗️ User-Generated Content (UGC) Editor** (Closes [#131](https://github.com/Kohgane/skywalking-earthflight/issues/131))
+**Phase 109 — 🤝 Clan/Squadron System** (Closes [#132](https://github.com/Kohgane/skywalking-earthflight/issues/132))
 
 ## Next Phase
 
-**Phase 109 — 🤝 Clan/Squadron System** ([#132](https://github.com/Kohgane/skywalking-earthflight/issues/132))
+**Phase 110 — 🎭 Dynamic NPC & Air Traffic Ecosystem** ([#133](https://github.com/Kohgane/skywalking-earthflight/issues/133))
 
 ## Post-Launch Phases (v2.0+)
 
@@ -53,7 +53,7 @@ Phases 1–80 have been merged into `main`. See individual PR descriptions and `
 | Phase | Title | Category | Issue | Status |
 |-------|-------|----------|-------|--------|
 | 108 | 🏗️ User-Generated Content (UGC) Editor | UGC | [#131](https://github.com/Kohgane/skywalking-earthflight/issues/131) | **Completed** |
-| 109 | 🤝 Clan/Squadron System | Social | [#132](https://github.com/Kohgane/skywalking-earthflight/issues/132) | Planned |
+| 109 | 🤝 Clan/Squadron System | Social | [#132](https://github.com/Kohgane/skywalking-earthflight/issues/132) | **Completed** |
 | 110 | 🎭 Dynamic NPC & Air Traffic Ecosystem | AI | [#133](https://github.com/Kohgane/skywalking-earthflight/issues/133) | Planned |
 
 ## 🏁 Launch Preparation
