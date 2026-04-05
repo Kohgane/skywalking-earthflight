@@ -3973,7 +3973,70 @@ UGCEditorManager (MonoBehaviour, singleton)
 
 ---
 
-## 🏁 All 108 Phases Complete (Post-Launch Active)
+## Phase 109 — 🤝 Clan/Squadron System
+
+Phase 109 adds a comprehensive Clan/Squadron System — enabling players to form cooperative
+flying squads, complete cooperative missions, schedule events, manage a shared base, and
+compete on squadron leaderboards.
+
+### New Scripts — `Assets/SWEF/Scripts/Squadron/` — namespace `SWEF.Squadron`
+
+| File | Type | Purpose |
+|------|------|---------|
+| `SquadronEnums.cs` | C# | All enums: `SquadronRank` (5), `SquadronType` (6), `SquadronStatus` (4), `SquadronMissionType` (8), `SquadronEventType` (6), `SquadronFacility` (8), `SquadronInviteStatus` (4), `SquadronPermission` (7), `SquadronRSVP` (3), `SquadronLeaderboardCategory` (4), `SquadronLeaderboardPeriod` (3) |
+| `SquadronConfig.cs` | C# | Static constants — member/officer/invite limits, name/tag lengths, facility max level & upgrade costs, mission cooldowns, event minimums, XP level table (50 levels), persistence paths, chat settings, facility bonus constants |
+| `SquadronData.cs` | C# | Serialisable data classes: `SquadronInfo`, `SquadronMember`, `SquadronMission`, `SquadronEvent`, `SquadronBase`, `SquadronInvite`, `SquadronLeaderboardEntry`, `SquadronChatMessage` |
+| `SquadronManager.cs` | C# | Singleton — create/disband, join/leave, invite/kick, promote/demote, permission checking via `PermissionMatrix`; XP addition with level recalculation; JSON persistence (`squadron_data.json`, `squadron_members.json`); 8 events |
+| `SquadronMissionController.cs` | C# | Singleton — start/join/complete missions, per-objective tracking, timeout coroutine, XP reward distribution, cooldown enforcement; persistence (`squadron_missions.json`); 4 events |
+| `SquadronEventScheduler.cs` | C# | Singleton — create/cancel events, RSVP, event tick coroutine, recurring event auto-scheduling; persistence (`squadron_events.json`); 4 events |
+| `SquadronBaseManager.cs` | C# | Singleton — initialise base, upgrade facilities (XP cost deduction), area unlocks at thresholds, decoration placement, facility bonus calculation; persistence (`squadron_base.json`); 3 events |
+| `SquadronBaseRenderer.cs` | C# | Base UI renderer — facility card grid, level display, detail panel, upgrade button, trophy room from completed missions |
+| `SquadronChatController.cs` | C# | Singleton — send messages, pinned announcements, mission briefings, system messages, history trim (200 max), `#if SWEF_SECURITY_AVAILABLE` profanity filter; persistence (`squadron_chat.json`); 1 event |
+| `SquadronLeaderboardController.cs` | C# | Singleton — squadron rankings by 4 categories × 3 periods, per-member contribution/flight rankings, `#if SWEF_LEADERBOARD_AVAILABLE` integration; 1 event |
+| `SquadronHUD.cs` | C# | In-flight HUD — member status dots (rank-coloured), mission progress bar, quick chat shortcuts, formation position label |
+| `SquadronUI.cs` | C# | Full management panel — 8 tabs: Info, Members, Missions, Events, Base, Leaderboard, Recruitment, Chat |
+| `SquadronCreateUI.cs` | C# | 5-step creation wizard — Name/Tag/Description, Type, Emblem (HSV), Recruitment settings, Confirm & Create |
+| `SquadronBridge.cs` | C# | Integration — Progression XP, Achievement triggers (6 achievements), Social feed, Multiplayer session; all `#if SWEF_*_AVAILABLE` |
+| `SquadronAnalytics.cs` | C# | Static telemetry — 10 events; `#if SWEF_ANALYTICS_AVAILABLE` guard |
+| `SWEF.Squadron.asmdef` | Assembly | Assembly definition for the Squadron module |
+
+#### Tests
+
+| File | Type | Purpose |
+|------|------|---------|
+| `Assets/Tests/EditMode/SquadronTests.cs` | NUnit | 36+ EditMode tests covering enums, config constants, data model construction, permission matrix, facility upgrades, mission objective tracking, event RSVP, leaderboard sorting, invite lifecycle, XP/level logic |
+
+### Rank & Permission Matrix
+
+| Permission | Leader | Officer | Veteran | Member | Recruit |
+|------------|--------|---------|---------|--------|---------|
+| InviteMembers | ✅ | ✅ | ✅ | ❌ | ❌ |
+| KickMembers | ✅ | ✅ | ❌ | ❌ | ❌ |
+| EditBase | ✅ | ✅ | ❌ | ❌ | ❌ |
+| StartMission | ✅ | ✅ | ✅ | ✅ | ❌ |
+| ManageEvents | ✅ | ✅ | ❌ | ❌ | ❌ |
+| EditSettings | ✅ | ❌ | ❌ | ❌ | ❌ |
+| PromoteMembers | ✅ | ✅ | ❌ | ❌ | ❌ |
+
+### Architecture
+
+```
+SquadronManager (MonoBehaviour, singleton)
+├── SquadronMissionController  (MonoBehaviour, singleton — mission lifecycle)
+├── SquadronEventScheduler     (MonoBehaviour, singleton — event scheduling, RSVP)
+├── SquadronBaseManager        (MonoBehaviour, singleton — facilities, upgrades)
+├── SquadronChatController     (MonoBehaviour, singleton — chat history, announcements)
+├── SquadronLeaderboardController (MonoBehaviour, singleton — rankings)
+├── SquadronHUD                (MonoBehaviour — in-flight overlay)
+├── SquadronUI                 (MonoBehaviour — full management panel)
+├── SquadronCreateUI           (MonoBehaviour — creation wizard)
+├── SquadronBridge             (MonoBehaviour — system integrations)
+└── SquadronAnalytics          (static — telemetry events)
+```
+
+---
+
+## 🏁 All 109 Phases Complete (Post-Launch Active)
 
 > **Target launch: 2026-11~12 (Season 1 "Sky Pioneer")**
 
