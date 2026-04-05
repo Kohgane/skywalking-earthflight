@@ -3820,7 +3820,77 @@ HistoricalSciFiModeManager (MonoBehaviour, singleton)
 
 ---
 
-## 🏁 All 106 Phases Complete (Post-Launch Active)
+## Phase 107 — 📺 Live Streaming & Spectator Mode
+
+Phase 107 adds a comprehensive Live Streaming & Spectator Mode system — enabling spectators,
+commentators, and content creators to watch, cast, and stream SWEF flights with advanced
+camera control, real-time chat integration, and streaming platform support.
+
+### New Scripts — `Assets/SWEF/Scripts/Spectator/` — namespace `SWEF.Spectator`
+
+#### Models (`Models/`)
+
+| File | Type | Purpose |
+|------|------|---------|
+| `Models/SpectatorEnums.cs` | C# | All enums: `SpectatorCameraMode` (5), `CinematicShotType` (4), `StreamingPlatform` (3), `CameraTransitionEffect` (3), `FlightEventType` (7), `ChatCommandType` (4), `ChatOverlayPosition` (4) |
+| `Models/SpectatorConfig.cs` | C# | ScriptableObject with all tunable parameters for camera, chat, director, and streaming |
+
+#### Systems (`Systems/`)
+
+| File | Type | Purpose |
+|------|------|---------|
+| `Systems/SpectatorModeController.cs` | C# | Core manager — enter/exit, target registration, camera mode switching; events: `OnSpectatorModeEntered`, `OnSpectatorModeExited`, `OnTargetChanged`, `OnCameraModeChanged` |
+| `Systems/SpectatorCameraController.cs` | C# | 5-mode camera — FreeCam (WASD+mouse), FollowCam (smooth chase), OrbitCam (continuous orbit), CinematicCam (auto-shot cycling), PilotView (cockpit); camera shake; speed-based FOV |
+| `Systems/CommentatorController.cs` | C# | Caster tools — 9 camera presets, PiP inset camera, highlight replay markers, flight event markers |
+| `Systems/StreamingIntegrationManager.cs` | C# | Stream lifecycle — start/end, viewer count, uptime, overlay data; events: `OnStreamStarted`, `OnStreamEnded`, `OnViewerMilestone` |
+| `Systems/LiveChatController.cs` | C# | Chat overlay — rate limiting, profanity filter (`#if SWEF_SECURITY_AVAILABLE`), command parsing (`!camera`, `!follow`, `!stats`) |
+| `Systems/CameraSwitchDirector.cs` | C# | Auto-director — timed AI camera cuts, event-triggered cuts (NearMiss, SpeedRecord, Overtake), manual override, weighted transition effects |
+
+#### UI (`UI/`)
+
+| File | Type | Purpose |
+|------|------|---------|
+| `UI/SpectatorHUD.cs` | C# | In-flight HUD — target info card (name/alt/speed/heading), camera mode label, event feed, stream info panel (viewers, uptime) |
+| `UI/SpectatorUI.cs` | C# | Settings panel — camera mode dropdown, target selection, auto-director toggle, chat overlay toggle, highlight button |
+
+#### Root
+
+| File | Type | Purpose |
+|------|------|---------|
+| `SpectatorAnalytics.cs` | C# | Telemetry — spectator session duration, camera mode popularity, stream duration; `#if SWEF_ANALYTICS_AVAILABLE` guard |
+| `SWEF.Spectator.asmdef` | Assembly | Assembly definition for the Spectator module |
+
+#### Tests
+
+| File | Type | Purpose |
+|------|------|---------|
+| `Assets/Tests/EditMode/SpectatorTests.cs` | NUnit | 30+ EditMode tests covering enums, config, all systems, and data types |
+
+### Camera Modes
+
+| Mode | Description |
+|------|-------------|
+| `FreeCam` | WASD + right-mouse free movement with boost (Shift) |
+| `FollowCam` | Smooth configurable-offset chase camera |
+| `OrbitCam` | Continuous orbit at configurable radius and elevation |
+| `CinematicCam` | Auto-cycling dramatic shots: Chase, Flyby, Dramatic, TopDown |
+| `PilotView` | First-person cockpit perspective |
+
+### Architecture
+
+```
+SpectatorModeController (MonoBehaviour, singleton)
+├── SpectatorCameraController  (MonoBehaviour — 5-mode camera, shake, FOV)
+├── CommentatorController      (MonoBehaviour — presets, PiP, highlights, markers)
+├── CameraSwitchDirector       (MonoBehaviour — auto-director, manual override)
+├── StreamingIntegrationManager (MonoBehaviour — platform bridge, overlay data)
+├── LiveChatController         (MonoBehaviour — chat queue, rate limit, commands)
+└── SpectatorAnalytics         (MonoBehaviour — telemetry bridge)
+```
+
+---
+
+## 🏁 All 107 Phases Complete (Post-Launch Active)
 
 > **Target launch: 2026-11~12 (Season 1 "Sky Pioneer")**
 
