@@ -1,7 +1,7 @@
 # SWEF Phase Roadmap
 
 > This file tracks the planned development phases for Skywalking: Earth Flight.
-> Last updated: 2026-04-05 (Phase 110 — Dynamic NPC & Air Traffic Ecosystem)
+> Last updated: 2026-04-05 (Phase 111 — ☁️ Cloud Save & Cross-Platform Sync)
 
 ## Completed Phases
 
@@ -38,14 +38,16 @@ Phases 1–80 have been merged into `main`. See individual PR descriptions and `
 | 107 | 📺 Live Streaming & Spectator Mode | — | 2026-04-05 |
 | 108 | 🏗️ User-Generated Content (UGC) Editor | — | 2026-04-05 |
 | 109 | 🤝 Clan/Squadron System | — | 2026-04-05 |
+| 110 | 🎭 Dynamic NPC & Air Traffic Ecosystem | — | 2026-04-05 |
+| 111 | ☁️ Cloud Save & Cross-Platform Sync | — | 2026-04-05 |
 
 ## Current Phase
 
-**Phase 111 — 🌐 Cross-Platform Cloud Save & Sync**
+**Phase 112 — 🎮 VR/XR Flight Experience**
 
 ## Next Phase
 
-**Phase 112 — 🎮 VR/XR Flight Experience**
+**Phase 113 — 🏙️ Procedural City & Airport Generation**
 
 ## Post-Launch Phases (v2.0+)
 
@@ -61,6 +63,7 @@ Phases 1–80 have been merged into `main`. See individual PR descriptions and `
 | 108 | 🏗️ User-Generated Content (UGC) Editor | UGC | [#131](https://github.com/Kohgane/skywalking-earthflight/issues/131) | **Completed** |
 | 109 | 🤝 Clan/Squadron System | Social | [#132](https://github.com/Kohgane/skywalking-earthflight/issues/132) | **Completed** |
 | 110 | 🎭 Dynamic NPC & Air Traffic Ecosystem | AI | [#133](https://github.com/Kohgane/skywalking-earthflight/issues/133) | **Completed** |
+| 111 | ☁️ Cloud Save & Cross-Platform Sync | Infrastructure | — | **Completed** |
 
 ## Post-Launch Phases (v3.0+)
 

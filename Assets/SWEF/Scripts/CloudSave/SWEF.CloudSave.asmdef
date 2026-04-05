@@ -1,0 +1,24 @@
+{
+    "name": "SWEF.CloudSave",
+    "rootNamespace": "SWEF.CloudSave",
+    "references": [
+        "SWEF.Core",
+        "UnityEngine.UI"
+    ],
+    "includePlatforms": [
+        "Editor",
+        "StandaloneWindows64",
+        "StandaloneOSX",
+        "StandaloneLinux64",
+        "Android",
+        "iOS"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
