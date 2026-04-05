@@ -4004,7 +4004,7 @@ compete on squadron leaderboards.
 
 | File | Type | Purpose |
 |------|------|---------|
-| `Assets/Tests/EditMode/SquadronTests.cs` | NUnit | 36+ EditMode tests covering enums, config constants, data model construction, permission matrix, facility upgrades, mission objective tracking, event RSVP, leaderboard sorting, invite lifecycle, XP/level logic |
+| `Assets/Tests/EditMode/SquadronTests.cs` | NUnit | 48 EditMode tests covering enums, config constants, data model construction, permission matrix, facility upgrades, mission objective tracking, event RSVP, leaderboard sorting, invite lifecycle, XP/level logic |
 
 ### Rank & Permission Matrix
 

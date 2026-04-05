@@ -87,14 +87,21 @@ namespace SWEF.Squadron
         private static int[] BuildLevelXPTable()
         {
             // 50 levels; level 1 starts at 0 XP, each subsequent level requires
-            // progressively more cumulative XP using a quadratic curve.
+            // progressively more cumulative XP using a quadratic curve:
+            //   XP(level) = BaseXPPerLevelSquared * level² * XPCurveModifier
             var table = new int[51];
             table[0] = 0;
             table[1] = 0;
             for (int lvl = 2; lvl <= 50; lvl++)
-                table[lvl] = (int)(500 * lvl * lvl * 0.5);
+                table[lvl] = (int)(BaseXPPerLevelSquared * lvl * lvl * XPCurveModifier);
             return table;
         }
+
+        /// <summary>Base coefficient for the quadratic XP-per-level formula.</summary>
+        private const int BaseXPPerLevelSquared = 500;
+
+        /// <summary>Curve modifier that shapes how steeply XP requirements scale with level.</summary>
+        private const double XPCurveModifier = 0.5;
 
         // ── Persistence paths ────────────────────────────────────────────────
 

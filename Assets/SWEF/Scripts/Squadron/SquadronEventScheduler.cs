@@ -43,6 +43,7 @@ namespace SWEF.Squadron
 
         private readonly List<SquadronEvent> _upcomingEvents = new List<SquadronEvent>();
         private readonly List<SquadronEvent> _pastEvents     = new List<SquadronEvent>();
+        private readonly HashSet<string>     _startedEventIds = new HashSet<string>();
 
         // ── Unity lifecycle ────────────────────────────────────────────────────
 
@@ -135,6 +136,7 @@ namespace SWEF.Squadron
             if (ev == null) return false;
 
             _upcomingEvents.Remove(ev);
+            _startedEventIds.Remove(ev.eventId);
             SaveEvents();
             OnEventCancelled?.Invoke(ev);
             return true;
@@ -194,9 +196,12 @@ namespace SWEF.Squadron
             {
                 var ev = _upcomingEvents[i];
 
-                // Fire OnEventStarted (once, within the first tick after start)
-                if (ev.startTime <= now && ev.startTime > now - 30)
+                // Fire OnEventStarted once when the event becomes active
+                if (ev.startTime <= now && !_startedEventIds.Contains(ev.eventId))
+                {
+                    _startedEventIds.Add(ev.eventId);
                     OnEventStarted?.Invoke(ev);
+                }
 
                 if (ev.endTime <= now)
                 {
@@ -207,6 +212,7 @@ namespace SWEF.Squadron
 
                     _upcomingEvents.RemoveAt(i);
                     _pastEvents.Add(ev);
+                    _startedEventIds.Remove(ev.eventId);
                     OnEventEnded?.Invoke(ev);
 
                     // Schedule next occurrence for recurring events
