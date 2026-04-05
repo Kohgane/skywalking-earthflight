@@ -1,7 +1,7 @@
 # SWEF Phase Roadmap
 
 > This file tracks the planned development phases for Skywalking: Earth Flight.
-> Last updated: 2026-04-05 (Phase 107 — Live Streaming & Spectator Mode + Phase 111–120 Roadmap)
+> Last updated: 2026-04-05 (Phase 110 — Dynamic NPC & Air Traffic Ecosystem)
 
 ## Completed Phases
 
@@ -41,11 +41,11 @@ Phases 1–80 have been merged into `main`. See individual PR descriptions and `
 
 ## Current Phase
 
-**Phase 110 — 🎭 Dynamic NPC & Air Traffic Ecosystem** (Closes [#133](https://github.com/Kohgane/skywalking-earthflight/issues/133))
+**Phase 111 — 🌐 Cross-Platform Cloud Save & Sync**
 
 ## Next Phase
 
-**Phase 111 — 🌐 Cross-Platform Cloud Save & Sync**
+**Phase 112 — 🎮 VR/XR Flight Experience**
 
 ## Post-Launch Phases (v2.0+)
 
@@ -60,7 +60,7 @@ Phases 1–80 have been merged into `main`. See individual PR descriptions and `
 | 107 | 📺 Live Streaming & Spectator Mode | Social | [#130](https://github.com/Kohgane/skywalking-earthflight/issues/130) | **Completed** |
 | 108 | 🏗️ User-Generated Content (UGC) Editor | UGC | [#131](https://github.com/Kohgane/skywalking-earthflight/issues/131) | **Completed** |
 | 109 | 🤝 Clan/Squadron System | Social | [#132](https://github.com/Kohgane/skywalking-earthflight/issues/132) | **Completed** |
-| 110 | 🎭 Dynamic NPC & Air Traffic Ecosystem | AI | [#133](https://github.com/Kohgane/skywalking-earthflight/issues/133) | **In Progress** |
+| 110 | 🎭 Dynamic NPC & Air Traffic Ecosystem | AI | [#133](https://github.com/Kohgane/skywalking-earthflight/issues/133) | **Completed** |
 
 ## Post-Launch Phases (v3.0+)
 

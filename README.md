@@ -145,7 +145,7 @@ See [`Assets/SWEF/README_SWEF_SETUP.md`](Assets/SWEF/README_SWEF_SETUP.md) for d
 |------|------|
 | [SCENE_SETUP_GUIDE.md](./SCENE_SETUP_GUIDE.md) | 씬 셋업 가이드 — Unity Editor에서 첫 테스트 비행까지 |
 | [BUG_TRACKING_GUIDE.md](./BUG_TRACKING_GUIDE.md) | 버그 트래킹 가이드 — 버그 리포트 템플릿, 라벨, 체크리스트 |
-| [PHASE_ROADMAP.md](./PHASE_ROADMAP.md) | 개발 로드맵 — 전체 109개 완료 페이즈 + 포스트 런치 Phase 110–120 |
+| [PHASE_ROADMAP.md](./PHASE_ROADMAP.md) | 개발 로드맵 — 전체 110개 완료 페이즈 + 포스트 런치 Phase 111–120 |
 | [RELEASE_NOTES_v1.0.0-rc1.md](./RELEASE_NOTES_v1.0.0-rc1.md) | 릴리즈 노트 — v1.0.0-rc1 전체 변경사항 요약 |
 
 ## License
@@ -4036,7 +4036,49 @@ SquadronManager (MonoBehaviour, singleton)
 
 ---
 
-## 🏁 Phases 1–109 Complete — Phase 110 In Progress
+## Phase 110 — 🎭 Dynamic NPC & Air Traffic Ecosystem
+
+Phase 110 implements a full Dynamic NPC & Air Traffic Ecosystem — populating the sky with
+AI-driven aircraft across 6 categories, dynamic route generation, a TCAS-style collision avoidance
+system, radio communication simulation, formation flight, and distance-based airport activation.
+Closes [#133](https://github.com/Kohgane/skywalking-earthflight/issues/133).
+
+### New Scripts — `Assets/SWEF/Scripts/NPCTraffic/` — namespace `SWEF.NPCTraffic`
+
+| Script | Type | Summary |
+|--------|------|---------|
+| `Models/NPCTrafficData.cs` | C# | Enums (`NPCAircraftCategory` ×6, `NPCBehaviorState` ×10, `NPCRouteType` ×4, `NPCVisualLOD` ×3, `NPCTrafficDensity` ×4), `NPCAircraftData`, `NPCFlightProfile`, `NPCTrafficConfig` ScriptableObject with 6 built-in profiles |
+| `Models/NPCRouteData.cs` | C# | `NPCWaypoint`, `NPCRoute`, `AltitudeProfileSegment` data classes |
+| `Models/NPCCommunicationData.cs` | C# | `NPCMessageType` (13 values), `NPCRadioMessage`, `NPCFormationData`, `NPCCallsignGenerator` static helper |
+| `Systems/NPCTrafficManager.cs` | C# | Central singleton — register/deregister/pool NPCs, spawn/despawn coroutines, time-of-day density scaling, `GetNearestNPC` query; 3 events |
+| `Systems/NPCAircraftController.cs` | C# | Individual AI state machine (Taxiing→Takeoff→Climbing→Cruising→Descending→Approach→Landing), route following, TCAS scan coroutine; 3 events |
+| `Systems/NPCRouteGenerator.cs` | C# | Generates airport-to-airport, patrol loop, training circuit, and random GA routes |
+| `Systems/NPCSpawnController.cs` | C# | Weighted category selection, object pool pre-warm, perimeter spawn positioning |
+| `Systems/AirportActivityManager.cs` | C# | Singleton — distance-based airport activation LOD, gate assignment/vacate, activity level 0–1 |
+| `Communication/NPCRadioController.cs` | C# | Singleton — message queue, ATC↔NPC exchange generation per state, frequency routing; 2 events |
+| `Communication/NPCFormationController.cs` | C# | Singleton — formation CRUD, player join/leave, proximity invite check; 4 events |
+| `Visual/NPCVisualController.cs` | C# | LOD switching (Icon/LowPoly/FullModel), nav-light animation, beacon flash, contrail emission control, livery tinting |
+| `Visual/NPCAudioController.cs` | C# | Distance-attenuated engine audio, Doppler pitch-shift simulation, radio chatter ambiance |
+| `Integration/NPCEventBridge.cs` | C# | `#if SWEF_DISASTER_AVAILABLE` diversion, `#if SWEF_AIRSHOW_AVAILABLE` formation, `#if SWEF_SEASONAL_AVAILABLE` density boost; VIP escort trigger |
+| `Integration/NPCAnalytics.cs` | C# | Static telemetry — 8 events; `#if SWEF_ANALYTICS_AVAILABLE` |
+| `UI/NPCTrafficHUD.cs` | C# | Radar blip overlay with sweep, nearest NPC info strip |
+| `UI/NPCTrafficUI.cs` | C# | Full settings panel — density dropdown, NPC list, airport status list, formation management |
+| `NPCTrafficModeManager.cs` | C# | DontDestroyOnLoad façade — bootstraps all sub-systems, exposes `SetPlayerTransform` |
+| `SWEF.NPCTraffic.asmdef` | Assembly | Assembly definition for the NPCTraffic module |
+
+### Tests
+
+`Assets/Tests/EditMode/NPCTrafficTests.cs` — 48 NUnit EditMode tests covering all enums,
+data models, callsign generation, manager register/deregister, formation join/leave,
+airport gate assignment/vacate, and singleton lifecycle.
+
+### Localization
+
+45 keys added (`npc_traffic_*`) across all 8 language files (en, ko, ja, zh, de, fr, es, pt).
+
+---
+
+## 🏁 Phases 1–110 Complete — Phase 111 Next
 
 > **Target launch: 2026-11~12 (Season 1 "Sky Pioneer")**
 
