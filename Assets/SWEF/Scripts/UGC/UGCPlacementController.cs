@@ -190,13 +190,14 @@ namespace SWEF.UGC
             var manager = UGCEditorManager.Instance;
             if (manager?.CurrentProject == null) return;
 
-            // Determine what to place based on active content type
-            // Default to waypoint placement
+            // NOTE: In a real Cesium integration, worldPoint would be converted to
+            // geographic coordinates via CesiumGeoreference.TransformUnityPositionToEarthCenteredEarthFixed.
+            // Here we store world-space y as altitude and x/z as lat/lon placeholders.
             var waypoint = new UGCWaypoint
             {
                 waypointId = Guid.NewGuid().ToString(),
-                latitude   = worldPoint.x,
-                longitude  = worldPoint.z,
+                latitude   = worldPoint.x,   // placeholder; replace with geo conversion in production
+                longitude  = worldPoint.z,   // placeholder; replace with geo conversion in production
                 altitude   = worldPoint.y,
                 order      = manager.CurrentProject.waypoints.Count,
                 isRequired = true,

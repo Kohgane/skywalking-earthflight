@@ -214,7 +214,13 @@ namespace SWEF.UGC
                     _currentResults.Sort((a, b) => string.Compare(b.createdAt, a.createdAt, StringComparison.Ordinal));
                     break;
                 case BrowseSortMode.Popular:
-                    _currentResults.Sort((a, b) => b.downloadCount.CompareTo(a.downloadCount));
+                    // Popular: weighted combination of downloads and rating
+                    _currentResults.Sort((a, b) =>
+                    {
+                        float scoreA = a.downloadCount + a.rating * 20f;
+                        float scoreB = b.downloadCount + b.rating * 20f;
+                        return scoreB.CompareTo(scoreA);
+                    });
                     break;
                 case BrowseSortMode.HighestRated:
                     _currentResults.Sort((a, b) => b.rating.CompareTo(a.rating));

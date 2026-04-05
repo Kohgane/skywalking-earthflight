@@ -151,7 +151,10 @@ namespace SWEF.UGC
         /// <summary>Condition that activates the trigger.</summary>
         public UGCTriggerType triggerType = UGCTriggerType.EnterZone;
 
-        /// <summary>World centre position (lat, lon, alt) stored as a Vector3 (x=lat, y=lon, z=alt).</summary>
+        /// <summary>
+        /// World centre position stored as a Vector3 where x = latitude (degrees),
+        /// y = altitude (metres above sea level), z = longitude (degrees).
+        /// </summary>
         public Vector3 position = Vector3.zero;
 
         /// <summary>Activation radius in metres around <see cref="position"/>.</summary>
@@ -189,7 +192,10 @@ namespace SWEF.UGC
         /// <summary>Classification of the zone's gameplay purpose.</summary>
         public UGCZoneType zoneType = UGCZoneType.Objective;
 
-        /// <summary>Geographic centre (lat, lon, alt) stored as a Vector3 (x=lat, y=lon, z=alt).</summary>
+        /// <summary>
+        /// Geographic centre stored as a Vector3 where x = latitude (degrees),
+        /// y = altitude (metres above sea level), z = longitude (degrees).
+        /// </summary>
         public Vector3 center = Vector3.zero;
 
         /// <summary>Horizontal radius of the zone cylinder in metres.</summary>

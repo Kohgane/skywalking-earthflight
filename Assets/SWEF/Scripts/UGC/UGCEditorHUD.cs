@@ -54,10 +54,15 @@ namespace SWEF.UGC
         [SerializeField] private UGCPlacementController _placement;
         [SerializeField] private UGCEditorUI            _editorUI;
 
+        // ── Cached references ──────────────────────────────────────────────────
+
+        private UGCTestRunner _testRunner;
+
         // ── Unity lifecycle ────────────────────────────────────────────────────
 
         private void Start()
         {
+            _testRunner = FindFirstObjectByType<UGCTestRunner>();
             WireButtons();
             WireManagerEvents();
             SetHudVisible(false);
@@ -153,8 +158,7 @@ namespace SWEF.UGC
 
         private void OnTestClicked()
         {
-            var runner = FindFirstObjectByType<UGCTestRunner>();
-            runner?.StartTest();
+            _testRunner?.StartTest();
         }
 
         private void OnPublishClicked()
