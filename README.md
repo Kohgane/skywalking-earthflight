@@ -3890,7 +3890,90 @@ SpectatorModeController (MonoBehaviour, singleton)
 
 ---
 
-## 🏁 All 107 Phases Complete (Post-Launch Active)
+## Phase 108 — 🏗️ User-Generated Content (UGC) Editor
+
+Phase 108 adds a comprehensive User-Generated Content (UGC) Editor system — enabling players
+to create, share, and play community-made tours, missions, race courses, scenarios, challenges,
+photo spots, waypoint packs, and flight routes.
+
+### New Scripts — `Assets/SWEF/Scripts/UGC/` — namespace `SWEF.UGC`
+
+| File | Type | Purpose |
+|------|------|---------|
+| `UGCEnums.cs` | C# | All enums: `UGCContentType` (8), `UGCStatus` (6), `UGCDifficulty` (5), `UGCCategory` (8), `EditorTool` (10), `ValidationSeverity` (4), `UGCRating` (5), `UGCTriggerType` (8), `UGCZoneType` (5), `UGCActionType` (7), `AltitudeMode` (3) |
+| `UGCConfig.cs` | C# | Static configuration constants — waypoint/trigger/zone limits, text limits, quality thresholds, persistence paths |
+| `UGCContentData.cs` | C# | Serialisable data classes: `UGCContent`, `UGCWaypoint`, `UGCTrigger`, `UGCZone`, `UGCMetadata`, `UGCReview`, `ValidationIssue`, `ValidationResult` |
+| `UGCEditorManager.cs` | C# | Singleton — create/open/save/load projects, undo/redo command stack (`IEditorCommand`), editor-mode enter/exit, auto-save; built-in commands: `AddWaypointCommand`, `RemoveWaypointCommand`, `AddTriggerCommand`, `AddZoneCommand` |
+| `UGCPlacementController.cs` | C# | Tap/click-to-place waypoints/triggers/zones, drag-to-move, snap-to-grid, altitude modes (GroundLevel/FixedAltitude/Relative), ghost preview, multi-select |
+| `UGCPathEditor.cs` | C# | Sequential waypoint path editor — Catmull-Rom spline via LineRenderer, distance computation, loop/one-way toggle, `#if SWEF_FLIGHTPLAN_AVAILABLE` import |
+| `UGCTriggerEditor.cs` | C# | Trigger placement, radius sphere gizmos, add/remove/select/chain triggers, chain-connection line renderers |
+| `UGCValidator.cs` | C# | Static validation — title/description/waypoint/trigger/zone/profanity checks, quality score 0–100; `#if SWEF_SECURITY_AVAILABLE` profanity guard |
+| `UGCTestRunner.cs` | C# | Test-play mode — reachability heuristics, issue detection, difficulty estimation, marks content as tested; `TestPlayResult` data class |
+| `UGCPublishManager.cs` | C# | Singleton — submit for review, publish/unpublish, version management, download/install, local library; persists `ugc_library.json` + `ugc_published.json` |
+| `UGCBrowseController.cs` | C# | Search/filter/sort community content (type, difficulty, category, rating, sort mode), pagination, `BrowseSortMode` enum |
+| `UGCReviewManager.cs` | C# | Singleton — submit reviews (one per player per content), helpful voting, rating aggregation, persistence to `ugc_reviews.json`; `#if SWEF_SECURITY_AVAILABLE` profanity guard |
+| `UGCShareManager.cs` | C# | Singleton — export `.swefugc`, import from file, deep-link `swef://ugc?id=xxx`, clipboard copy |
+| `UGCEditorHUD.cs` | C# | Editor HUD — tool palette (10 tools), undo/redo, save/test/publish, grid/snap toggles, unsaved-changes indicator |
+| `UGCEditorUI.cs` | C# | Full editor panel — project settings, content browser, test results, validation panel, publishing wizard |
+| `UGCBrowseUI.cs` | C# | Community browser UI — content grid, search bar, filter sidebar, detail modal, download button |
+| `UGCBridge.cs` | C# | Integration — Progression XP, Achievement unlocks, Social feed, Mission registration; all guarded by `#if SWEF_*_AVAILABLE` |
+| `UGCAnalytics.cs` | C# | Telemetry — 10 analytics events (`ugc_editor_opened` … `ugc_content_reported`); `#if SWEF_ANALYTICS_AVAILABLE` guard |
+| `SWEF.UGC.asmdef` | Assembly | Assembly definition for the UGC module |
+
+#### Tests
+
+| File | Type | Purpose |
+|------|------|---------|
+| `Assets/Tests/EditMode/UGCTests.cs` | NUnit | 40+ EditMode tests covering enums, config, data models, validator, command pattern, editor manager, review manager, share manager |
+
+### Content Types
+
+| Type | Description |
+|------|-------------|
+| `Tour` | Guided sightseeing route along waypoints |
+| `Mission` | Objective-driven with triggers and goals |
+| `RaceCourse` | Timed race through checkpoint gates |
+| `Scenario` | Open-world environmental experience |
+| `Challenge` | Skill/endurance challenge |
+| `PhotoSpot` | Curated photography location |
+| `WaypointPack` | Shareable navigation waypoints |
+| `FlightRoute` | Pre-planned flight with altitude profile |
+
+### Editor Tools
+
+| Tool | Description |
+|------|-------------|
+| `Select` | Inspect and select placed objects |
+| `Place` | Tap/click to place new objects |
+| `Move` | Drag to reposition placed objects |
+| `Rotate` | Rotate selected object |
+| `Scale` | Scale zones and trigger radii |
+| `Delete` | Remove selected object |
+| `Path` | Sequential waypoint path drawing |
+| `Zone` | Paint zone areas onto terrain |
+| `Trigger` | Place and configure event triggers |
+| `Text` | Add floating world-space labels |
+
+### Architecture
+
+```
+UGCEditorManager (MonoBehaviour, singleton)
+├── UGCPlacementController  (MonoBehaviour — tap-to-place, snap, altitude, ghost preview)
+├── UGCPathEditor           (MonoBehaviour — Catmull-Rom path, loop toggle)
+├── UGCTriggerEditor        (MonoBehaviour — trigger placement, chain visualisation)
+├── UGCValidator            (static — validation + quality score)
+├── UGCTestRunner           (MonoBehaviour — test-play, difficulty estimation)
+├── UGCPublishManager       (MonoBehaviour, singleton — review, publish, library)
+├── UGCBrowseController     (MonoBehaviour — search/filter/sort/paginate)
+├── UGCReviewManager        (MonoBehaviour, singleton — reviews, ratings)
+├── UGCShareManager         (MonoBehaviour, singleton — export/import/.swefugc/deeplink)
+├── UGCBridge               (MonoBehaviour — Progression/Achievement/Social integration)
+└── UGCAnalytics            (static — telemetry events)
+```
+
+---
+
+## 🏁 All 108 Phases Complete (Post-Launch Active)
 
 > **Target launch: 2026-11~12 (Season 1 "Sky Pioneer")**
 
