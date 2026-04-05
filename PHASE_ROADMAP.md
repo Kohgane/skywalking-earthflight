@@ -1,7 +1,7 @@
 # SWEF Phase Roadmap
 
 > This file tracks the planned development phases for Skywalking: Earth Flight.
-> Last updated: 2026-04-05 (Phase 110 — Dynamic NPC & Air Traffic Ecosystem)
+> Last updated: 2026-04-05 (Phase 112 — VR/XR Flight Experience)
 
 ## Completed Phases
 
@@ -38,14 +38,16 @@ Phases 1–80 have been merged into `main`. See individual PR descriptions and `
 | 107 | 📺 Live Streaming & Spectator Mode | — | 2026-04-05 |
 | 108 | 🏗️ User-Generated Content (UGC) Editor | — | 2026-04-05 |
 | 109 | 🤝 Clan/Squadron System | — | 2026-04-05 |
+| 110 | 🎭 Dynamic NPC & Air Traffic Ecosystem | — | 2026-04-05 |
+| 111 | 🌐 Cross-Platform Cloud Save & Sync | — | 2026-04-05 |
 
 ## Current Phase
 
-**Phase 111 — 🌐 Cross-Platform Cloud Save & Sync**
+**Phase 112 — 🎮 VR/XR Flight Experience**
 
 ## Next Phase
 
-**Phase 112 — 🎮 VR/XR Flight Experience**
+**Phase 113 — 🏙️ Procedural City & Airport Generation**
 
 ## Post-Launch Phases (v2.0+)
 
@@ -61,13 +63,15 @@ Phases 1–80 have been merged into `main`. See individual PR descriptions and `
 | 108 | 🏗️ User-Generated Content (UGC) Editor | UGC | [#131](https://github.com/Kohgane/skywalking-earthflight/issues/131) | **Completed** |
 | 109 | 🤝 Clan/Squadron System | Social | [#132](https://github.com/Kohgane/skywalking-earthflight/issues/132) | **Completed** |
 | 110 | 🎭 Dynamic NPC & Air Traffic Ecosystem | AI | [#133](https://github.com/Kohgane/skywalking-earthflight/issues/133) | **Completed** |
+| 111 | 🌐 Cross-Platform Cloud Save & Sync | Infrastructure | — | **Completed** |
+| 112 | 🎮 VR/XR Flight Experience | XR | — | **Current** |
 
 ## Post-Launch Phases (v3.0+)
 
 | Phase | Title | Category | Description |
 |-------|-------|----------|-------------|
-| 111 | 🌐 Cross-Platform Cloud Save & Sync | Infrastructure | 크로스 플랫폼 클라우드 세이브, 기기간 진행상황 동기화, 충돌 해결 |
-| 112 | 🎮 VR/XR Flight Experience | XR | Meta Quest / Apple Vision Pro 전용 VR 비행 경험, 핸드 트래킹 조종 |
+| 111 | 🌐 Cross-Platform Cloud Save & Sync | Infrastructure | 크로스 플랫폼 클라우드 세이브, 기기간 진행상황 동기화, 충돌 해결 — **Completed** |
+| 112 | 🎮 VR/XR Flight Experience | XR | Meta Quest / Apple Vision Pro 전용 VR 비행 경험, 핸드 트래킹 조종 — **Current** |
 | 113 | 🏙️ Procedural City & Airport Generation | World | 절차적 도시/공항 생성, 실시간 건물 LOD, 활주로 자동 배치 |
 | 114 | 🛰️ Satellite & Space Debris Tracking | Space | 실시간 위성 궤도 추적, 우주 쓰레기 회피, ISS 도킹 시나리오 |
 | 115 | 🎨 Advanced Aircraft Livery Editor | Customization | 레이어 기반 도장 에디터, 커스텀 데칼 업로드, 팀 도장 시스템 |

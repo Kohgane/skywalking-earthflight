@@ -1,17 +1,17 @@
 # SWEF Project Briefing
 
 ## Current Status
-- **Feature Phases Completed**: 1–109 (of 120 planned)
-- **Current Phase**: 110 — Dynamic NPC & Air Traffic Ecosystem
-- **Remaining v2.0**: Phase 110 (in progress)
-- **Post-Launch v3.0+**: Phases 111–120 (planned)
+- **Feature Phases Completed**: 1–111 (of 120 planned)
+- **Current Phase**: 112 — VR/XR Flight Experience
+- **Remaining v3.0+**: Phases 113–120 (planned)
+- **Post-Launch v3.0+**: Phases 113–120 (planned)
 
 ## Timeline Estimates
 | Milestone | Estimate |
 |-----------|----------|
 | Test Flight (PC) | ✅ Ready — Phase 98 merged, WASD+mouse flight working |
-| Test Flight (All Platforms) | After Phase 110 CI stabilization |
-| App Launch | After Phase 110 — estimated ~2 weeks |
+| Test Flight (All Platforms) | After Phase 112 CI stabilization |
+| App Launch | After Phase 112 — estimated ~2 weeks |
 
 ## Platform Support
 | Platform | Status |
@@ -19,7 +19,7 @@
 | PC (Windows/Mac/Linux) | ✅ Full support |
 | Mobile (iOS/Android) | ✅ Full support |
 | Tablet (iPad/Android Tablet) | ✅ Optimized UI (Phase 97) |
-| XR (VR/AR headsets) | ✅ Supported (not exclusive); full VR planned Phase 112 |
+| XR (VR/AR headsets) | ✅ Full VR support implemented (Phase 112) |
 
 **CRITICAL RULE**: No platform-exclusive builds. Every feature works on PC, mobile, tablet, AND XR.
 
@@ -31,8 +31,8 @@
 
 | Phase | Title | Description |
 |-------|-------|-------------|
-| 111 | 🌐 Cross-Platform Cloud Save & Sync | 여러 기기에서 하나의 계정으로 진행상황 동기화 — PC에서 하던 비행을 모바일에서 이어서 |
-| 112 | 🎮 VR/XR Flight Experience | Meta Quest / Apple Vision Pro에서 완전 몰입형 VR 비행 경험. 핸드 트래킹으로 조종간 직접 조작 |
+| 111 | 🌐 Cross-Platform Cloud Save & Sync | 여러 기기에서 하나의 계정으로 진행상황 동기화 — **✅ Completed** |
+| 112 | 🎮 VR/XR Flight Experience | Meta Quest / Apple Vision Pro에서 완전 몰입형 VR 비행 경험. 핸드 트래킹으로 조종간 직접 조작 — **🚧 Current** |
 | 113 | 🏙️ Procedural City & Airport Generation | 실제 지리 데이터 기반 절차적 도시/공항 생성. Cesium 타일 위에 건물과 활주로 자동 배치 |
 | 114 | 🛰️ Satellite & Space Debris Tracking | 실시간 위성 궤도 데이터 연동. 우주에서 실제 ISS 위치를 찾아 도킹 |
 | 115 | 🎨 Advanced Aircraft Livery Editor | Photoshop급 레이어 기반 항공기 도장 에디터. 커뮤니티 공유 마켓플레이스 |
@@ -44,4 +44,4 @@
 
 ## Known Issues
 - CI build: `UNITY_LICENSE` secret was deleted; workflow updated to use `UNITY_EMAIL` + `UNITY_PASSWORD` only (Personal license via game-ci/unity-builder@v4)
-- Phase 110 (Dynamic NPC & Air Traffic) implementation in progress
+- Phase 112 (VR/XR Flight Experience) implementation complete; XR device required for full feature validation
