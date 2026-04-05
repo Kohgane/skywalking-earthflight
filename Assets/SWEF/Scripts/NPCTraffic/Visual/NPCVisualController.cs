@@ -133,10 +133,6 @@ namespace SWEF.NPCTraffic
 
             float dist = Vector3.Distance(transform.position, _playerTransform.position);
 
-            NPCTrafficConfig cfg = NPCTrafficManager.Instance != null
-                ? null  // access via instance if we had config exposed
-                : null;
-
             float iconDist    = 50000f;
             float lowPolyDist = 10000f;
 

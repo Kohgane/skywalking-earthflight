@@ -566,7 +566,7 @@ public class NPCTrafficTests
 
         string gateId = mgr.AssignGate("YSSY", "QFA1");
         Assert.IsFalse(string.IsNullOrEmpty(gateId));
-        Assert.AreEqual(0, mgr.GetFreeGateCount("YSSY") - (5 - 1)); // 1 occupied
+        Assert.AreEqual(4, mgr.GetFreeGateCount("YSSY")); // 5 gates, 1 occupied → 4 free
         // Verify assigned
         var airport = mgr.TrackedAirports.First(a => a.ICAO == "YSSY");
         var gate    = airport.Gates.Find(g => g.GateId == gateId);
