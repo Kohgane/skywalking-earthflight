@@ -1,7 +1,7 @@
 # SWEF Phase Roadmap
 
 > This file tracks the planned development phases for Skywalking: Earth Flight.
-> Last updated: 2026-04-04 (Phase 106 — Historical & Sci-Fi Flight Mode)
+> Last updated: 2026-04-05 (Phase 107 — Live Streaming & Spectator Mode)
 
 ## Completed Phases
 
@@ -35,14 +35,15 @@ Phases 1–80 have been merged into `main`. See individual PR descriptions and `
 | 104 | 🎓 Flight Academy & Certification System | — | 2026-04-04 |
 | 105 | 🌋 Dynamic Terrain Events & Geological Phenomena | — | 2026-04-04 |
 | 106 | 🛸 Historical & Sci-Fi Flight Mode | — | 2026-04-04 |
+| 107 | 📺 Live Streaming & Spectator Mode | — | 2026-04-05 |
 
 ## Current Phase
 
-**Phase 106 — 🛸 Historical & Sci-Fi Flight Mode** (Closes [#129](https://github.com/Kohgane/skywalking-earthflight/issues/129))
+**Phase 107 — 📺 Live Streaming & Spectator Mode** (Closes [#130](https://github.com/Kohgane/skywalking-earthflight/issues/130))
 
 ## Next Phase
 
-**Phase 107 — 📺 Live Streaming & Spectator Mode** ([#130](https://github.com/Kohgane/skywalking-earthflight/issues/130))
+**Phase 108 — 🏗️ User-Generated Content (UGC) Editor** ([#131](https://github.com/Kohgane/skywalking-earthflight/issues/131))
 
 ## Post-Launch Phases (v2.0+)
 
@@ -50,7 +51,6 @@ Phases 1–80 have been merged into `main`. See individual PR descriptions and `
 
 | Phase | Title | Category | Issue | Status |
 |-------|-------|----------|-------|--------|
-| 107 | 📺 Live Streaming & Spectator Mode | Social | [#130](https://github.com/Kohgane/skywalking-earthflight/issues/130) | Planned |
 | 108 | 🏗️ User-Generated Content (UGC) Editor | UGC | [#131](https://github.com/Kohgane/skywalking-earthflight/issues/131) | Planned |
 | 109 | 🤝 Clan/Squadron System | Social | [#132](https://github.com/Kohgane/skywalking-earthflight/issues/132) | Planned |
 | 110 | 🎭 Dynamic NPC & Air Traffic Ecosystem | AI | [#133](https://github.com/Kohgane/skywalking-earthflight/issues/133) | Planned |
