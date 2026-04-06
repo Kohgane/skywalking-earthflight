@@ -588,8 +588,7 @@ public class ProceduralWorldTests
     {
         var go = new GameObject();
         var db = go.AddComponent<AirportDatabaseProvider>();
-        // Awake is called automatically when AddComponent is called in EditMode
-        // with RuntimeInitializeOnLoad — validate via public Count
+        // Unity calls Awake automatically when AddComponent is used, which populates the database.
         Assert.GreaterOrEqual(db.Count, 1, "Builtin database should have at least one entry");
         UnityEngine.Object.DestroyImmediate(go);
     }

@@ -4201,7 +4201,7 @@ delivering noise-based city layout generation, multi-type airport construction w
 runways and ILS, four-level LOD management, tile-based world streaming, and real-world
 geographic data integration.
 
-### New Scripts (25 files) — `Assets/SWEF/Scripts/ProceduralWorld/` — namespace `SWEF.ProceduralWorld`
+### New Scripts (32 files) — `Assets/SWEF/Scripts/ProceduralWorld/` — namespace `SWEF.ProceduralWorld`
 
 | Script | Type | Summary |
 |--------|------|---------|
@@ -4238,7 +4238,7 @@ geographic data integration.
 
 ### Tests
 
-`Assets/SWEF/Scripts/ProceduralWorld/Tests/ProceduralWorldTests.cs` — 45+ NUnit EditMode tests covering
+`Assets/SWEF/Scripts/ProceduralWorld/Tests/ProceduralWorldTests.cs` — 50+ NUnit EditMode tests covering
 all enums, `ProceduralWorldConfig` defaults, all data models (`BuildingInstance`, `RunwayData`,
 `AirportLayout`, `CityDescription`, `CityLayout`, `ChunkCoord`, `TerrainAnalysisResult`),
 `RunwayGenerator.OptimalHeading()`, `ElevationMapper` static utilities,
