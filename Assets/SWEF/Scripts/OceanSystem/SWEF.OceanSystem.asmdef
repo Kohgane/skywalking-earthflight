@@ -1,0 +1,23 @@
+{
+    "name": "SWEF.OceanSystem",
+    "rootNamespace": "SWEF.OceanSystem",
+    "references": [
+        "SWEF.Core"
+    ],
+    "includePlatforms": [
+        "Editor",
+        "StandaloneWindows64",
+        "StandaloneOSX",
+        "StandaloneLinux64",
+        "Android",
+        "iOS"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

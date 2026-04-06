@@ -145,7 +145,7 @@ See [`Assets/SWEF/README_SWEF_SETUP.md`](Assets/SWEF/README_SWEF_SETUP.md) for d
 |------|------|
 | [SCENE_SETUP_GUIDE.md](./SCENE_SETUP_GUIDE.md) | 씬 셋업 가이드 — Unity Editor에서 첫 테스트 비행까지 |
 | [BUG_TRACKING_GUIDE.md](./BUG_TRACKING_GUIDE.md) | 버그 트래킹 가이드 — 버그 리포트 템플릿, 라벨, 체크리스트 |
-| [PHASE_ROADMAP.md](./PHASE_ROADMAP.md) | 개발 로드맵 — 전체 116개 완료/진행 페이즈 + 포스트 런치 Phase 117+ |
+| [PHASE_ROADMAP.md](./PHASE_ROADMAP.md) | 개발 로드맵 — 전체 117개 완료/진행 페이즈 + 포스트 런치 Phase 118+ |
 | [RELEASE_NOTES_v1.0.0-rc1.md](./RELEASE_NOTES_v1.0.0-rc1.md) | 릴리즈 노트 — v1.0.0-rc1 전체 변경사항 요약 |
 
 ## License
@@ -4405,3 +4405,60 @@ standard deviation, percentile, `TrendAnalyzer` improving/declining/stable detec
 `WeeklyDigestGenerator` empty and multi-session, `ShareableCardGenerator` null/valid,
 `LeaderboardManager` submit/update/sort/rank, `PlayerRankingSystem` tier/rating/ELO,
 `AnalyticsTelemetry` chart tracking, and `FlightSessionTracker` session lifecycle.
+
+## Phase 117 — 🌊 Advanced Ocean & Maritime System
+
+Phase 117 implements the full Advanced Ocean & Maritime System —
+delivering Gerstner wave simulation, water landing physics, aircraft carrier operations,
+AI maritime traffic, SAR and patrol missions, and environment effects.
+
+### New Scripts (34 files) — `Assets/SWEF/Scripts/OceanSystem/` — namespace `SWEF.OceanSystem`
+
+| Script | Type | Summary |
+|--------|------|---------|
+| `Core/OceanSystemManager.cs` | MonoBehaviour singleton | Central orchestrator (DontDestroyOnLoad): sea state, region, wave conditions, landing/trap recording |
+| `Core/OceanSystemConfig.cs` | ScriptableObject | Runtime config: wave params, water quality, tide cycle, buoyancy, carrier, maritime traffic, landing assist |
+| `Core/OceanSystemData.cs` | Data models | Enums (`OceanRegion`, `SeaState`, `VesselType`, `WaterLandingType`, `MaritimeMissionType`, `CatapultType`, `GlidepathState`, `SearchPattern`, `DebrisType`) + data classes |
+| `Simulation/OceanWaveSimulator.cs` | MonoBehaviour | Multi-octave Gerstner wave sim: swell, wind waves, choppiness; surface height queries |
+| `Simulation/OceanSurfaceRenderer.cs` | MonoBehaviour | Ocean surface rendering: foam, SSS colour, caustics animation |
+| `Simulation/TideController.cs` | MonoBehaviour | Tidal water level: configurable cycle, spring/neap modulation |
+| `Simulation/OceanCurrentSimulator.cs` | MonoBehaviour | Surface and rip current simulation using Perlin noise fields |
+| `Simulation/WaterPhysicsController.cs` | MonoBehaviour | Buoyancy, drag, splash effects, wake generation for any Rigidbody |
+| `WaterLanding/WaterLandingController.cs` | MonoBehaviour | Seaplane touchdown detection, deceleration, taxi phase, landing record |
+| `WaterLanding/SeaplanePhysics.cs` | MonoBehaviour | Pontoon buoyancy, step planing, porpoising damping, crosswind correction |
+| `WaterLanding/EmergencyDitchingSystem.cs` | MonoBehaviour | Structural stress evaluation, crew briefing, life raft deployment |
+| `WaterLanding/WaterTakeoffController.cs` | MonoBehaviour | Takeoff run phases: bow spray, step lift, rotation, airborne detection |
+| `Carrier/AircraftCarrierController.cs` | MonoBehaviour (`#if SWEF_CARRIER_AVAILABLE`) | Deck motion, course/speed control |
+| `Carrier/CarrierDeckManager.cs` | MonoBehaviour (`#if SWEF_CARRIER_AVAILABLE`) | Parking slots, catapult queue, landing result broadcasting |
+| `Carrier/CatapultLaunchSystem.cs` | MonoBehaviour (`#if SWEF_CARRIER_AVAILABLE`) | Steam/EMALS catapult with bell-curve acceleration profile |
+| `Carrier/ArrestorWireSystem.cs` | MonoBehaviour (`#if SWEF_CARRIER_AVAILABLE`) | Wire engagement detection, deceleration, bolter detection, trap records |
+| `Carrier/CarrierNavigationSystem.cs` | MonoBehaviour (`#if SWEF_CARRIER_AVAILABLE`) | ACLS/ICLS guidance, meatball state, lineup/glideslope deviation, LSO calls |
+| `Maritime/MaritimeTrafficManager.cs` | MonoBehaviour singleton | Vessel spawning, shipping lane routing, port arrivals/departures |
+| `Maritime/VesselController.cs` | MonoBehaviour | AI vessel: waypoint navigation, COLREGS collision avoidance, sea-state speed adjustment |
+| `Maritime/VesselRenderer.cs` | MonoBehaviour | 4-level LOD, wake trails, running lights at night, flag display |
+| `Maritime/PortController.cs` | MonoBehaviour | Berth management, cargo operations timer, vessel docking/departure events |
+| `Missions/MaritimeMissionManager.cs` | MonoBehaviour singleton | Mission spawning, SAR lifecycle, expiry, rescue recording |
+| `Missions/SearchAndRescueController.cs` | MonoBehaviour | Search pattern generation (ExpandingSquare/Sector/ParallelTrack), survivor detection, hoist |
+| `Missions/MaritimePatrolController.cs` | MonoBehaviour | Patrol waypoints, vessel identification, illegal fishing detection |
+| `Missions/CargoDeliveryMission.cs` | MonoBehaviour | Pickup/delivery waypoints, cargo timer, state machine |
+| `Environment/OceanWeatherIntegration.cs` | MonoBehaviour | Weather→wave coupling: wind speed→sea state, storm surge |
+| `Environment/MarineFogController.cs` | MonoBehaviour | Advection fog, sea smoke, altitude-based visibility gradient |
+| `Environment/OceanDebrisController.cs` | MonoBehaviour | Floating debris spawning (icebergs, containers, oil slicks, seaweed) |
+| `Environment/UnderwaterEffects.cs` | MonoBehaviour | Underwater fog, light shafts, bubble trails, audio |
+| `UI/OceanSystemUI.cs` | MonoBehaviour | Settings panel: wave/reflection quality, caustics, foam density, landing assist |
+| `UI/MaritimeRadarHUD.cs` | MonoBehaviour | Radar overlay: sea state, wave height, wind direction rose |
+| `UI/CarrierApproachHUD.cs` | MonoBehaviour | Meatball, lineup bar, glideslope needle, AOA indexer, LSO call display |
+| `UI/MaritimeMissionUI.cs` | MonoBehaviour | SAR/patrol/cargo mission status panels |
+| `Integration/OceanSystemBridge.cs` | MonoBehaviour | Cross-system bridge: Flight, Weather, Achievement (`#if SWEF_OCEAN_AVAILABLE`) |
+| `Integration/OceanSystemAnalytics.cs` | MonoBehaviour singleton | Telemetry: water landings, carrier traps, SAR/patrol/cargo completions, sea time |
+
+### Tests
+
+`Assets/SWEF/Scripts/OceanSystem/Tests/OceanSystemTests.cs` — 60+ NUnit EditMode tests covering
+all 9 enums, `OceanSystemConfig` defaults, `WaveConditions`/`VesselData`/`DeckSlotState`/`SARMissionData`/
+`WaterLandingRecord`/`CarrierTrapRecord` field assignment, `OceanWaveSimulator` surface height and displacement
+finiteness, `ApplySeaState`, `TideController` phase clamping, `OceanCurrentSimulator` velocity and rip current,
+`EmergencyDitchingSystem` state transitions, `WaterTakeoffController` phases, `PortController` berth management,
+`SearchAndRescueController` all three search patterns, `MaritimePatrolController` lifecycle, `OceanSystemAnalytics`
+counter tracking and rates, `OceanWeatherIntegration` no-throw, `CargoDeliveryMission` state machine,
+and `OceanSystemManager` event firing.

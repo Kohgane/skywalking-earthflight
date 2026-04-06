@@ -2,7 +2,7 @@
 
 ## Current Status
 - **Feature Phases Completed**: 1–116 (of 120 planned)
-- **Current Phase**: 116 — Flight Analytics Dashboard
+- **Current Phase**: 117 — Advanced Ocean & Maritime System
 - **Post-Launch v3.0+**: Phases 117–120 (planned)
 
 ## Timeline Estimates
