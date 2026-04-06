@@ -5,14 +5,7 @@
         "SWEF.Core",
         "SWEF.Flight"
     ],
-    "includePlatforms": [
-        "Editor",
-        "StandaloneWindows64",
-        "StandaloneOSX",
-        "StandaloneLinux64",
-        "Android",
-        "iOS"
-    ],
+    "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,

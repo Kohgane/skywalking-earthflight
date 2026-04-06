@@ -13,14 +13,7 @@
         "Unity.TextMeshPro",
         "UnityEngine.UI"
     ],
-    "includePlatforms": [
-        "Editor",
-        "StandaloneWindows64",
-        "StandaloneOSX",
-        "StandaloneLinux64",
-        "Android",
-        "iOS"
-    ],
+    "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,
