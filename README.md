@@ -145,7 +145,7 @@ See [`Assets/SWEF/README_SWEF_SETUP.md`](Assets/SWEF/README_SWEF_SETUP.md) for d
 |------|------|
 | [SCENE_SETUP_GUIDE.md](./SCENE_SETUP_GUIDE.md) | 씬 셋업 가이드 — Unity Editor에서 첫 테스트 비행까지 |
 | [BUG_TRACKING_GUIDE.md](./BUG_TRACKING_GUIDE.md) | 버그 트래킹 가이드 — 버그 리포트 템플릿, 라벨, 체크리스트 |
-| [PHASE_ROADMAP.md](./PHASE_ROADMAP.md) | 개발 로드맵 — 전체 111개 완료 페이즈 + 포스트 런치 Phase 112–120 |
+| [PHASE_ROADMAP.md](./PHASE_ROADMAP.md) | 개발 로드맵 — 전체 112개 완료/진행 페이즈 + 포스트 런치 Phase 113–120 |
 | [RELEASE_NOTES_v1.0.0-rc1.md](./RELEASE_NOTES_v1.0.0-rc1.md) | 릴리즈 노트 — v1.0.0-rc1 전체 변경사항 요약 |
 
 ## License
@@ -4078,7 +4078,56 @@ airport gate assignment/vacate, and singleton lifecycle.
 
 ---
 
-## 🏁 Phases 1–110 Complete — Phase 111 Next
+## Phase 112 — 🎮 VR/XR Flight Experience
+
+Phase 112 implements a comprehensive VR/XR Flight Experience system — delivering a fully
+immersive Meta Quest / Apple Vision Pro flight cockpit with hand tracking, gesture recognition,
+3D instrumentation, motion comfort tools, and a complete VR flight loop from preflight to debrief.
+
+### New Scripts — `Assets/SWEF/Scripts/XR/` — namespace `SWEF.XR`
+
+| Script | Type | Summary |
+|--------|------|---------|
+| `Core/XRFlightData.cs` | C# | Enums (`XRPlatform` ×4, `XRComfortLevel` ×5, `XRHandedness` ×2, `XRLocomotionType` ×4, `XRSessionState` ×6, `VRFlightPhase` ×5, `XRGestureType` ×6, `CockpitInteractionType` ×4), data classes `XRHandState`, `XRHandCalibrationData`, `XRAnalyticsEvent` |
+| `Core/XRFlightConfig.cs` | ScriptableObject | Runtime config: comfort, rendering quality, hand tracking thresholds, locomotion, camera/IPD, platform |
+| `Core/XRFlightManager.cs` | C# | DontDestroyOnLoad singleton — initialises XR subsystems, manages `XRSessionState`, routes platform adapter |
+| `Platform/IXRPlatformAdapter.cs` | Interface | Platform-agnostic adapter contract: Initialise, RecenterView, Tick, Shutdown, GetHandState |
+| `Platform/GenericXRAdapter.cs` | C# | Fallback OpenXR adapter — stub hand states, basic recenter |
+| `Platform/MetaQuestAdapter.cs` | C# | Meta Quest adapter: passthrough mode, guardian, hand tracking (`#if SWEF_META_QUEST`) |
+| `Platform/AppleVisionProAdapter.cs` | C# | Apple Vision Pro: spatial computing, eye tracking, spatial gestures (`#if SWEF_APPLE_VISION`) |
+| `Platform/SteamVRAdapter.cs` | C# | SteamVR/OpenXR: controller input, lighthouse tracking (`#if SWEF_STEAMVR`) |
+| `Cockpit/VRCockpitController.cs` | C# | Virtual cockpit — throttle, yoke/stick control with grab-position mapping; 3 events |
+| `Cockpit/VRCockpitLayout.cs` | ScriptableObject | Per-aircraft-type 3D control/instrument positions for 5 aircraft categories |
+| `Cockpit/VRInstrumentPanel.cs` | C# | 3D altimeter, airspeed, attitude indicator, compass needle animation |
+| `Cockpit/VRCockpitInteraction.cs` | C# | Grab/push/pull/twist interaction with `IsWithinGrabRange`, `BeginGrab`, `EndGrab`, normalised value |
+| `HandTracking/HandTrackingController.cs` | C# | Singleton — polls platform adapter hand states each frame; `OnHandStatesUpdated` event |
+| `HandTracking/HandGestureRecognizer.cs` | C# | Confirms gestures after hold-duration; `ClassifyGesture` API; `OnGestureStarted`/`OnGestureEnded` |
+| `HandTracking/HandTrackingCalibration.cs` | C# | Palm-size calibration from `XRHandState`; dominant-hand, sensitivity; PlayerPrefs persistence |
+| `HandTracking/VRHandVisualizer.cs` | C# | Ghost-hand overlay, haptic trigger events, hand model visibility sync |
+| `Camera/VRCameraRig.cs` | C# | IPD adjustment [0.05–0.08 m], FOV [60°–120°], near-clip config; 2 events |
+| `Camera/VRComfortSystem.cs` | C# | Vignette ramp, snap-turning, ground reference, rest frame overlay; per-comfort-level preset |
+| `Camera/VRTeleportController.cs` | C# | Parabolic arc with Linecast collision; `ExecuteTeleport`; `SnapToSeat` anchor |
+| `Camera/VRRecenterController.cs` | C# | Double-tap recenter, Seated/Standing mode toggle; `OnRecentered` event |
+| `Experience/VRFlightExperience.cs` | C# | Preflight→Takeoff→Cruise→Landing→Debrief state machine; `OnPhaseChanged` event |
+| `Experience/VRWeatherEffects.cs` | C# | Volumetric cloud layer, canopy rain particles, Perlin-noise turbulence shake |
+| `Experience/VRSpatialAudio.cs` | C# | Engine pitch/volume from throttle level, wind volume from speed factor, mute API |
+| `Experience/VRPhotoMode.cs` | C# | Virtual hand-held camera; Flat/Panorama360/StereoSideBySide capture; `OnPhotoCaptured` event |
+| `UI/VRUI.cs` | C# | World-space Canvas panel: Fixed / GazeFollow / CockpitAttached placement modes |
+| `UI/VRMenuController.cs` | C# | Radial menu activated by OpenPalm gesture; gaze-dwell selection; `OnItemSelected` event |
+| `UI/VRHUDRenderer.cs` | C# | Head-follow HUD overlay: airspeed, altitude, heading, flight phase labels |
+| `UI/VRSettingsPanel.cs` | C# | Comfort level, hand tracking toggle, standing/seated, graphics quality — PlayerPrefs persistence |
+| `Integration/XRBridge.cs` | C# | Singleton bridge to SWEF Flight/Weather/Achievement sub-systems (`#if SWEF_XR_AVAILABLE`) |
+| `Integration/XRAnalytics.cs` | C# | Static telemetry: `BeginSession`, `EndSession`, gesture/comfort/teleport/photo tracking |
+
+### Tests
+
+`Assets/SWEF/Scripts/XR/Tests/XRFlightTests.cs` — 78 NUnit EditMode tests covering all enums,
+ScriptableObject defaults, data models, GenericXRAdapter lifecycle, cockpit interaction,
+gesture recognition, comfort presets, calibration, recenter, camera rig clamping,
+instrument panel, spatial audio, weather effects, analytics, photo mode, VR UI, and flight phases.
+
+---
+
 
 > **Target launch: 2026-11~12 (Season 1 "Sky Pioneer")**
 
@@ -4132,8 +4181,8 @@ to synchronise their progress across every device and platform automatically.
 
 | Phase | Title | Description |
 |-------|-------|-------------|
-| **111** | 🌐 Cross-Platform Cloud Save & Sync | 여러 기기에서 하나의 계정으로 진행상황 동기화 — PC에서 하던 비행을 모바일에서 이어서 |
-| **112** | 🎮 VR/XR Flight Experience | Meta Quest / Apple Vision Pro에서 완전 몰입형 VR 비행 경험. 핸드 트래킹으로 조종간 직접 조작 |
+| **111** | 🌐 Cross-Platform Cloud Save & Sync | 여러 기기에서 하나의 계정으로 진행상황 동기화 — PC에서 하던 비행을 모바일에서 이어서 — **✅ Completed** |
+| **112** | 🎮 VR/XR Flight Experience | Meta Quest / Apple Vision Pro에서 완전 몰입형 VR 비행 경험. 핸드 트래킹으로 조종간 직접 조작 — **🚧 Current** |
 | **113** | 🏙️ Procedural City & Airport Generation | 실제 지리 데이터 기반 절차적 도시/공항 생성. Cesium 타일 위에 건물과 활주로 자동 배치 |
 | **114** | 🛰️ Satellite & Space Debris Tracking | 실시간 위성 궤도 데이터 연동. 우주에서 실제 ISS 위치를 찾아 도킹 |
 | **115** | 🎨 Advanced Aircraft Livery Editor | Photoshop급 레이어 기반 항공기 도장 에디터. 커뮤니티 공유 마켓플레이스 |
