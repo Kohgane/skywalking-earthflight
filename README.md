@@ -145,7 +145,7 @@ See [`Assets/SWEF/README_SWEF_SETUP.md`](Assets/SWEF/README_SWEF_SETUP.md) for d
 |------|------|
 | [SCENE_SETUP_GUIDE.md](./SCENE_SETUP_GUIDE.md) | 씬 셋업 가이드 — Unity Editor에서 첫 테스트 비행까지 |
 | [BUG_TRACKING_GUIDE.md](./BUG_TRACKING_GUIDE.md) | 버그 트래킹 가이드 — 버그 리포트 템플릿, 라벨, 체크리스트 |
-| [PHASE_ROADMAP.md](./PHASE_ROADMAP.md) | 개발 로드맵 — 전체 117개 완료/진행 페이즈 + 포스트 런치 Phase 118+ |
+| [PHASE_ROADMAP.md](./PHASE_ROADMAP.md) | 개발 로드맵 — 전체 118개 완료/진행 페이즈 + 포스트 런치 Phase 119+ |
 | [RELEASE_NOTES_v1.0.0-rc1.md](./RELEASE_NOTES_v1.0.0-rc1.md) | 릴리즈 노트 — v1.0.0-rc1 전체 변경사항 요약 |
 
 ## License
@@ -4462,3 +4462,65 @@ finiteness, `ApplySeaState`, `TideController` phase clamping, `OceanCurrentSimul
 `SearchAndRescueController` all three search patterns, `MaritimePatrolController` lifecycle, `OceanSystemAnalytics`
 counter tracking and rates, `OceanWeatherIntegration` no-throw, `CargoDeliveryMission` state machine,
 and `OceanSystemManager` event firing.
+
+---
+
+## Phase 118 — 🔊 Spatial Audio & 3D Soundscape
+
+Phase 118 implements the full Spatial Audio & 3D Soundscape system —
+physically-based 3D positional audio, engine sound layers, aerodynamic noise,
+biome-based environment soundscapes, cockpit audio, Doppler shift, reverb zones,
+audio occlusion, HRTF binaural processing, and audio accessibility features.
+
+### New Scripts (36 files) — `Assets/SWEF/Scripts/SpatialAudio/` — namespace `SWEF.SpatialAudio`
+
+| File | Type | Purpose |
+|------|------|---------|
+| `Core/SpatialAudioManager.cs` | MonoBehaviour singleton | Central orchestrator (DontDestroyOnLoad): source pool, listener tracking, zone transitions, HRTF toggle |
+| `Core/SpatialAudioConfig.cs` | ScriptableObject | Runtime config: max sources, attenuation curves, Doppler factor, reverb quality, occlusion type, HRTF toggle |
+| `Core/SpatialAudioData.cs` | Data models | Enums (`AudioZoneType`, `SoundPropagationModel`, `AudioOcclusionType`, `EngineSoundLayer`, `ReverbZonePreset`, `WildlifeZone`) + data classes (`EngineAudioProfile`, `EnvironmentAudioProfile`, `WindNoiseProfile`, `DopplerResult`, `AudioZoneState`, `SpatialAudioAnalyticsRecord`) |
+| `Engine/EngineSoundController.cs` | MonoBehaviour | RPM-based pitch/volume, multi-layer engine sounds (idle, cruise, full throttle, afterburner) |
+| `Engine/EngineAudioLayerMixer.cs` | MonoBehaviour | Layer mixing: intake, exhaust, turbine whine, propeller, jet wash blended by throttle and RPM |
+| `Engine/EngineStartupSequence.cs` | MonoBehaviour | Start/shutdown sequence: StarterMotor → Ignition → SpoolUp → Running → SpoolDown → ShutdownWhine |
+| `Engine/MultiEngineAudioController.cs` | MonoBehaviour | Per-engine audio sources, asymmetric thrust, engine failure sound |
+| `Aerodynamic/WindNoiseController.cs` | MonoBehaviour | Laminar flow, turbulent buffeting, Mach effects based on airspeed |
+| `Aerodynamic/AerodynamicSoundGenerator.cs` | MonoBehaviour | Flap, gear, speed brake, buffet, stall warning audio events |
+| `Aerodynamic/SonicBoomController.cs` | MonoBehaviour | Shock wave audio for supersonic flight, distance-based propagation delay |
+| `Aerodynamic/PropWashAudio.cs` | MonoBehaviour | Propeller/rotor wash audio with ground effect modulation |
+| `Environment/EnvironmentSoundscapeController.cs` | MonoBehaviour | Biome-based ambient soundscape crossfades (forest, ocean, city, desert, arctic, mountain) |
+| `Environment/WeatherAudioController.cs` | MonoBehaviour | Rain intensity layers, thunder with distance delay, hail impacts, wind gusts |
+| `Environment/AirportAmbientController.cs` | MonoBehaviour | Terminal PA, jet noise, ground vehicles, ATC radio chatter — altitude-faded |
+| `Environment/WildlifeAudioController.cs` | MonoBehaviour | Birds at altitude, seagulls near coast, crickets at night, forest/tropical biomes |
+| `Environment/CityAudioController.cs` | MonoBehaviour | Traffic, sirens, construction — fades with altitude |
+| `Propagation/AudioPropagationEngine.cs` | MonoBehaviour | Distance attenuation (Linear/Log/Realistic), atmospheric absorption, propagation delay |
+| `Propagation/AudioOcclusionSystem.cs` | MonoBehaviour | None/LowPass/Raycast/Volumetric occlusion modes, cutoff Hz and volume reduction |
+| `Propagation/DopplerEffectController.cs` | MonoBehaviour | Doppler pitch shift for flyby, approaching/receding sources; `DopplerResult` model |
+| `Propagation/ReverbZoneManager.cs` | MonoBehaviour | Zone-to-preset mapping, `AudioReverbZone`/`AudioReverbFilter` application |
+| `Cockpit/CockpitAudioController.cs` | MonoBehaviour | Avionics hum, gyro whir, pressurisation, switch clicks |
+| `Cockpit/CockpitWarningAudio.cs` | MonoBehaviour | Stall horn, gear warning, GPWS, overspeed clacker, altitude alerts |
+| `Cockpit/RadioAudioController.cs` | MonoBehaviour | ATC/co-pilot voice clips with squelch open/close and bandpass filter |
+| `Cockpit/CockpitCreakController.cs` | MonoBehaviour | G-load airframe creak, turbulence rattle, pressurisation creak |
+| `Effects/AudioEffectsProcessor.cs` | MonoBehaviour | Zone-aware low-pass/high-pass filtering, cockpit interior blend |
+| `Effects/HRTFProcessor.cs` | MonoBehaviour | HRTF binaural audio enable/disable/quality; `#if SWEF_XR_AVAILABLE` XR config |
+| `Effects/AudioDynamicRange.cs` | MonoBehaviour | Auto-ducking priority queue (Ambient/Flight/Radio/Warning), fade-in/out |
+| `Effects/AudioTransitionController.cs` | MonoBehaviour | Zone crossfades, interior/exterior blend coroutine, altitude mix weight |
+| `UI/SpatialAudioUI.cs` | MonoBehaviour | Settings panel: master/engine/ambient/cockpit/warning volumes, HRTF toggle, quality presets |
+| `UI/AudioMixerUI.cs` | MonoBehaviour | Advanced mixer: per-category sliders, reverb wet/dry, occlusion toggle, HRTF on/off |
+| `UI/SoundscapeDebugUI.cs` | MonoBehaviour | Debug overlay: zone name, altitude, speed, reverb preset labels |
+| `UI/AudioAccessibilityUI.cs` | MonoBehaviour | Subtitles for radio/ATC, visual sound indicators, mono audio toggle |
+| `Integration/SpatialAudioBridge.cs` | MonoBehaviour | Cross-system bridge: Flight/Weather/XR/NPC/Engine (`#if SWEF_SPATIAL_AUDIO_AVAILABLE`) |
+| `Integration/SpatialAudioAnalytics.cs` | MonoBehaviour singleton | HRTF adoption, quality preset, peak source count, CPU cost telemetry |
+| `SWEF.SpatialAudio.asmdef` | Assembly Definition | Assembly for all SpatialAudio scripts |
+
+### Tests
+
+`Assets/SWEF/Scripts/SpatialAudio/Tests/SpatialAudioTests.cs` — 45+ NUnit EditMode tests covering
+all 6 enums (`AudioZoneType`, `SoundPropagationModel`, `AudioOcclusionType`, `EngineSoundLayer`,
+`ReverbZonePreset`, `WildlifeZone`), all data model classes, `EngineAudioLayerMixer.LayerWeight`
+static calculations (idle/full-throttle/turbine/jet-wash/afterburner weights), `WindNoiseController`
+volume regime calculations (laminar/turbulent/Mach), `AudioPropagationEngine` speed-of-sound formula
+and all three attenuation models, `AudioOcclusionSystem` cutoff Hz and volume multiplier mapping,
+`DopplerEffectController` static/approaching/receding pitch calculations, `ReverbZoneManager`
+zone-to-preset mapping, `SonicBoomController` Mach threshold and propagation delay,
+`PropWashAudio` wash level, `CockpitWarningAudio` enum and initial state, `AudioDynamicRange`
+priority ordering, and `EngineStartupSequence` state machine.
