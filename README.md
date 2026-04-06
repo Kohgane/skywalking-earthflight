@@ -145,7 +145,7 @@ See [`Assets/SWEF/README_SWEF_SETUP.md`](Assets/SWEF/README_SWEF_SETUP.md) for d
 |------|------|
 | [SCENE_SETUP_GUIDE.md](./SCENE_SETUP_GUIDE.md) | 씬 셋업 가이드 — Unity Editor에서 첫 테스트 비행까지 |
 | [BUG_TRACKING_GUIDE.md](./BUG_TRACKING_GUIDE.md) | 버그 트래킹 가이드 — 버그 리포트 템플릿, 라벨, 체크리스트 |
-| [PHASE_ROADMAP.md](./PHASE_ROADMAP.md) | 개발 로드맵 — 전체 114개 완료/진행 페이즈 + 포스트 런치 Phase 115–120 |
+| [PHASE_ROADMAP.md](./PHASE_ROADMAP.md) | 개발 로드맵 — 전체 115개 완료/진행 페이즈 + 포스트 런치 Phase 116+ |
 | [RELEASE_NOTES_v1.0.0-rc1.md](./RELEASE_NOTES_v1.0.0-rc1.md) | 릴리즈 노트 — v1.0.0-rc1 전체 변경사항 요약 |
 
 ## License
@@ -4296,3 +4296,57 @@ all enums, `SatelliteTrackingConfig` defaults and derived properties, `TLEData`/
 `OrbitalMechanicsEngine` orbital period and orbit classification, `SatelliteCatalogFilter` all filter
 and sort methods, `CollisionWarningSystem.CalculateAvoidanceDeltaV`, `OrbitVisualizer.ColorForType`,
 `ISSTracker.ISSNoradId`, and `SpaceStationInterior.ISSModule` enum validation.
+
+
+## Phase 115 — 🎨 Advanced Aircraft Livery Editor
+
+Phase 115 implements the full Advanced Aircraft Livery Editor system —
+delivering a professional-grade layer-based paint editor, procedural pattern generation,
+decal placement, UV mapping, 3D live preview, team livery sharing, template library,
+and community gallery.
+
+### New Scripts (22 files) — `Assets/SWEF/Scripts/LiveryEditor/` — namespace `SWEF.LiveryEditor`
+
+| Script | Type | Summary |
+|--------|------|---------|
+| `Core/LiveryEditorManager.cs` | MonoBehaviour singleton | Central orchestrator (DontDestroyOnLoad): livery creation, save, load, apply, auto-save |
+| `Core/LiveryEditorConfig.cs` | ScriptableObject | Runtime config: max layers, texture resolution, undo depth, colour palette presets, auto-save interval |
+| `Core/LiveryEditorData.cs` | Data models | Enums (`LiveryLayerType`, `BlendMode`, `DecalCategory`, `LiveryExportFormat`, `BrushType`, `MirrorMode`, `GradientType`, `PatternType`, `UVZone`, `LiveryTemplateCategory`) + `LayerSnapshot`, `LiveryMetadata`, `GradientStop`, `DecalTransform`, `BrushSettings`, `DecalAssetRecord`, `LiverySaveData` |
+| `Layers/LiveryLayerManager.cs` | MonoBehaviour | Layer stack: add, remove, reorder, duplicate, merge, group operations |
+| `Layers/LiveryLayer.cs` | Runtime class | Individual layer: texture, opacity, blend mode, visibility, lock, mask, group |
+| `Layers/LayerBlender.cs` | Static class | Compositing: Normal, Multiply, Screen, Overlay, SoftLight, Darken, Lighten, Add blend modes; mask application |
+| `Layers/LayerHistoryController.cs` | MonoBehaviour | Undo/redo: cursor-based history stack, configurable depth, snapshot recording |
+| `Tools/BrushEngine.cs` | MonoBehaviour | Paint brush: Round, Square, Soft, Airbrush, Eraser; pressure sensitivity; mirror painting |
+| `Tools/PatternGenerator.cs` | Static class | Procedural patterns: Stripes, Chevrons, Camouflage, Chequered, Geometric, Noise |
+| `Tools/GradientPainter.cs` | Static class | Gradient fills: Linear, Radial, Angular, Reflected with multi-stop colour support |
+| `Tools/ColorPickerController.cs` | MonoBehaviour | Colour management: RGB/HSV/Hex, eyedropper, recent colour history, palette selection |
+| `Decals/DecalLibrary.cs` | MonoBehaviour | Decal catalogue: Airline, Military, Racing, National seed records; runtime registration |
+| `Decals/DecalPlacer.cs` | MonoBehaviour | Decal placement: UV position/rotation/scale/flip, real-time preview, canvas baking |
+| `Decals/CustomDecalImporter.cs` | MonoBehaviour | User decal upload: PNG/JPG bytes import, file size validation, bilinear scaling (`#if SWEF_UGC_AVAILABLE`) |
+| `Decals/TextDecalRenderer.cs` | MonoBehaviour | Text overlay: colour, font size, outline, drop shadow on canvas |
+| `Preview/AircraftUVMapper.cs` | MonoBehaviour | UV zone layout: Fuselage/Wings/Tail/Engines/LandingGear/Nose rects, hit-test |
+| `Preview/LiveryPreviewRenderer.cs` | MonoBehaviour | 3D preview: orbit rotation, auto-rotate, zoom, lighting presets, texture application |
+| `Preview/UVProjectionController.cs` | MonoBehaviour | 3D paint projection: screen-to-UV raycast, world-to-UV barycentric interpolation |
+| `Preview/LiveryMaterialApplier.cs` | MonoBehaviour | Material application: base-colour, metallic, smoothness, emission map |
+| `Sharing/TeamLiveryManager.cs` | MonoBehaviour | Team liveries: shared colour scheme, member roster, bulk apply |
+| `Sharing/LiveryGallery.cs` | MonoBehaviour | Community gallery: search, top-rated, newest, download, rating (`#if SWEF_MARKETPLACE_AVAILABLE`) |
+| `Sharing/LiveryExporter.cs` | MonoBehaviour | Export: PNG/JPEG texture sheet, metadata JSON, 256 px thumbnail |
+| `Sharing/LiveryImporter.cs` | MonoBehaviour | Import: format version check, aircraft compatibility check, JSON + texture loading |
+| `Templates/LiveryTemplateLibrary.cs` | MonoBehaviour | Template catalogue: 8 built-in templates (Commercial, Military, Racing, Historic, Fantasy) |
+| `Templates/TemplateCustomizer.cs` | MonoBehaviour | Template customisation: colour override, pattern scale, generates `LiverySaveData` |
+| `Templates/RandomLiveryGenerator.cs` | MonoBehaviour | Random livery generation: category-guided colour, pattern, style-name selection |
+| `UI/LiveryEditorUI.cs` | MonoBehaviour | Root editor UI: panel visibility, tool selection, save/close delegation |
+| `UI/LiveryBrowserUI.cs` | MonoBehaviour | Livery browser: My Liveries / Team Liveries / Community Gallery tabs, search |
+| `UI/LiveryEditorToolbar.cs` | MonoBehaviour | Toolbar: Brush/Select/Transform/Text/Decal/Fill/Eyedropper, undo/redo, save |
+| `UI/LiveryEditorHUD.cs` | MonoBehaviour | In-flight HUD: quick-swap livery slots, open-editor shortcut |
+| `Integration/LiveryEditorBridge.cs` | MonoBehaviour | Cross-system bridge: Aircraft, Workshop, CloudSave (`#if SWEF_LIVERY_AVAILABLE`, `#if SWEF_MARKETPLACE_AVAILABLE`) |
+| `Integration/LiveryEditorAnalytics.cs` | Static class | Telemetry: sessions, liveries created/saved/exported, brush strokes, decal placements, template usage |
+
+### Tests
+
+`Assets/SWEF/Scripts/LiveryEditor/Tests/LiveryEditorTests.cs` — 50 NUnit EditMode tests covering
+all 10 enums, `LiveryEditorConfig` defaults and palette presets, `LiveryLayer` creation/duplicate/properties,
+`LayerBlender` all blend modes, `LayerHistoryController` undo/redo/cursor management,
+`GradientStop`/`DecalTransform`/`BrushSettings`/`LiveryMetadata`/`LiverySaveData`/`LayerSnapshot` data models,
+`PatternGenerator` all types without throw, `GradientPainter` linear and multi-stop,
+`LiveryTemplate`/`DecalAssetRecord` field assignment, and `LiveryEditorAnalytics` counter tracking and reset.
