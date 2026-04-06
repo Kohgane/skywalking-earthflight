@@ -48,7 +48,8 @@ namespace SWEF.LandingChallenge
 
             raw *= 1000f; // convert 0–1 → 0–1000
             raw *= GetDifficultyMultiplier(challenge.Difficulty, cfg);
-            raw -= td.BounceCount.GetHashCode() >= 0 ? 0f : 0f; // placeholder
+            // Apply bounce deductions
+            if (cfg != null) raw -= td.BounceCount * cfg.bouncePenalty;
 
             result.TotalScore                = Mathf.Clamp(raw, 0f, 1000f);
             result.CenterlineDeviationMetres = td.CentrelineOffsetMetres;

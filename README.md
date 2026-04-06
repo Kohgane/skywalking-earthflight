@@ -4682,7 +4682,7 @@ replay recording, and carrier/mountain/extreme landing scenarios.
 
 ### Tests
 
-`Assets/SWEF/Scripts/LandingChallenge/Tests/LandingChallengeTests.cs` — 55 NUnit EditMode tests covering
+`Assets/SWEF/Scripts/LandingChallenge/Tests/LandingChallengeTests.cs` — 67 NUnit EditMode tests covering
 all enums (`ChallengeType`, `DifficultyLevel`, `ScoringCategory`, `LandingGrade`, `ChallengeStatus`,
 `LSOGrade`, `WeatherPreset`), data models (`ChallengeDefinition`, `TouchdownData`, `ApproachSnapshot`,
 `LandingResult`, `ChallengeProgress`), `LandingGradeCalculator` grade/deduction/bonus logic,
