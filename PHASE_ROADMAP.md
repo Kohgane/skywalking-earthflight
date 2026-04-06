@@ -1,7 +1,7 @@
 # SWEF Phase Roadmap
 
 > This file tracks the planned development phases for Skywalking: Earth Flight.
-> Last updated: 2026-04-06 (Phase 116 — Flight Analytics Dashboard)
+> Last updated: 2026-04-06 (Phase 117 — Advanced Ocean & Maritime System)
 
 ## Completed Phases
 
@@ -45,14 +45,15 @@ Phases 1–80 have been merged into `main`. See individual PR descriptions and `
 | 114 | 🛰️ Satellite & Space Debris Tracking | — | 2026-04-06 |
 | 115 | 🎨 Advanced Aircraft Livery Editor | — | 2026-04-06 |
 | 116 | 📊 Flight Analytics Dashboard | — | 2026-04-06 |
+| 117 | 🌊 Advanced Ocean & Maritime System | — | 2026-04-06 |
 
 ## Current Phase
 
-**Phase 116 — 📊 Flight Analytics Dashboard**
+**Phase 117 — 🌊 Advanced Ocean & Maritime System**
 
 ## Next Phase
 
-**Phase 117 — 🌊 Ocean & Maritime Flight System**
+**Phase 118 — 🔊 Spatial Audio & 3D Soundscape**
 
 ## Post-Launch Phases (v2.0+)
 
@@ -70,7 +71,11 @@ Phases 1–80 have been merged into `main`. See individual PR descriptions and `
 | 110 | 🎭 Dynamic NPC & Air Traffic Ecosystem | AI | [#133](https://github.com/Kohgane/skywalking-earthflight/issues/133) | **Completed** |
 | 111 | 🌐 Cross-Platform Cloud Save & Sync | Infrastructure | — | **Completed** |
 | 112 | 🎮 VR/XR Flight Experience | XR | — | **Completed** |
-| 113 | 🏙️ Procedural City & Airport Generation | World | — | **Current** |
+| 113 | 🏙️ Procedural City & Airport Generation | World | — | **Completed** |
+| 114 | 🛰️ Satellite & Space Debris Tracking | Space | — | **Completed** |
+| 115 | 🎨 Advanced Aircraft Livery Editor | Customization | — | **Completed** |
+| 116 | 📊 Flight Analytics Dashboard | Analytics | — | **Completed** |
+| 117 | 🌊 Advanced Ocean & Maritime System | World | — | **Current** |
 
 ## Post-Launch Phases (v3.0+)
 
@@ -80,9 +85,9 @@ Phases 1–80 have been merged into `main`. See individual PR descriptions and `
 | 112 | 🎮 VR/XR Flight Experience | XR | Meta Quest / Apple Vision Pro 전용 VR 비행 경험, 핸드 트래킹 조종 — **Completed** |
 | 113 | 🏙️ Procedural City & Airport Generation | World | 절차적 도시/공항 생성, 실시간 건물 LOD, 활주로 자동 배치 — **Completed** |
 | 114 | 🛰️ Satellite & Space Debris Tracking | Space | 실시간 위성 궤도 추적, 우주 쓰레기 회피, ISS 도킹 시나리오 — **Completed** |
-| 115 | 🎨 Advanced Aircraft Livery Editor | Customization | 레이어 기반 도장 에디터, 커스텀 데칼 업로드, 팀 도장 시스템 — **Current** |
-| 116 | 📊 Flight Analytics Dashboard | Analytics | 비행 통계 대시보드, 히트맵, 비행 경로 분석, 성능 리포트 |
-| 117 | 🌊 Advanced Ocean & Maritime System | World | 해양 시뮬레이션 강화, 수상 착륙, 항공모함 이착함, 해상 구조 미션 |
+| 115 | 🎨 Advanced Aircraft Livery Editor | Customization | 레이어 기반 도장 에디터, 커스텀 데칼 업로드, 팀 도장 시스템 — **Completed** |
+| 116 | 📊 Flight Analytics Dashboard | Analytics | 비행 통계 대시보드, 히트맵, 비행 경로 분석, 성능 리포트 — **Completed** |
+| 117 | 🌊 Advanced Ocean & Maritime System | World | 해양 시뮬레이션 강화, 수상 착륙, 항공모함 이착함, 해상 구조 미션 — **Current** |
 | 118 | 🔊 Spatial Audio & 3D Soundscape | Audio | 3D 공간 오디오, 거리 기반 엔진 사운드, 환경 음향 시뮬레이션 |
 | 119 | 🤖 Advanced AI Traffic Control | AI | 고급 AI ATC 시스템, 실시간 항로 최적화, 충돌 회피 알고리즘 |
 | 120 | 🎯 Precision Landing Challenge System | Gameplay | 정밀 착륙 챌린지, 항공모함/산악/극한 착륙, 글로벌 리더보드 |
