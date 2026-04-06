@@ -145,7 +145,7 @@ See [`Assets/SWEF/README_SWEF_SETUP.md`](Assets/SWEF/README_SWEF_SETUP.md) for d
 |------|------|
 | [SCENE_SETUP_GUIDE.md](./SCENE_SETUP_GUIDE.md) | 씬 셋업 가이드 — Unity Editor에서 첫 테스트 비행까지 |
 | [BUG_TRACKING_GUIDE.md](./BUG_TRACKING_GUIDE.md) | 버그 트래킹 가이드 — 버그 리포트 템플릿, 라벨, 체크리스트 |
-| [PHASE_ROADMAP.md](./PHASE_ROADMAP.md) | 개발 로드맵 — 전체 119개 완료/진행 페이즈 + 포스트 런치 Phase 120+ |
+| [PHASE_ROADMAP.md](./PHASE_ROADMAP.md) | 개발 로드맵 — 전체 120개 완료 페이즈 (v3.0 로드맵 완료!) |
 | [RELEASE_NOTES_v1.0.0-rc1.md](./RELEASE_NOTES_v1.0.0-rc1.md) | 릴리즈 노트 — v1.0.0-rc1 전체 변경사항 요약 |
 
 ## License
@@ -4177,20 +4177,22 @@ to synchronise their progress across every device and platform automatically.
 
 ---
 
-## 🚀 Post-Launch v3.0+ Roadmap (Phase 111–120)
+## 🚀 Post-Launch v3.0+ Roadmap (Phase 111–120) — ✅ COMPLETE
+
+> **🎉 v3.0 Roadmap Complete!** All 120 development phases are implemented. The codebase is ready for Unity integration, scene wiring, asset import, and device testing.
 
 | Phase | Title | Description |
 |-------|-------|-------------|
 | **111** | 🌐 Cross-Platform Cloud Save & Sync | 여러 기기에서 하나의 계정으로 진행상황 동기화 — PC에서 하던 비행을 모바일에서 이어서 — **✅ Completed** |
 | **112** | 🎮 VR/XR Flight Experience | Meta Quest / Apple Vision Pro에서 완전 몰입형 VR 비행 경험. 핸드 트래킹으로 조종간 직접 조작 — **✅ Completed** |
-| **113** | 🏙️ Procedural City & Airport Generation | 실제 지리 데이터 기반 절차적 도시/공항 생성. Cesium 타일 위에 건물과 활주로 자동 배치 — **🚧 Current** |
-| **114** | 🛰️ Satellite & Space Debris Tracking | 실시간 위성 궤도 데이터 연동. 우주에서 실제 ISS 위치를 찾아 도킹 |
-| **115** | 🎨 Advanced Aircraft Livery Editor | Photoshop급 레이어 기반 항공기 도장 에디터. 커뮤니티 공유 마켓플레이스 |
-| **116** | 📊 Flight Analytics Dashboard | 비행 기록 분석 대시보드. 히트맵으로 자주 가는 곳, 착륙 정밀도 통계 등 |
-| **117** | 🌊 Advanced Ocean & Maritime System | 수상 비행기 착수, 항공모함 이착함, 해상 구조 미션. 파도/조류 시뮬레이션 |
-| **118** | 🔊 Spatial Audio & 3D Soundscape | HRTF 기반 3D 공간 오디오. 옆을 지나가는 항공기 엔진 소리가 방향에 따라 변화 |
-| **119** | 🤖 Advanced AI Traffic Control | 완전 자동화된 AI 관제 시스템. 실시간 항로 충돌 감지 및 우회 지시 |
-| **120** | 🎯 Precision Landing Challenge System | 극한 환경 정밀 착륙 챌린지. 항공모함, 빙하, 화산 옆 착륙. 글로벌 리더보드 |
+| **113** | 🏙️ Procedural City & Airport Generation | 실제 지리 데이터 기반 절차적 도시/공항 생성. Cesium 타일 위에 건물과 활주로 자동 배치 — **✅ Completed** |
+| **114** | 🛰️ Satellite & Space Debris Tracking | 실시간 위성 궤도 데이터 연동. 우주에서 실제 ISS 위치를 찾아 도킹 — **✅ Completed** |
+| **115** | 🎨 Advanced Aircraft Livery Editor | Photoshop급 레이어 기반 항공기 도장 에디터. 커뮤니티 공유 마켓플레이스 — **✅ Completed** |
+| **116** | 📊 Flight Analytics Dashboard | 비행 기록 분석 대시보드. 히트맵으로 자주 가는 곳, 착륙 정밀도 통계 등 — **✅ Completed** |
+| **117** | 🌊 Advanced Ocean & Maritime System | 수상 비행기 착수, 항공모함 이착함, 해상 구조 미션. 파도/조류 시뮬레이션 — **✅ Completed** |
+| **118** | 🔊 Spatial Audio & 3D Soundscape | HRTF 기반 3D 공간 오디오. 옆을 지나가는 항공기 엔진 소리가 방향에 따라 변화 — **✅ Completed** |
+| **119** | 🤖 Advanced AI Traffic Control | 완전 자동화된 AI 관제 시스템. 실시간 항로 충돌 감지 및 우회 지시 — **✅ Completed** |
+| **120** | 🎯 Precision Landing Challenge System | 극한 환경 정밀 착륙 챌린지. 항공모함, 빙하, 화산 옆 착륙. 글로벌 리더보드 — **✅ Completed — FINAL** |
 
 ---
 
@@ -4588,3 +4590,106 @@ seed and add/retrieve, `FlowControlManager` ground stop/GDP/MIT, `SequencingCont
 with priority and runway balancing, `AirspaceManager` Class A query, `SpecialUseAirspace` TFR/prohibited,
 `ATCAnalytics` counters and session reset, `ATCStripBoard` strip/handoff management,
 `NOTAMManager` issue/cancel, `SectorController` seed and enter/exit.
+
+---
+
+## Phase 120 — 🎯 Precision Landing Challenge System
+
+> **🏁 FINAL PHASE — v3.0 Roadmap Complete!**
+
+Phase 120 implements the complete **Precision Landing Challenge System** —
+a multi-tier landing challenge framework with global leaderboards, AI coaching,
+replay recording, and carrier/mountain/extreme landing scenarios.
+
+### New Scripts (38 files) — `Assets/SWEF/Scripts/LandingChallenge/` — namespace `SWEF.LandingChallenge`
+
+#### Core/
+| File | Type | Description |
+|------|------|-------------|
+| `LandingChallengeData.cs` | Data models | Enums: `ChallengeType` (9), `DifficultyLevel` (5), `ScoringCategory` (6), `LandingGrade` (6), `ChallengeStatus` (5), `LSOGrade` (5), `WeatherPreset` (10); Data classes: `LandingResult`, `ChallengeDefinition`, `ChallengeProgress`, `TouchdownData`, `ApproachSnapshot`, `ReplayFrame` |
+| `LandingChallengeConfig.cs` | ScriptableObject | Scoring weights, difficulty multipliers, precision thresholds, wind tolerance, replay buffer size, grade thresholds, penalties, bonuses |
+| `LandingChallengeManager.cs` | MonoBehaviour singleton | DontDestroyOnLoad; challenge registration, session lifecycle, touchdown scoring dispatch, JSON persistence |
+
+#### Challenges/
+| File | Description |
+|------|-------------|
+| `StandardLandingChallenge.cs` | ILS/Visual/Circling approach modes, snapshot collection, touchdown zone check |
+| `CarrierLandingChallenge.cs` | Pitching deck simulation, IFLOLS meatball, wire engagement, LSO grading |
+| `MountainLandingChallenge.cs` | Density altitude, obstacle clearance, one-way approach, performance penalty |
+| `CrosswindLandingChallenge.cs` | Progressive wind, gusts (Perlin), wind shear on short final |
+| `ShortFieldChallenge.cs` | Obstacle 50 ft clearance, stopping distance, runway exceedance |
+| `ExtremeLandingChallenge.cs` | Bitmask `HazardFlags` (8 flags), turbulence force, difficulty multiplier |
+
+#### Scoring/
+| File | Description |
+|------|-------------|
+| `LandingScoringEngine.cs` | 6-category weighted scoring, difficulty multiplier, star assignment |
+| `TouchdownAnalyzer.cs` | Centreline/threshold offset, G-force, crab/bank angles from transforms |
+| `ApproachAnalyzer.cs` | Mean GS/LOC deviation, speed stability, gear/flap fraction, quality score |
+| `LandingGradeCalculator.cs` | Static: grade from score, deductions (bounces/go-around), bonuses (manual/night/noHUD/weather) |
+| `ReplayRecorder.cs` | Rolling circular buffer (60 s), frame capture, slow-motion playback |
+
+#### Progression/
+| File | Description |
+|------|-------------|
+| `LandingProgressionSystem.cs` | Star tracking, tier unlock, mastery badge awards |
+| `LandingRewardManager.cs` | XP, currency, exclusive liveries, pilot titles (Carrier Ace, Mountain Goat, etc.) |
+| `DailyLandingChallenge.cs` | Deterministic daily seed, community participation counter, personal best tracking |
+| `LandingCertificationSystem.cs` | 5 certification levels (BasicLanding → MasterPilot), prerequisite challenge evaluation |
+
+#### Leaderboard/
+| File | Description |
+|------|-------------|
+| `LeaderboardEntry.cs` | Serializable entry: player, score, grade, aircraft, weather, replay ID, timestamp |
+| `LandingLeaderboardManager.cs` | MonoBehaviour singleton; per-challenge, per-airport, per-aircraft, global boards; `#if SWEF_MULTIPLAYER_AVAILABLE` |
+| `SeasonalLeaderboard.cs` | Monthly reset, cumulative score, tier promotions (Bronze→Diamond) |
+| `GhostReplayManager.cs` | Frame-by-frame ghost aircraft overlay from downloaded replay |
+
+#### Environment/
+| File | Description |
+|------|-------------|
+| `ChallengeWeatherController.cs` | Fixed presets, progressive difficulty, random mode, severity (0–1) |
+| `ChallengeAirportSelector.cs` | Curated catalogue: TNCM St. Maarten, VNLK Lukla, LXGB Gibraltar, VHHX Kai Tak, etc. |
+| `ChallengeAircraftRestrictor.cs` | 9 aircraft categories, per-challenge restriction rules, handicap multipliers |
+| `ChallengeScoringModifier.cs` | Manual flight / night / no-HUD / weather bonus application |
+
+#### UI/
+| File | Description |
+|------|-------------|
+| `LandingChallengeUI.cs` | Challenge browser grid, difficulty filter, lock/unlock status |
+| `LandingScoreUI.cs` | Animated score reveal, grade display, star award, personal best comparison |
+| `LandingHUD.cs` | PAPI indication (5 states), glideslope/localiser dots, speed trend |
+| `LeaderboardUI.cs` | Global/Friends/Personal tabs, pagination, replay watch trigger |
+| `LandingReplayUI.cs` | Play/pause/rewind, camera mode switching, slow-motion, share |
+
+#### Tutorial/
+| File | Description |
+|------|-------------|
+| `LandingTutorialController.cs` | 5-step default approach tutorial, altitude-triggered step advance, speed hints |
+| `LandingCoachSystem.cs` | Real-time coaching with cooldown, post-landing tips |
+| `ApproachBriefing.cs` | Pre-challenge briefing: weather, speeds, key callouts, airport-specific notes |
+
+#### Integration/
+| File | Description |
+|------|-------------|
+| `LandingChallengeBridge.cs` | Cross-system bridge (`#if SWEF_LANDING_CHALLENGE_AVAILABLE`) connecting to Flight/Achievement/Academy/CloudSave |
+| `LandingChallengeAnalytics.cs` | Attempt/completion/score telemetry, grade distribution, popular challenge ranking |
+
+#### Assembly
+| File | Description |
+|------|-------------|
+| `SWEF.LandingChallenge.asmdef` | Assembly definition for all LandingChallenge scripts |
+
+### Tests
+
+`Assets/SWEF/Scripts/LandingChallenge/Tests/LandingChallengeTests.cs` — 67 NUnit EditMode tests covering
+all enums (`ChallengeType`, `DifficultyLevel`, `ScoringCategory`, `LandingGrade`, `ChallengeStatus`,
+`LSOGrade`, `WeatherPreset`), data models (`ChallengeDefinition`, `TouchdownData`, `ApproachSnapshot`,
+`LandingResult`, `ChallengeProgress`), `LandingGradeCalculator` grade/deduction/bonus logic,
+`LeaderboardEntry.FromResult` factory, `ApproachAnalyzer` quality scoring, `LandingProgressionSystem`
+star/badge/tier tracking, `LandingLeaderboardManager` insert/rank/replace, `SeasonalLeaderboard`
+tier promotion, challenge scenarios (`CrosswindLandingChallenge`, `MountainLandingChallenge`,
+`ShortFieldChallenge`, `ExtremeLandingChallenge` hazard flags/multipliers), `LandingChallengeAnalytics`
+counters, `LandingHUD` PAPI states, `LandingTutorialController` activation/hints,
+`ReplayRecorder` start/save, `DailyLandingChallenge` seed/NextReset, `ChallengeAircraftRestrictor`
+rules/handicap, `LandingCoachSystem` activation/tips.
