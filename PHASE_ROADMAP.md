@@ -1,7 +1,7 @@
 # SWEF Phase Roadmap
 
 > This file tracks the planned development phases for Skywalking: Earth Flight.
-> Last updated: 2026-04-06 (Phase 114 — Satellite & Space Debris Tracking)
+> Last updated: 2026-04-06 (Phase 115 — Advanced Aircraft Livery Editor)
 
 ## Completed Phases
 
@@ -43,14 +43,15 @@ Phases 1–80 have been merged into `main`. See individual PR descriptions and `
 | 112 | 🎮 VR/XR Flight Experience | — | 2026-04-05 |
 | 113 | 🏙️ Procedural City & Airport Generation | — | 2026-04-06 |
 | 114 | 🛰️ Satellite & Space Debris Tracking | — | 2026-04-06 |
+| 115 | 🎨 Advanced Aircraft Livery Editor | — | 2026-04-06 |
 
 ## Current Phase
 
-**Phase 114 — 🛰️ Satellite & Space Debris Tracking**
+**Phase 115 — 🎨 Advanced Aircraft Livery Editor**
 
 ## Next Phase
 
-**Phase 115 — ✏️ Livery & Livery Editor**
+**Phase 116 — 📊 Flight Analytics & Performance Dashboard**
 
 ## Post-Launch Phases (v2.0+)
 
@@ -77,7 +78,8 @@ Phases 1–80 have been merged into `main`. See individual PR descriptions and `
 | 111 | 🌐 Cross-Platform Cloud Save & Sync | Infrastructure | 크로스 플랫폼 클라우드 세이브, 기기간 진행상황 동기화, 충돌 해결 — **Completed** |
 | 112 | 🎮 VR/XR Flight Experience | XR | Meta Quest / Apple Vision Pro 전용 VR 비행 경험, 핸드 트래킹 조종 — **Completed** |
 | 113 | 🏙️ Procedural City & Airport Generation | World | 절차적 도시/공항 생성, 실시간 건물 LOD, 활주로 자동 배치 — **Completed** |
-| 114 | 🛰️ Satellite & Space Debris Tracking | Space | 실시간 위성 궤도 추적, 우주 쓰레기 회피, ISS 도킹 시나리오 — **Current** |
+| 114 | 🛰️ Satellite & Space Debris Tracking | Space | 실시간 위성 궤도 추적, 우주 쓰레기 회피, ISS 도킹 시나리오 — **Completed** |
+| 115 | 🎨 Advanced Aircraft Livery Editor | Customization | 레이어 기반 도장 에디터, 커스텀 데칼 업로드, 팀 도장 시스템 — **Current** |
 | 115 | 🎨 Advanced Aircraft Livery Editor | Customization | 레이어 기반 도장 에디터, 커스텀 데칼 업로드, 팀 도장 시스템 |
 | 116 | 📊 Flight Analytics Dashboard | Analytics | 비행 통계 대시보드, 히트맵, 비행 경로 분석, 성능 리포트 |
 | 117 | 🌊 Advanced Ocean & Maritime System | World | 해양 시뮬레이션 강화, 수상 착륙, 항공모함 이착함, 해상 구조 미션 |
