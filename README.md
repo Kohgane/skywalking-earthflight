@@ -145,7 +145,7 @@ See [`Assets/SWEF/README_SWEF_SETUP.md`](Assets/SWEF/README_SWEF_SETUP.md) for d
 |------|------|
 | [SCENE_SETUP_GUIDE.md](./SCENE_SETUP_GUIDE.md) | 씬 셋업 가이드 — Unity Editor에서 첫 테스트 비행까지 |
 | [BUG_TRACKING_GUIDE.md](./BUG_TRACKING_GUIDE.md) | 버그 트래킹 가이드 — 버그 리포트 템플릿, 라벨, 체크리스트 |
-| [PHASE_ROADMAP.md](./PHASE_ROADMAP.md) | 개발 로드맵 — 전체 118개 완료/진행 페이즈 + 포스트 런치 Phase 119+ |
+| [PHASE_ROADMAP.md](./PHASE_ROADMAP.md) | 개발 로드맵 — 전체 119개 완료/진행 페이즈 + 포스트 런치 Phase 120+ |
 | [RELEASE_NOTES_v1.0.0-rc1.md](./RELEASE_NOTES_v1.0.0-rc1.md) | 릴리즈 노트 — v1.0.0-rc1 전체 변경사항 요약 |
 
 ## License
@@ -4524,3 +4524,67 @@ and all three attenuation models, `AudioOcclusionSystem` cutoff Hz and volume mu
 zone-to-preset mapping, `SonicBoomController` Mach threshold and propagation delay,
 `PropWashAudio` wash level, `CockpitWarningAudio` enum and initial state, `AudioDynamicRange`
 priority ordering, and `EngineStartupSequence` state machine.
+
+---
+
+## Phase 119 — 🤖 Advanced AI Traffic Control
+
+Phase 119 implements the full Advanced AI Traffic Control (ATC) system —
+a comprehensive real-time ATC simulation featuring AI-driven controllers,
+route optimization, TCAS collision avoidance, realistic radio communication
+and complete airspace management.
+
+### ATC Scripts
+
+| Path | Type | Description |
+|------|------|-------------|
+| `Core/ATCManager.cs` | MonoBehaviour singleton | Central ATC manager: facilities, flight strips, conflict alerts, handoffs |
+| `Core/ATCConfig.cs` | ScriptableObject | Separation minimums, communication delay, AI response time, traffic density limits |
+| `Core/ATCData.cs` | Data | `ATCFacilityType`, `ATCInstruction`, `FlightPhase`, `SeparationStandard`, `ClearanceType`, `RunwayAssignment`, `TrafficPriority`, `ConflictAlert`, `HoldingPattern`, `Waypoint` |
+| `Controllers/AIATCController.cs` | MonoBehaviour | AI ATC logic: priority sequencing, separation assurance, clearance generation |
+| `Controllers/ApproachController.cs` | MonoBehaviour | Approach sequencing, ILS/visual, speed management, step-down altitudes, go-around |
+| `Controllers/TowerController.cs` | MonoBehaviour | Runway assignment, takeoff/landing clearances, traffic pattern, go-around commands |
+| `Controllers/GroundController.cs` | MonoBehaviour | Taxi routing, hold-short instructions, runway crossing clearances, gate assignments |
+| `Controllers/CenterController.cs` | MonoBehaviour | Flight level assignments, direct-to routing, sector handoffs, oceanic clearances |
+| `Routing/RouteOptimizer.cs` | MonoBehaviour | Wind-aware route optimization, fuel-optimal altitude, weather deviation |
+| `Routing/AirwayNetworkManager.cs` | MonoBehaviour singleton | Waypoints, Victor/Jet airways, SIDs, STARs |
+| `Routing/FlowControlManager.cs` | MonoBehaviour | Ground stops, GDP slots, miles-in-trail restrictions |
+| `Routing/ConflictDetector.cs` | MonoBehaviour | Trajectory analysis, loss-of-separation warnings, conflict alerts |
+| `Safety/TCASController.cs` | MonoBehaviour | TCAS II: TA/RA generation, coordinated advisories |
+| `Safety/CollisionPredictionEngine.cs` | MonoBehaviour | CPA calculation, time-to-CPA, conflict probability |
+| `Safety/AvoidanceManeuverGenerator.cs` | MonoBehaviour | Climb/descend/turn/speed avoidance maneuvers |
+| `Safety/ProximityWarningSystem.cs` | MonoBehaviour | Multi-level warnings: informational → caution → warning → critical |
+| `Communication/ATCCommunicationController.cs` | MonoBehaviour | Standard phraseology, readback/hearback, transmission log |
+| `Communication/ATCVoiceSynthesizer.cs` | MonoBehaviour | Multi-voice AI speech with urgency modulation |
+| `Communication/RadioFrequencyManager.cs` | MonoBehaviour | Per-airport ATIS/ground/tower/approach/departure/center frequencies |
+| `Communication/CommunicationQueue.cs` | MonoBehaviour | Priority queue, step-on prevention, emergency override |
+| `Traffic/TrafficFlowSimulator.cs` | MonoBehaviour singleton | Realistic AI traffic density simulation |
+| `Traffic/HoldingPatternController.cs` | MonoBehaviour | Racetrack holding, EFC, lap tracking, fuel monitoring |
+| `Traffic/SequencingController.cs` | MonoBehaviour | FCFS + priority sequencing, balanced runway assignment |
+| `Traffic/EmergencyTrafficHandler.cs` | MonoBehaviour | Priority landing, rescue notification, diversion coordination |
+| `Airspace/AirspaceManager.cs` | MonoBehaviour singleton | Class A/B/C/D/E/G zones, clearance requirements |
+| `Airspace/SectorController.cs` | MonoBehaviour | Sector boundaries, load balancing, inter-sector handoffs |
+| `Airspace/NOTAMManager.cs` | MonoBehaviour singleton | NOTAMs: runway closures, navaid outages, airspace reservations |
+| `Airspace/SpecialUseAirspace.cs` | MonoBehaviour | MOA, restricted, prohibited, TFR, ADIZ zones |
+| `UI/ATCUI.cs` | MonoBehaviour | Communication log, frequency selector, clearance display, radar scope |
+| `UI/RadarScopeUI.cs` | MonoBehaviour | Aircraft blips, data blocks, conflict overlays |
+| `UI/ATCStripBoard.cs` | MonoBehaviour | Electronic flight strips, pending clearances, handoff status |
+| `UI/ATCSettingsUI.cs` | MonoBehaviour | AI difficulty, communication speed, realism, voice volume (PlayerPrefs) |
+| `Integration/ATCBridge.cs` | MonoBehaviour singleton | Cross-system bridge (`#if SWEF_ATC_AVAILABLE`) |
+| `Integration/ATCAnalytics.cs` | MonoBehaviour singleton | Communications, conflicts, go-arounds, emergencies, violations telemetry |
+| `SWEF.ATC.asmdef` | Assembly Definition | Assembly for all ATC scripts |
+
+### Tests
+
+`Assets/SWEF/Scripts/ATC/Tests/ATCTests.cs` — 56 NUnit EditMode tests covering
+all enums (`ATCFacilityType`, `ATCInstruction`, `FlightPhase`, `TrafficPriority`,
+`SeparationStandard`, `TCASAdvisory`, `AirspaceClass`, `WaypointType`, `ConflictSeverity`),
+data models (`ATCFacility`, `FlightStrip`, `SeparationData`, `ConflictAlert`, `RunwayAssignment`,
+`HoldingPattern`, `Waypoint`), `CollisionPredictionEngine` CPA geometry, `AvoidanceManeuverGenerator`
+TCAS maneuver generation, `ProximityWarningSystem` escalation levels, `ATCCommunicationController`
+phraseology and readback, `ATCVoiceSynthesizer` profiles and volume clamping, `CommunicationQueue`
+priority/emergency handling, `RouteOptimizer` distance and altitude calculations, `AirwayNetworkManager`
+seed and add/retrieve, `FlowControlManager` ground stop/GDP/MIT, `SequencingController` FCFS
+with priority and runway balancing, `AirspaceManager` Class A query, `SpecialUseAirspace` TFR/prohibited,
+`ATCAnalytics` counters and session reset, `ATCStripBoard` strip/handoff management,
+`NOTAMManager` issue/cancel, `SectorController` seed and enter/exit.

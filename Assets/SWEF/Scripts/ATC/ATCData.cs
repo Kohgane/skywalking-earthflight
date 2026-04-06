@@ -14,17 +14,21 @@ namespace SWEF.ATC
         Center,
         Ground,
         Departure,
-        ATIS
+        ATIS,
+        Unicom,
+        Emergency
     }
 
     /// <summary>Current phase of flight for the player aircraft.</summary>
     public enum FlightPhase
     {
+        Preflight,
         Parked,
         Taxi,
         Takeoff,
         Departure,
         Cruise,
+        Descent,
         Approach,
         Landing,
         GoAround,
@@ -213,4 +217,248 @@ namespace SWEF.ATC
     }
 
     #endregion
+
+    // ── Phase 119 additions ───────────────────────────────────────────────────
+
+    /// <summary>Required separation standard between aircraft (Phase 119).</summary>
+    public enum SeparationStandard
+    {
+        IFR_Radar,
+        IFR_Procedural,
+        VFR_Visual,
+        RVSM,
+        WakeTurbulence,
+        Oceanic
+    }
+
+    /// <summary>Type of ATC clearance issued (Phase 119).</summary>
+    public enum ClearanceType
+    {
+        IFR_Departure,
+        Taxi,
+        Takeoff,
+        Approach,
+        Landing,
+        RunwayCrossing,
+        Holding,
+        Reroute
+    }
+
+    /// <summary>Priority level of a flight in ATC sequencing (Phase 119).</summary>
+    public enum TrafficPriority
+    {
+        Low      = 0,
+        Normal   = 1,
+        High     = 2,
+        Medical  = 3,
+        Military = 4,
+        Emergency = 5
+    }
+
+    /// <summary>Severity classification of a traffic conflict (Phase 119).</summary>
+    public enum ConflictSeverity
+    {
+        Advisory,
+        Caution,
+        Warning,
+        Critical
+    }
+
+    /// <summary>ICAO airspace classification (Phase 119).</summary>
+    public enum AirspaceClass { A, B, C, D, E, G }
+
+    /// <summary>TCAS advisory type (Phase 119).</summary>
+    public enum TCASAdvisory
+    {
+        None,
+        TA,
+        RA_Climb,
+        RA_Descend,
+        RA_Monitor,
+        ClearOfConflict
+    }
+
+    /// <summary>Classification of a navigation waypoint (Phase 119).</summary>
+    public enum WaypointType
+    {
+        VOR,
+        NDB,
+        Intersection,
+        Enroute,
+        Terminal,
+        Airport,
+        RunwayThreshold
+    }
+
+    /// <summary>
+    /// ATC instruction code enum (Phase 119) — distinct from the Phase 78
+    /// <see cref="ATCInstruction"/> clearance class.
+    /// </summary>
+    public enum ATCInstructionCode
+    {
+        Cleared,
+        Hold,
+        GoAround,
+        VectorTo,
+        DescendTo,
+        ClimbTo,
+        MaintainSpeed,
+        ContactFrequency
+    }
+
+    /// <summary>Runway assignment record for a flight (Phase 119).</summary>
+    [System.Serializable]
+    public class RunwayAssignment
+    {
+        public string icao;
+        public string runwayId;
+        public bool isLanding;
+        public float scheduledTime;
+        public string callsign;
+
+        public RunwayAssignment(string icao, string runwayId, bool isLanding, string callsign)
+        {
+            this.icao = icao;
+            this.runwayId = runwayId;
+            this.isLanding = isLanding;
+            this.callsign = callsign;
+            this.scheduledTime = UnityEngine.Time.time;
+        }
+    }
+
+    /// <summary>Real-time separation measurement (Phase 119).</summary>
+    [System.Serializable]
+    public class SeparationData
+    {
+        public string callsignA;
+        public string callsignB;
+        public float horizontalNM;
+        public float verticalFt;
+        public float requiredHorizontalNM;
+        public float requiredVerticalFt;
+        public bool IsViolation => horizontalNM < requiredHorizontalNM && verticalFt < requiredVerticalFt;
+    }
+
+    /// <summary>Predicted or active conflict alert (Phase 119).</summary>
+    [System.Serializable]
+    public class ConflictAlert
+    {
+        public string alertId;
+        public string callsignA;
+        public string callsignB;
+        public float timeToConflict;
+        public float minSeparationNM;
+        public ConflictSeverity severity;
+        public bool acknowledged;
+
+        public ConflictAlert(string a, string b, float ttc, float minSep, ConflictSeverity sev)
+        {
+            alertId = System.Guid.NewGuid().ToString("N").Substring(0, 8);
+            callsignA = a;
+            callsignB = b;
+            timeToConflict = ttc;
+            minSeparationNM = minSep;
+            severity = sev;
+        }
+    }
+
+    /// <summary>Holding pattern assignment (Phase 119).</summary>
+    [System.Serializable]
+    public class HoldingPattern
+    {
+        public string callsign;
+        public string fixName;
+        public UnityEngine.Vector3 fixPosition;
+        public float inboundCourse;
+        public bool rightTurns;
+        public float legTimeMinutes;
+        public int altitude;
+        public float expectedFurtherClearance;
+        public int lapsCompleted;
+
+        public HoldingPattern(string callsign, string fix, UnityEngine.Vector3 position, float course, int alt)
+        {
+            this.callsign = callsign;
+            fixName = fix;
+            fixPosition = position;
+            inboundCourse = course;
+            altitude = alt;
+            rightTurns = true;
+            legTimeMinutes = alt >= 14000 ? 1.5f : 1.0f;
+        }
+    }
+
+    /// <summary>Navigation waypoint in the airway network (Phase 119).</summary>
+    [System.Serializable]
+    public class Waypoint
+    {
+        public string identifier;
+        public UnityEngine.Vector3 position;
+        public WaypointType type;
+        public int minAltitude;
+        public int maxAltitude;
+        public int speedConstraint;
+
+        public Waypoint(string id, UnityEngine.Vector3 pos, WaypointType type = WaypointType.Enroute)
+        {
+            identifier = id;
+            position = pos;
+            this.type = type;
+        }
+    }
+
+    /// <summary>ATC facility record (Phase 119).</summary>
+    [System.Serializable]
+    public class ATCFacility
+    {
+        public string facilityId;
+        public string name;
+        public ATCFacilityType facilityType;
+        public float primaryFrequency;
+        public float backupFrequency;
+        public string icaoCode;
+        public bool isActive;
+        public int aircraftCount;
+
+        public ATCFacility(string id, string name, ATCFacilityType type, float freq, string icao)
+        {
+            facilityId = id;
+            this.name = name;
+            facilityType = type;
+            primaryFrequency = freq;
+            icaoCode = icao;
+            isActive = true;
+        }
+    }
+
+    /// <summary>Electronic flight progress strip (Phase 119).</summary>
+    [System.Serializable]
+    public class FlightStrip
+    {
+        public string callsign;
+        public string aircraftType;
+        public string origin;
+        public string destination;
+        public int filedAltitude;
+        public int filedSpeed;
+        public FlightPhase phase;
+        public string squawk;
+        public string assignedRunway;
+        public TrafficPriority priority;
+        public float createdAt;
+        public ATCInstructionCode lastInstruction;
+
+        public FlightStrip(string callsign, string type, string origin, string dest, int altitude)
+        {
+            this.callsign = callsign;
+            aircraftType = type;
+            this.origin = origin;
+            destination = dest;
+            filedAltitude = altitude;
+            phase = FlightPhase.Taxi;
+            squawk = "1200";
+            priority = TrafficPriority.Normal;
+            createdAt = UnityEngine.Time.time;
+        }
+    }
 }
