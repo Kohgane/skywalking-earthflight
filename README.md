@@ -4344,7 +4344,7 @@ and community gallery.
 
 ### Tests
 
-`Assets/SWEF/Scripts/LiveryEditor/Tests/LiveryEditorTests.cs` — 47 NUnit EditMode tests covering
+`Assets/SWEF/Scripts/LiveryEditor/Tests/LiveryEditorTests.cs` — 50 NUnit EditMode tests covering
 all 10 enums, `LiveryEditorConfig` defaults and palette presets, `LiveryLayer` creation/duplicate/properties,
 `LayerBlender` all blend modes, `LayerHistoryController` undo/redo/cursor management,
 `GradientStop`/`DecalTransform`/`BrushSettings`/`LiveryMetadata`/`LiverySaveData`/`LayerSnapshot` data models,

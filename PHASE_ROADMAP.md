@@ -80,7 +80,6 @@ Phases 1–80 have been merged into `main`. See individual PR descriptions and `
 | 113 | 🏙️ Procedural City & Airport Generation | World | 절차적 도시/공항 생성, 실시간 건물 LOD, 활주로 자동 배치 — **Completed** |
 | 114 | 🛰️ Satellite & Space Debris Tracking | Space | 실시간 위성 궤도 추적, 우주 쓰레기 회피, ISS 도킹 시나리오 — **Completed** |
 | 115 | 🎨 Advanced Aircraft Livery Editor | Customization | 레이어 기반 도장 에디터, 커스텀 데칼 업로드, 팀 도장 시스템 — **Current** |
-| 115 | 🎨 Advanced Aircraft Livery Editor | Customization | 레이어 기반 도장 에디터, 커스텀 데칼 업로드, 팀 도장 시스템 |
 | 116 | 📊 Flight Analytics Dashboard | Analytics | 비행 통계 대시보드, 히트맵, 비행 경로 분석, 성능 리포트 |
 | 117 | 🌊 Advanced Ocean & Maritime System | World | 해양 시뮬레이션 강화, 수상 착륙, 항공모함 이착함, 해상 구조 미션 |
 | 118 | 🔊 Spatial Audio & 3D Soundscape | Audio | 3D 공간 오디오, 거리 기반 엔진 사운드, 환경 음향 시뮬레이션 |
