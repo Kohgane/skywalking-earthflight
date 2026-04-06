@@ -2,9 +2,10 @@
     "name": "SWEF.Spectator",
     "rootNamespace": "SWEF.Spectator",
     "references": [
-        "SWEF.Core",
         "SWEF.Flight",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "SWEF.Analytics",
+        "SWEF.Security"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

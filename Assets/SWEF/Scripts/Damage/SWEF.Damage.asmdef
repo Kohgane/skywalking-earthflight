@@ -2,7 +2,6 @@
     "name": "SWEF.Damage",
     "rootNamespace": "SWEF.Damage",
     "references": [
-        "SWEF.Core",
         "SWEF.Flight",
         "Unity.TextMeshPro",
         "UnityEngine.UI"

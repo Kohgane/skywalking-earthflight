@@ -1,10 +1,7 @@
 {
     "name": "SWEF.Atmosphere",
     "rootNamespace": "SWEF.Atmosphere",
-    "references": [
-        "SWEF.Core",
-        "SWEF.Flight"
-    ],
+    "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

@@ -2,8 +2,14 @@
     "name": "SWEF.MusicPlayer",
     "rootNamespace": "SWEF.MusicPlayer",
     "references": [
-        "SWEF.Core",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "SWEF.Audio",
+        "SWEF.Flight",
+        "SWEF.Localization",
+        "SWEF.Multiplayer",
+        "SWEF.Settings",
+        "SWEF.UI",
+        "SWEF.Weather"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

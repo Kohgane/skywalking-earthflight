@@ -1,9 +1,7 @@
 {
     "name": "SWEF.Security",
     "rootNamespace": "SWEF.Security",
-    "references": [
-        "SWEF.Core"
-    ],
+    "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

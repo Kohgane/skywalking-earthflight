@@ -2,8 +2,9 @@
     "name": "SWEF.CityGen",
     "rootNamespace": "SWEF.CityGen",
     "references": [
-        "SWEF.Core",
-        "SWEF.Terrain"
+        "SWEF.Terrain",
+        "SWEF.Narration",
+        "SWEF.Ocean"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

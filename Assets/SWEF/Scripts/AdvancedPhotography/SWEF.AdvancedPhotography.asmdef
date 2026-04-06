@@ -2,10 +2,15 @@
     "name": "SWEF.AdvancedPhotography",
     "rootNamespace": "SWEF.AdvancedPhotography",
     "references": [
-        "SWEF.Core",
         "SWEF.Flight",
         "SWEF.PhotoMode",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "SWEF.Achievement",
+        "SWEF.Analytics",
+        "SWEF.Biome",
+        "SWEF.Minimap",
+        "SWEF.Narration",
+        "SWEF.Weather"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

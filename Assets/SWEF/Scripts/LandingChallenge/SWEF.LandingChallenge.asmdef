@@ -2,9 +2,12 @@
     "name": "SWEF.LandingChallenge",
     "rootNamespace": "SWEF.LandingChallenge",
     "references": [
-        "SWEF.Core",
         "SWEF.Flight",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "SWEF.Academy",
+        "SWEF.Achievement",
+        "SWEF.Analytics",
+        "SWEF.CloudSave"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

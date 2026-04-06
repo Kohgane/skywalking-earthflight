@@ -2,7 +2,15 @@
     "name": "SWEF.Editor",
     "rootNamespace": "SWEF.Editor",
     "references": [
-        "SWEF.Core"
+        "SWEF.Achievement",
+        "SWEF.Audio",
+        "SWEF.CloudRendering",
+        "SWEF.CoreBase",
+        "SWEF.LOD",
+        "SWEF.Multiplayer",
+        "SWEF.Performance",
+        "SWEF.Terrain",
+        "SWEF.Weather"
     ],
     "includePlatforms": [
         "Editor"

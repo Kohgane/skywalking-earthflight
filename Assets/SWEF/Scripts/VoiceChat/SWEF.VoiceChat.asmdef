@@ -2,9 +2,15 @@
     "name": "SWEF.VoiceChat",
     "rootNamespace": "SWEF.VoiceChat",
     "references": [
-        "SWEF.Core",
         "SWEF.UI",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "SWEF.Accessibility",
+        "SWEF.Analytics",
+        "SWEF.Audio",
+        "SWEF.Localization",
+        "SWEF.Multiplayer",
+        "SWEF.MusicPlayer",
+        "SWEF.Settings"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

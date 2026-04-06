@@ -2,8 +2,8 @@
     "name": "SWEF.VoiceCommand",
     "rootNamespace": "SWEF.VoiceCommand",
     "references": [
-        "SWEF.Core",
-        "SWEF.Flight"
+        "SWEF.Flight",
+        "SWEF.Analytics"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

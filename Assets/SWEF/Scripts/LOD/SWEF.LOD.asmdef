@@ -1,9 +1,7 @@
 {
     "name": "SWEF.LOD",
     "rootNamespace": "SWEF.LOD",
-    "references": [
-        "SWEF.Core"
-    ],
+    "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

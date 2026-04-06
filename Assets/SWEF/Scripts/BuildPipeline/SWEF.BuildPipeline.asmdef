@@ -2,7 +2,7 @@
     "name": "SWEF.BuildPipeline",
     "rootNamespace": "SWEF.BuildPipeline",
     "references": [
-        "SWEF.Core"
+        "SWEF.Accessibility"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -2,10 +2,14 @@
     "name": "SWEF.TerrainSurvey",
     "rootNamespace": "SWEF.TerrainSurvey",
     "references": [
-        "SWEF.Core",
         "SWEF.Terrain",
         "SWEF.Journal",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "SWEF.Achievement",
+        "SWEF.Analytics",
+        "SWEF.Flight",
+        "SWEF.GuidedTour",
+        "SWEF.Minimap"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -2,9 +2,15 @@
     "name": "SWEF.Airshow",
     "rootNamespace": "SWEF.Airshow",
     "references": [
-        "SWEF.Core",
         "SWEF.Flight",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "SWEF.Analytics",
+        "SWEF.Autopilot",
+        "SWEF.Contrail",
+        "SWEF.Localization",
+        "SWEF.Replay",
+        "SWEF.Social",
+        "SWEF.Weather"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

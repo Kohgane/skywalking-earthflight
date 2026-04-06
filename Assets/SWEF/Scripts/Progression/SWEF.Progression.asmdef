@@ -2,8 +2,6 @@
     "name": "SWEF.Progression",
     "rootNamespace": "SWEF.Progression",
     "references": [
-        "SWEF.Core",
-        "SWEF.Achievement",
         "Unity.TextMeshPro",
         "UnityEngine.UI"
     ],

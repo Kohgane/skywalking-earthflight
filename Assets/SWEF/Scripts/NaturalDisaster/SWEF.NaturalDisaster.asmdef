@@ -2,9 +2,13 @@
     "name": "SWEF.NaturalDisaster",
     "rootNamespace": "SWEF.NaturalDisaster",
     "references": [
-        "SWEF.Core",
         "SWEF.Flight",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "SWEF.Biome",
+        "SWEF.Minimap",
+        "SWEF.Mission",
+        "SWEF.VFX",
+        "SWEF.Weather"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

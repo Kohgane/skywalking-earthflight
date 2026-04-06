@@ -1,9 +1,7 @@
 {
     "name": "SWEF.Haptic",
     "rootNamespace": "SWEF.Haptic",
-    "references": [
-        "SWEF.Core"
-    ],
+    "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

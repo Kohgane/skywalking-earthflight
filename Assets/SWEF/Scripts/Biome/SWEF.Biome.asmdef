@@ -1,9 +1,7 @@
 {
     "name": "SWEF.Biome",
     "rootNamespace": "SWEF.Biome",
-    "references": [
-        "SWEF.Core"
-    ],
+    "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

@@ -1,9 +1,7 @@
 {
     "name": "SWEF.LiveryEditor",
     "rootNamespace": "SWEF.LiveryEditor",
-    "references": [
-        "SWEF.Core"
-    ],
+    "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

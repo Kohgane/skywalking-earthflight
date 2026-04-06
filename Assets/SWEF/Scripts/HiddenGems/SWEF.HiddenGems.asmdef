@@ -2,9 +2,17 @@
     "name": "SWEF.HiddenGems",
     "rootNamespace": "SWEF.HiddenGems",
     "references": [
-        "SWEF.Core",
         "Unity.TextMeshPro",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "SWEF.Achievement",
+        "SWEF.Analytics",
+        "SWEF.Favorites",
+        "SWEF.Flight",
+        "SWEF.GuidedTour",
+        "SWEF.Localization",
+        "SWEF.Minimap",
+        "SWEF.Progression",
+        "SWEF.Social"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

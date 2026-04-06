@@ -2,10 +2,12 @@
     "name": "SWEF.LiveFlight",
     "rootNamespace": "SWEF.LiveFlight",
     "references": [
-        "SWEF.Core",
         "SWEF.Analytics",
         "Unity.TextMeshPro",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "SWEF.Flight",
+        "SWEF.Minimap",
+        "SWEF.Terrain"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

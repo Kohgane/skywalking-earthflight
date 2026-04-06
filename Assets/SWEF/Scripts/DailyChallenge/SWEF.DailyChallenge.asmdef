@@ -2,8 +2,6 @@
     "name": "SWEF.DailyChallenge",
     "rootNamespace": "SWEF.DailyChallenge",
     "references": [
-        "SWEF.Core",
-        "SWEF.Achievement",
         "UnityEngine.UI"
     ],
     "includePlatforms": [],

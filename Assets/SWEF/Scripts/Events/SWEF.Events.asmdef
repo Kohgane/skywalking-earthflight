@@ -2,9 +2,12 @@
     "name": "SWEF.Events",
     "rootNamespace": "SWEF.Events",
     "references": [
-        "SWEF.Core",
         "Unity.TextMeshPro",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "SWEF.Achievement",
+        "SWEF.Flight",
+        "SWEF.GuidedTour",
+        "SWEF.Weather"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

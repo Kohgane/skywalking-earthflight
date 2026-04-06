@@ -2,8 +2,8 @@
     "name": "SWEF.Settings",
     "rootNamespace": "SWEF.Settings",
     "references": [
-        "SWEF.Core",
-        "SWEF.UI",
+        "SWEF.CoreBase",
+        "SWEF.Localization",
         "UnityEngine.UI"
     ],
     "includePlatforms": [],

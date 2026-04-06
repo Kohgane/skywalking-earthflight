@@ -2,8 +2,6 @@
     "name": "SWEF.Teleport",
     "rootNamespace": "SWEF.Teleport",
     "references": [
-        "SWEF.Core",
-        "SWEF.Flight",
         "UnityEngine.UI"
     ],
     "includePlatforms": [],

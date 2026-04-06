@@ -2,9 +2,16 @@
     "name": "SWEF.Autopilot",
     "rootNamespace": "SWEF.Autopilot",
     "references": [
-        "SWEF.Core",
         "SWEF.Flight",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "SWEF.Accessibility",
+        "SWEF.Analytics",
+        "SWEF.CockpitHUD",
+        "SWEF.Fuel",
+        "SWEF.GuidedTour",
+        "SWEF.Landing",
+        "SWEF.Localization",
+        "SWEF.RoutePlanner"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -2,9 +2,12 @@
     "name": "SWEF.UI",
     "rootNamespace": "SWEF.UI",
     "references": [
-        "SWEF.Core",
+        "SWEF.CoreBase",
         "Unity.TextMeshPro",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "SWEF.CoreMid",
+        "SWEF.CoreMidB",
+        "SWEF.CorePremium"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

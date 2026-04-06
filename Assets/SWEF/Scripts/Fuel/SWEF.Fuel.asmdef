@@ -2,10 +2,10 @@
     "name": "SWEF.Fuel",
     "rootNamespace": "SWEF.Fuel",
     "references": [
-        "SWEF.Core",
         "SWEF.Flight",
         "Unity.TextMeshPro",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "SWEF.Landing"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

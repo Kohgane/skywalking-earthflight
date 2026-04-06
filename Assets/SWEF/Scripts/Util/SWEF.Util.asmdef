@@ -2,7 +2,7 @@
     "name": "SWEF.Util",
     "rootNamespace": "SWEF.Util",
     "references": [
-        "SWEF.Core"
+        "SWEF.CoreBase"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

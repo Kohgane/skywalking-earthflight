@@ -2,7 +2,13 @@
     "name": "SWEF.VFX",
     "rootNamespace": "SWEF.VFX",
     "references": [
-        "SWEF.Core"
+        "SWEF.Achievement",
+        "SWEF.Biome",
+        "SWEF.Flight",
+        "SWEF.Performance",
+        "SWEF.Progression",
+        "SWEF.TimeOfDay",
+        "SWEF.Weather"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

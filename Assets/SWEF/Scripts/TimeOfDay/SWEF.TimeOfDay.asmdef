@@ -2,8 +2,14 @@
     "name": "SWEF.TimeOfDay",
     "rootNamespace": "SWEF.TimeOfDay",
     "references": [
-        "SWEF.Core",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "SWEF.Analytics",
+        "SWEF.Atmosphere",
+        "SWEF.Flight",
+        "SWEF.Localization",
+        "SWEF.Multiplayer",
+        "SWEF.Screenshot",
+        "SWEF.Settings"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

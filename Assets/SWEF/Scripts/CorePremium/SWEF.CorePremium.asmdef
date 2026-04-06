@@ -1,0 +1,17 @@
+{
+    "name": "SWEF.CorePremium",
+    "rootNamespace": "SWEF.Core",
+    "references": [
+        "SWEF.CoreBase",
+        "SWEF.IAP"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

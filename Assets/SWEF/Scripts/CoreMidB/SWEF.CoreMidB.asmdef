@@ -1,0 +1,19 @@
+{
+    "name": "SWEF.CoreMidB",
+    "rootNamespace": "SWEF.Core",
+    "references": [
+        "SWEF.CoreBase",
+        "SWEF.Multiplayer",
+        "UnityEngine.UI",
+        "UnityEngine.SceneManagement"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

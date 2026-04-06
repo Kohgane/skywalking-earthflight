@@ -2,8 +2,9 @@
     "name": "SWEF.Social",
     "rootNamespace": "SWEF.Social",
     "references": [
-        "SWEF.Core",
-        "UnityEngine.UI"
+        "SWEF.CoreBase",
+        "UnityEngine.UI",
+        "SWEF.CoreMid"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

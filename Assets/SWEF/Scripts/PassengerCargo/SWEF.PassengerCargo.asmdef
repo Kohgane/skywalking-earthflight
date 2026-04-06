@@ -2,10 +2,18 @@
     "name": "SWEF.PassengerCargo",
     "rootNamespace": "SWEF.PassengerCargo",
     "references": [
-        "SWEF.Core",
         "SWEF.Flight",
         "SWEF.Mission",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "SWEF.Achievement",
+        "SWEF.Analytics",
+        "SWEF.DailyChallenge",
+        "SWEF.Journal",
+        "SWEF.Landing",
+        "SWEF.Progression",
+        "SWEF.RoutePlanner",
+        "SWEF.SocialHub",
+        "SWEF.Weather"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

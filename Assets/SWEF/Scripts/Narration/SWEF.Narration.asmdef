@@ -2,8 +2,15 @@
     "name": "SWEF.Narration",
     "rootNamespace": "SWEF.Narration",
     "references": [
-        "SWEF.Core",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "SWEF.Achievement",
+        "SWEF.Analytics",
+        "SWEF.Audio",
+        "SWEF.Flight",
+        "SWEF.Journal",
+        "SWEF.Localization",
+        "SWEF.Minimap",
+        "SWEF.Settings"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

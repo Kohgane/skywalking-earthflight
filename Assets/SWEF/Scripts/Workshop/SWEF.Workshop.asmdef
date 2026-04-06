@@ -1,9 +1,7 @@
 {
     "name": "SWEF.Workshop",
     "rootNamespace": "SWEF.Workshop",
-    "references": [
-        "SWEF.Core"
-    ],
+    "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

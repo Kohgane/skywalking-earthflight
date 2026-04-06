@@ -2,7 +2,7 @@
     "name": "SWEF.Ocean",
     "rootNamespace": "SWEF.Ocean",
     "references": [
-        "SWEF.Core"
+        "SWEF.Weather"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

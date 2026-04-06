@@ -2,7 +2,9 @@
     "name": "SWEF.ProceduralWorld",
     "rootNamespace": "SWEF.ProceduralWorld",
     "references": [
-        "SWEF.Core"
+        "SWEF.ATC",
+        "SWEF.Minimap",
+        "SWEF.Weather"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

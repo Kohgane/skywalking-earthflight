@@ -2,9 +2,18 @@
     "name": "SWEF.Emergency",
     "rootNamespace": "SWEF.Emergency",
     "references": [
-        "SWEF.Core",
         "SWEF.Flight",
-        "SWEF.UI"
+        "SWEF.UI",
+        "SWEF.Achievement",
+        "SWEF.Analytics",
+        "SWEF.Audio",
+        "SWEF.CockpitHUD",
+        "SWEF.Damage",
+        "SWEF.FlightSchool",
+        "SWEF.Fuel",
+        "SWEF.Journal",
+        "SWEF.Localization",
+        "SWEF.Wildlife"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

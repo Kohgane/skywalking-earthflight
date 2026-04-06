@@ -2,11 +2,14 @@
     "name": "SWEF.FlightPlan",
     "rootNamespace": "SWEF.FlightPlan",
     "references": [
-        "SWEF.Core",
         "SWEF.Flight",
         "SWEF.Autopilot",
         "Unity.TextMeshPro",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "SWEF.ATC",
+        "SWEF.Landing",
+        "SWEF.NaturalDisaster",
+        "SWEF.Weather"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

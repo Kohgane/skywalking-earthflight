@@ -2,7 +2,6 @@
     "name": "SWEF.Localization",
     "rootNamespace": "SWEF.Localization",
     "references": [
-        "SWEF.Core",
         "UnityEngine.UI"
     ],
     "includePlatforms": [],

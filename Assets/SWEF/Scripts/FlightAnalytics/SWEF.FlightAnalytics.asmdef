@@ -2,7 +2,9 @@
     "name": "SWEF.FlightAnalytics",
     "rootNamespace": "SWEF.FlightAnalytics",
     "references": [
-        "SWEF.Core"
+        "SWEF.Achievement",
+        "SWEF.CloudSave",
+        "SWEF.Journal"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

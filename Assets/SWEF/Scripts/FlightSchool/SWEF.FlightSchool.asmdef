@@ -2,10 +2,10 @@
     "name": "SWEF.FlightSchool",
     "rootNamespace": "SWEF.FlightSchool",
     "references": [
-        "SWEF.Core",
         "SWEF.Flight",
         "SWEF.UI",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "SWEF.Analytics"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

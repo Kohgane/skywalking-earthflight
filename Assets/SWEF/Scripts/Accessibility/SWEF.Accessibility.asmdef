@@ -2,8 +2,7 @@
     "name": "SWEF.Accessibility",
     "rootNamespace": "SWEF.Accessibility",
     "references": [
-        "SWEF.Core",
-        "SWEF.UI",
+        "SWEF.Localization",
         "UnityEngine.UI"
     ],
     "includePlatforms": [],

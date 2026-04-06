@@ -2,7 +2,6 @@
     "name": "SWEF.Contrail",
     "rootNamespace": "SWEF.Contrail",
     "references": [
-        "SWEF.Core",
         "SWEF.Flight"
     ],
     "includePlatforms": [],

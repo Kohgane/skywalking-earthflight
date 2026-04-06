@@ -2,7 +2,7 @@
     "name": "SWEF.Audio",
     "rootNamespace": "SWEF.Audio",
     "references": [
-        "SWEF.Core"
+        "SWEF.CoreMid"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

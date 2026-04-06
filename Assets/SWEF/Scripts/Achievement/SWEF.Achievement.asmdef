@@ -2,7 +2,7 @@
     "name": "SWEF.Achievement",
     "rootNamespace": "SWEF.Achievement",
     "references": [
-        "SWEF.Core",
+        "SWEF.Localization",
         "UnityEngine.UI"
     ],
     "includePlatforms": [],

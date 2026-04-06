@@ -2,7 +2,6 @@
     "name": "SWEF.OrbitalCamera",
     "rootNamespace": "SWEF.OrbitalCamera",
     "references": [
-        "SWEF.Core",
         "SWEF.Flight"
     ],
     "includePlatforms": [],

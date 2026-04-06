@@ -2,7 +2,6 @@
     "name": "SWEF.PCInput",
     "rootNamespace": "SWEF.PCInput",
     "references": [
-        "SWEF.Core",
         "SWEF.Flight",
         "SWEF.InputSystem",
         "SWEF.CockpitHUD",

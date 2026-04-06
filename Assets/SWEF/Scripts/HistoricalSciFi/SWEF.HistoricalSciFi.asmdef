@@ -2,7 +2,6 @@
     "name": "SWEF.HistoricalSciFi",
     "rootNamespace": "SWEF.HistoricalSciFi",
     "references": [
-        "SWEF.Core",
         "SWEF.Flight",
         "UnityEngine.UI"
     ],

@@ -2,10 +2,18 @@
     "name": "SWEF.RoutePlanner",
     "rootNamespace": "SWEF.RoutePlanner",
     "references": [
-        "SWEF.Core",
         "SWEF.Flight",
         "SWEF.Minimap",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "SWEF.Accessibility",
+        "SWEF.Analytics",
+        "SWEF.Favorites",
+        "SWEF.GuidedTour",
+        "SWEF.Localization",
+        "SWEF.Multiplayer",
+        "SWEF.Narration",
+        "SWEF.Social",
+        "SWEF.UI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

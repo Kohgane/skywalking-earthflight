@@ -1,0 +1,25 @@
+{
+    "name": "SWEF.CoreMid",
+    "rootNamespace": "SWEF.Core",
+    "references": [
+        "SWEF.CoreBase",
+        "SWEF.Performance",
+        "SWEF.Replay",
+        "SWEF.Teleport",
+        "SWEF.Achievement",
+        "SWEF.Weather",
+        "SWEF.Notification",
+        "SWEF.Analytics",
+        "UnityEngine.UI",
+        "UnityEngine.SceneManagement"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

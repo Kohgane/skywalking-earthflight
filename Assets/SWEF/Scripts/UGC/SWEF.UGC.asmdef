@@ -2,8 +2,15 @@
     "name": "SWEF.UGC",
     "rootNamespace": "SWEF.UGC",
     "references": [
-        "SWEF.Core",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "SWEF.Achievement",
+        "SWEF.Analytics",
+        "SWEF.FlightPlan",
+        "SWEF.Mission",
+        "SWEF.Multiplayer",
+        "SWEF.Progression",
+        "SWEF.Security",
+        "SWEF.Social"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

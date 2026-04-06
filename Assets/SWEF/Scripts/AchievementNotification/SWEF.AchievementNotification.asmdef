@@ -2,7 +2,6 @@
     "name": "SWEF.AchievementNotification",
     "rootNamespace": "SWEF.AchievementNotification",
     "references": [
-        "SWEF.Core",
         "SWEF.Achievement",
         "SWEF.UI",
         "UnityEngine.UI"

@@ -2,9 +2,14 @@
     "name": "SWEF.ATC",
     "rootNamespace": "SWEF.ATC",
     "references": [
-        "SWEF.Core",
         "SWEF.Flight",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "SWEF.Analytics",
+        "SWEF.Audio",
+        "SWEF.CityGen",
+        "SWEF.Landing",
+        "SWEF.Localization",
+        "SWEF.Weather"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

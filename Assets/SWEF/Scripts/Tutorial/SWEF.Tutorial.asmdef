@@ -2,7 +2,12 @@
     "name": "SWEF.Tutorial",
     "rootNamespace": "SWEF.Tutorial",
     "references": [
-        "SWEF.Core",
+        "SWEF.Analytics",
+        "SWEF.CoreBase",
+        "SWEF.CoreServices",
+        "SWEF.Flight",
+        "SWEF.Screenshot",
+        "SWEF.Teleport",
         "SWEF.UI",
         "UnityEngine.UI"
     ],
