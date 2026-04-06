@@ -145,7 +145,7 @@ See [`Assets/SWEF/README_SWEF_SETUP.md`](Assets/SWEF/README_SWEF_SETUP.md) for d
 |------|------|
 | [SCENE_SETUP_GUIDE.md](./SCENE_SETUP_GUIDE.md) | 씬 셋업 가이드 — Unity Editor에서 첫 테스트 비행까지 |
 | [BUG_TRACKING_GUIDE.md](./BUG_TRACKING_GUIDE.md) | 버그 트래킹 가이드 — 버그 리포트 템플릿, 라벨, 체크리스트 |
-| [PHASE_ROADMAP.md](./PHASE_ROADMAP.md) | 개발 로드맵 — 전체 113개 완료/진행 페이즈 + 포스트 런치 Phase 114–120 |
+| [PHASE_ROADMAP.md](./PHASE_ROADMAP.md) | 개발 로드맵 — 전체 114개 완료/진행 페이즈 + 포스트 런치 Phase 115–120 |
 | [RELEASE_NOTES_v1.0.0-rc1.md](./RELEASE_NOTES_v1.0.0-rc1.md) | 릴리즈 노트 — v1.0.0-rc1 전체 변경사항 요약 |
 
 ## License
@@ -4243,3 +4243,56 @@ all enums, `ProceduralWorldConfig` defaults, all data models (`BuildingInstance`
 `AirportLayout`, `CityDescription`, `CityLayout`, `ChunkCoord`, `TerrainAnalysisResult`),
 `RunwayGenerator.OptimalHeading()`, `ElevationMapper` static utilities,
 `ProceduralWorldAnalytics`, and `RealWorldCityMapper`.
+
+
+---
+
+## Phase 114 — 🛰️ Satellite & Space Debris Tracking
+
+Phase 114 implements a comprehensive Satellite & Space Debris Tracking system —
+delivering real-time orbital tracking from TLE/NORAD data, SGP4 propagation, procedural
+space debris simulation with conjunction assessment, a full ISS docking scenario,
+and 3D orbital visualisation.
+
+### New Scripts (26 files) — `Assets/SWEF/Scripts/SatelliteTracking/` — namespace `SWEF.SatelliteTracking`
+
+| Script | Type | Summary |
+|--------|------|---------|
+| `Core/SatelliteTrackingManager.cs` | MonoBehaviour singleton | Central orchestrator (DontDestroyOnLoad): TLE ingestion, position propagation, debris monitoring, event bus |
+| `Core/SatelliteTrackingConfig.cs` | ScriptableObject | Runtime config: update frequency, visible satellite limit, orbit prediction accuracy, debris density, data source URL |
+| `Core/SatelliteTrackingData.cs` | Data models | Enums (`SatelliteType`, `OrbitType`, `SatelliteStatus`, `DebrisSize`, `DockingState`, `TrackingMode`) + `TLEData`, `OrbitalState`, `SatelliteRecord`, `SatellitePass`, `DebrisObject`, `ConjunctionData`, `DockingCorridor` |
+| `Orbital/OrbitalMechanicsEngine.cs` | MonoBehaviour | Keplerian orbit calculation: semi-major axis, eccentricity, inclination, RAAN, ECI/ECEF/geodetic conversion |
+| `Orbital/TLEParser.cs` | Static class | NORAD Two-Line Element parser: three-line and two-line format, multi-satellite TLE files |
+| `Orbital/SGP4Propagator.cs` | MonoBehaviour | SGP4 position prediction: atmospheric drag, J2–J4 oblateness, drag perturbations |
+| `Orbital/OrbitVisualizer.cs` | MonoBehaviour | 3D orbit path: elliptical orbit LineRenderer, ground track projection, coverage footprint ring |
+| `Database/SatelliteDatabase.cs` | MonoBehaviour singleton | Satellite catalogue: NORAD ID lookup, type/orbit/country queries, 5 built-in seed records |
+| `Database/SatelliteDataProvider.cs` | Abstract MonoBehaviour + impls | CelesTrak provider (HTTP), `MockSatelliteDataProvider` (offline), `SpaceTrackProvider` (`#if SWEF_SATELLITE_API_AVAILABLE`) |
+| `Database/RealTimeSatelliteTracker.cs` | MonoBehaviour | Live position update loop: TLE fetch, orbital propagation, orbit classification |
+| `Database/SatelliteCatalogFilter.cs` | Static class | Fluent filters: by type, orbit, country, active, magnitude, name search, favourites, composite |
+| `Debris/SpaceDebrisManager.cs` | MonoBehaviour singleton | Debris field simulation: Gaussian density model, collision probability estimation |
+| `Debris/DebrisGenerator.cs` | MonoBehaviour | Procedural debris: size distribution, tumble rate, albedo, rejection-sampling altitude |
+| `Debris/CollisionWarningSystem.cs` | MonoBehaviour | Conjunction screening: satellite–satellite and satellite–debris closest approach, probability, urgency levels |
+| `Debris/DebrisFieldRenderer.cs` | MonoBehaviour | LOD renderer: close meshes, mid-range point sprites, distant density cloud via ParticleSystem |
+| `Scenarios/ISSTracker.cs` | MonoBehaviour | ISS tracking: real-time position, 7-crew complement, visible-pass prediction, mock TLE fallback |
+| `Scenarios/DockingScenarioController.cs` | MonoBehaviour singleton | Docking state machine: Far → Near → Final → Contact → Capture → HardDock → Undocking |
+| `Scenarios/DockingGuidanceSystem.cs` | MonoBehaviour | Go/no-go annunciator: velocity limit curve, lateral offset, alignment error, corridor compliance |
+| `Scenarios/SpaceStationInterior.cs` | MonoBehaviour | Post-docking interior: 8 ISS modules, cupola view, microgravity WASD movement |
+| `Rendering/SatelliteRenderer.cs` | MonoBehaviour | Satellite 3D model: solar panel Sun-tracking, antenna Earth-pointing, distance-based LOD scale |
+| `Rendering/OrbitTrailRenderer.cs` | MonoBehaviour | TrailRenderer: type-colour gradient, ground shadow projection onto Earth sphere |
+| `Rendering/SatellitePassPredictor.cs` | MonoBehaviour | Pass prediction: elevation/azimuth calculation, min-elevation threshold, full pass table |
+| `Rendering/SpaceEnvironmentRenderer.cs` | MonoBehaviour | Space environment: atmosphere limb glow, star field brightness, sun lens flare at altitude |
+| `UI/SatelliteTrackingUI.cs` | MonoBehaviour | Dashboard: satellite list, search bar, type/orbit filters, favourites toggle, active-only filter |
+| `UI/SatelliteInfoPanel.cs` | MonoBehaviour | Detail panel: orbital elements, inclination, period, pass prediction table, favourite toggle |
+| `UI/DebrisRadarHUD.cs` | MonoBehaviour | Debris radar: proximity blips, Yellow/Red warning indicators, TCA countdown, avoidance Δv |
+| `UI/DockingHUD.cs` | MonoBehaviour | Docking HUD: alignment crosshair, range/velocity/offset readouts, go/no-go annunciator, capture indicator |
+| `Integration/SatelliteTrackingBridge.cs` | MonoBehaviour singleton | Cross-system bridge: Minimap overlay, Achievement hooks (`#if SWEF_SATELLITE_AVAILABLE`, `#if SWEF_MINIMAP_AVAILABLE`) |
+| `Integration/SatelliteTrackingAnalytics.cs` | MonoBehaviour | Telemetry: satellites tracked, docking attempts/successes, debris encounters, interior exploration time |
+
+### Tests
+
+`Assets/SWEF/Scripts/SatelliteTracking/Tests/SatelliteTrackingTests.cs` — 49 NUnit EditMode tests covering
+all enums, `SatelliteTrackingConfig` defaults and derived properties, `TLEData`/`OrbitalState`/`SatelliteRecord`/
+`DebrisObject`/`ConjunctionData`/`SatellitePass`/`DockingCorridor` data models, `TLEParser` single and bulk parsing,
+`OrbitalMechanicsEngine` orbital period and orbit classification, `SatelliteCatalogFilter` all filter
+and sort methods, `CollisionWarningSystem.CalculateAvoidanceDeltaV`, `OrbitVisualizer.ColorForType`,
+`ISSTracker.ISSNoradId`, and `SpaceStationInterior.ISSModule` enum validation.
