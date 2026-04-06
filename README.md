@@ -4143,6 +4143,40 @@ instrument panel, spatial audio, weather effects, analytics, photo mode, VR UI, 
 
 ---
 
+## Phase 111 — ☁️ Cloud Save & Cross-Platform Sync
+
+Phase 111 implements a full Cloud Save & Cross-Platform Sync system — allowing players
+to synchronise their progress across every device and platform automatically.
+
+### New Scripts — `Assets/SWEF/Scripts/CloudSave/` — namespace `SWEF.CloudSave`
+
+| File | Type | Description |
+|------|------|-------------|
+| `Models/CloudSaveData.cs` | C# | Enums (`CloudProviderType` ×4, `ProviderConnectionStatus` ×5, `SyncStatus` ×7, `ConflictResolutionStrategy` ×3, `PlatformAccountType` ×5), `CloudSaveConfig` ScriptableObject, `ProviderStatus`, `SaveFileRecord`, `OfflineQueueEntry` |
+| `Models/SaveDataRegistry.cs` | C# | Centralized registry of all 20+ SWEF JSON save files; SHA-256 delta-sync dirty detection |
+| `Models/CrossPlatformProfile.cs` | C# | `CrossPlatformProfile` data class + `CrossPlatformProfileManager` singleton; account linking, device registration (max 5), profile merging |
+| `Providers/ICloudSaveProvider.cs` | C# | Provider interface: `InitialiseAsync`, `UploadAsync`, `DownloadAsync`, `DeleteAsync`, `ListKeysAsync`, `GetCloudTimestampAsync`, `QueryQuotaAsync` |
+| `Providers/LocalFileProvider.cs` | C# | Always-available JSON file fallback — writes to `CloudSaveLocal/` sub-folder |
+| `Providers/UnityCloudSaveProvider.cs` | C# | Unity Gaming Services Cloud Save backend (`#if SWEF_UGS_AVAILABLE`) |
+| `Providers/FirebaseProvider.cs` | C# | Firebase Realtime Database backend (`#if SWEF_FIREBASE_AVAILABLE`) |
+| `Providers/CustomRESTProvider.cs` | C# | Generic REST API backend (PUT/GET/DELETE/{key}, auth bearer token) |
+| `Systems/CloudSaveManager.cs` | C# | Central singleton — provider selection, factory, fallback to LocalFile on error |
+| `Systems/CloudSyncEngine.cs` | C# | Background sync — debounced auto-sync (30 s), launch pull, delta upload, offline queue, GZip compression, AES-256 encryption bridge |
+| `Systems/SaveDataMigrator.cs` | C# | Schema version detection, sequential migration pipeline (v1→v2), pre-migration backup, rollback, export bundle |
+| `Systems/ConflictResolver.cs` | C# | `LastWriteWins`, `MergeByTimestamp`, `PromptUser` strategies; pending-choice tracking |
+| `UI/CloudSaveUI.cs` | C# | Full settings panel — provider dropdown, sync status, last-sync label, storage bar, manual sync/pull buttons, conflict dialog, export/import |
+| `UI/CloudSaveHUD.cs` | C# | Compact HUD indicator — status icon + label, auto-hide after sync |
+| `Integration/CloudSaveBridge.cs` | C# | Cross-system integration (`#if SWEF_SAVE_AVAILABLE`, `#if SWEF_ANALYTICS_AVAILABLE`) |
+| `Integration/CloudSaveAnalytics.cs` | C# | Static telemetry helpers for 10 cloud-save events |
+| `SWEF.CloudSave.asmdef` | Assembly | Assembly definition for the CloudSave module |
+
+### Test Coverage
+`Assets/Tests/EditMode/CloudSaveTests.cs` — 45+ NUnit EditMode tests covering enums,
+`ProviderStatus`, `SaveDataRegistry`, `CrossPlatformProfile`, all 4 providers,
+`SaveDataMigrator`, `ConflictResolver`, and `CloudSaveConfig`.
+
+---
+
 ## 🚀 Post-Launch v3.0+ Roadmap (Phase 111–120)
 
 | Phase | Title | Description |
