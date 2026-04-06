@@ -4514,7 +4514,7 @@ audio occlusion, HRTF binaural processing, and audio accessibility features.
 
 ### Tests
 
-`Assets/SWEF/Scripts/SpatialAudio/Tests/SpatialAudioTests.cs` — 45+ NUnit EditMode tests covering
+`Assets/SWEF/Scripts/SpatialAudio/Tests/SpatialAudioTests.cs` — 64 NUnit EditMode tests covering
 all 6 enums (`AudioZoneType`, `SoundPropagationModel`, `AudioOcclusionType`, `EngineSoundLayer`,
 `ReverbZonePreset`, `WildlifeZone`), all data model classes, `EngineAudioLayerMixer.LayerWeight`
 static calculations (idle/full-throttle/turbine/jet-wash/afterburner weights), `WindNoiseController`

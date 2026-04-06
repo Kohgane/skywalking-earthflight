@@ -1,5 +1,5 @@
 // SpatialAudioTests.cs — Phase 118: Spatial Audio & 3D Soundscape
-// Comprehensive NUnit EditMode tests (45+ tests).
+// Comprehensive NUnit EditMode tests (64 tests).
 // Tests cover: enums, config, engine audio layers, wind noise, propagation,
 // occlusion, Doppler, reverb zones, data models, analytics.
 
