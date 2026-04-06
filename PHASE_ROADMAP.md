@@ -1,7 +1,7 @@
 # SWEF Phase Roadmap
 
 > This file tracks the planned development phases for Skywalking: Earth Flight.
-> Last updated: 2026-04-06 (Phase 115 — Advanced Aircraft Livery Editor)
+> Last updated: 2026-04-06 (Phase 116 — Flight Analytics Dashboard)
 
 ## Completed Phases
 
@@ -44,14 +44,15 @@ Phases 1–80 have been merged into `main`. See individual PR descriptions and `
 | 113 | 🏙️ Procedural City & Airport Generation | — | 2026-04-06 |
 | 114 | 🛰️ Satellite & Space Debris Tracking | — | 2026-04-06 |
 | 115 | 🎨 Advanced Aircraft Livery Editor | — | 2026-04-06 |
+| 116 | 📊 Flight Analytics Dashboard | — | 2026-04-06 |
 
 ## Current Phase
 
-**Phase 115 — 🎨 Advanced Aircraft Livery Editor**
+**Phase 116 — 📊 Flight Analytics Dashboard**
 
 ## Next Phase
 
-**Phase 116 — 📊 Flight Analytics & Performance Dashboard**
+**Phase 117 — 🌊 Ocean & Maritime Flight System**
 
 ## Post-Launch Phases (v2.0+)
 

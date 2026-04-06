@@ -145,7 +145,7 @@ See [`Assets/SWEF/README_SWEF_SETUP.md`](Assets/SWEF/README_SWEF_SETUP.md) for d
 |------|------|
 | [SCENE_SETUP_GUIDE.md](./SCENE_SETUP_GUIDE.md) | 씬 셋업 가이드 — Unity Editor에서 첫 테스트 비행까지 |
 | [BUG_TRACKING_GUIDE.md](./BUG_TRACKING_GUIDE.md) | 버그 트래킹 가이드 — 버그 리포트 템플릿, 라벨, 체크리스트 |
-| [PHASE_ROADMAP.md](./PHASE_ROADMAP.md) | 개발 로드맵 — 전체 115개 완료/진행 페이즈 + 포스트 런치 Phase 116+ |
+| [PHASE_ROADMAP.md](./PHASE_ROADMAP.md) | 개발 로드맵 — 전체 116개 완료/진행 페이즈 + 포스트 런치 Phase 117+ |
 | [RELEASE_NOTES_v1.0.0-rc1.md](./RELEASE_NOTES_v1.0.0-rc1.md) | 릴리즈 노트 — v1.0.0-rc1 전체 변경사항 요약 |
 
 ## License
@@ -4350,3 +4350,58 @@ all 10 enums, `LiveryEditorConfig` defaults and palette presets, `LiveryLayer` c
 `GradientStop`/`DecalTransform`/`BrushSettings`/`LiveryMetadata`/`LiverySaveData`/`LayerSnapshot` data models,
 `PatternGenerator` all types without throw, `GradientPainter` linear and multi-stop,
 `LiveryTemplate`/`DecalAssetRecord` field assignment, and `LiveryEditorAnalytics` counter tracking and reset.
+
+## Phase 116 — 📊 Flight Analytics Dashboard
+
+Phase 116 implements the full Flight Analytics Dashboard system —
+delivering data recording, statistical analysis, geographic heatmaps, chart rendering,
+automated reports, leaderboards, and an in-flight analytics HUD.
+
+### New Scripts (22 files) — `Assets/SWEF/Scripts/FlightAnalytics/` — namespace `SWEF.FlightAnalytics`
+
+| Script | Type | Summary |
+|--------|------|---------|
+| `Core/FlightAnalyticsManager.cs` | MonoBehaviour singleton | Central orchestrator (DontDestroyOnLoad): session lifecycle, stats queries, event broadcasting |
+| `Core/FlightAnalyticsConfig.cs` | ScriptableObject | Runtime config: retention period, sampling rate, heatmap resolution, export format, privacy settings |
+| `Core/FlightAnalyticsData.cs` | Data models | Enums (`AnalyticsCategory`, `ChartType`, `TimeRange`, `StatAggregation`, `ExportFormat`, `TrendDirection`, `PilotTier`) + `FlightDataPoint`, `FlightSessionRecord`, `AggregatedStats`, `HeatmapCell`, `HeatmapData`, `ChartSeries`, `ChartData`, `FlightReport`, `LeaderboardEntry` |
+| `Collection/FlightDataRecorder.cs` | MonoBehaviour | Real-time data sampling: position, altitude, speed, heading, G-force, fuel at configurable Hz |
+| `Collection/FlightSessionTracker.cs` | MonoBehaviour | Session lifecycle: begin/end, distance accumulation, airport visit log, event recording |
+| `Collection/PerformanceMetricsCollector.cs` | MonoBehaviour | Score computation: landing quality, fuel efficiency, navigation accuracy, smoothness |
+| `Collection/HistoricalDataStore.cs` | MonoBehaviour | JSON persistence: save/load sessions, auto-purge by date/count |
+| `Analysis/FlightStatisticsEngine.cs` | MonoBehaviour | Statistics: aggregation, moving average, standard deviation, percentile |
+| `Analysis/TrendAnalyzer.cs` | MonoBehaviour | Trend detection: linear regression slope, progression curve, milestone estimate |
+| `Analysis/ComparisonEngine.cs` | MonoBehaviour | Flight comparison: delta dictionary, personal-best lookup, average metric |
+| `Analysis/AchievementCorrelator.cs` | MonoBehaviour | Achievement analytics: flight-count progress, distance progress, unlock rate |
+| `Heatmap/FlightHeatmapGenerator.cs` | MonoBehaviour | Geographic density heatmap from flight path and airport visit data |
+| `Heatmap/HeatmapRenderer.cs` | MonoBehaviour | Heatmap texture generation: cool→hot gradient, opacity control |
+| `Heatmap/LandingHeatmap.cs` | MonoBehaviour | Landing zone heatmap: centreline offset distribution, average accuracy |
+| `Heatmap/AltitudeHeatmap.cs` | MonoBehaviour | Altitude band distribution: time-in-band, preferred cruising altitude |
+| `Charts/ChartRenderer.cs` | MonoBehaviour | Chart data assembly: performance line, comparison bar, skill radar |
+| `Charts/FlightPathVisualizer.cs` | MonoBehaviour | 3D path replay with LineRenderer: colour-coded by altitude/speed/time |
+| `Charts/SpeedAltitudeGraph.cs` | MonoBehaviour | Dual-axis speed & altitude line chart + scatter plot |
+| `Charts/FuelEfficiencyChart.cs` | MonoBehaviour | Fuel efficiency trend, consumption rate, and aircraft comparison charts |
+| `Reports/FlightReportGenerator.cs` | MonoBehaviour | Post-flight reports: summary, highlights, improvement suggestions |
+| `Reports/WeeklyDigestGenerator.cs` | MonoBehaviour | Weekly/monthly digest: total hours, distance, best score, unique airports |
+| `Reports/ReportExporter.cs` | MonoBehaviour | Export to JSON/CSV; PDF/PNG stubs |
+| `Reports/ShareableCardGenerator.cs` | MonoBehaviour | Shareable stats cards: single flight and lifetime summaries |
+| `Social/LeaderboardManager.cs` | MonoBehaviour singleton | In-memory leaderboards; backend submit stub (`#if SWEF_MULTIPLAYER_AVAILABLE`) |
+| `Social/PlayerRankingSystem.cs` | MonoBehaviour | ELO-style rating, PilotTier mapping, expected-score formula |
+| `Social/CommunityStatsProvider.cs` | MonoBehaviour | Community snapshot stub; live data via `#if SWEF_MULTIPLAYER_AVAILABLE` |
+| `UI/FlightAnalyticsUI.cs` | MonoBehaviour | Main dashboard: panel navigation, time-range filter, category tabs |
+| `UI/FlightDetailPanel.cs` | MonoBehaviour | Single-flight detail view: path visualizer + speed/altitude graph |
+| `UI/StatisticsOverviewUI.cs` | MonoBehaviour | Lifetime stats overview panel |
+| `UI/AnalyticsHUD.cs` | MonoBehaviour | In-flight compact HUD: elapsed time, distance, efficiency indicator |
+| `Integration/FlightAnalyticsBridge.cs` | MonoBehaviour | Cross-system bridge: Journal, Achievement, CloudSave (`#if SWEF_ANALYTICS_AVAILABLE`) |
+| `Integration/AnalyticsTelemetry.cs` | MonoBehaviour | Dashboard meta-analytics: chart views, export counts, most-viewed chart |
+
+### Tests
+
+`Assets/SWEF/Scripts/FlightAnalytics/Tests/FlightAnalyticsTests.cs` — 50+ NUnit EditMode tests covering
+all 7 enums, all data model fields, `FlightStatisticsEngine` aggregation (all 5 methods), moving average,
+standard deviation, percentile, `TrendAnalyzer` improving/declining/stable detection and progression curve,
+`ComparisonEngine` delta and personal-best, `AchievementCorrelator` progress and unlock rate,
+`FlightHeatmapGenerator` empty and with data, `AltitudeHeatmap` band count and time-in-bands,
+`LandingHeatmap` touchdown recording and average offset, `FlightReportGenerator` null/valid/highlights,
+`WeeklyDigestGenerator` empty and multi-session, `ShareableCardGenerator` null/valid,
+`LeaderboardManager` submit/update/sort/rank, `PlayerRankingSystem` tier/rating/ELO,
+`AnalyticsTelemetry` chart tracking, and `FlightSessionTracker` session lifecycle.
