@@ -4290,7 +4290,7 @@ and 3D orbital visualisation.
 
 ### Tests
 
-`Assets/SWEF/Scripts/SatelliteTracking/Tests/SatelliteTrackingTests.cs` — 45+ NUnit EditMode tests covering
+`Assets/SWEF/Scripts/SatelliteTracking/Tests/SatelliteTrackingTests.cs` — 49 NUnit EditMode tests covering
 all enums, `SatelliteTrackingConfig` defaults and derived properties, `TLEData`/`OrbitalState`/`SatelliteRecord`/
 `DebrisObject`/`ConjunctionData`/`SatellitePass`/`DockingCorridor` data models, `TLEParser` single and bulk parsing,
 `OrbitalMechanicsEngine` orbital period and orbit classification, `SatelliteCatalogFilter` all filter

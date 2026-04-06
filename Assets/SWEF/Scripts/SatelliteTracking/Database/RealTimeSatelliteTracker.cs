@@ -36,6 +36,8 @@ namespace SWEF.SatelliteTracking
         private readonly List<SatelliteRecord> _records = new List<SatelliteRecord>();
         private OrbitalMechanicsEngine _engine;
 
+        private Coroutine _updateCoroutine;
+
         // ── Unity lifecycle ───────────────────────────────────────────────────────
 
         private void Awake()
@@ -59,13 +61,14 @@ namespace SWEF.SatelliteTracking
                 mock.FetchLatestTLEs();
             }
 
-            StartCoroutine(PositionUpdateLoop());
+            _updateCoroutine = StartCoroutine(PositionUpdateLoop());
         }
 
         private void OnDestroy()
         {
             if (dataProvider != null)
                 dataProvider.OnDataReceived -= HandleTLEData;
+            if (_updateCoroutine != null) StopCoroutine(_updateCoroutine);
         }
 
         // ── Public API ────────────────────────────────────────────────────────────

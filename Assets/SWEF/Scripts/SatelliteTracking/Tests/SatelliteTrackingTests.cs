@@ -1,5 +1,5 @@
 // SatelliteTrackingTests.cs — Phase 114: Satellite & Space Debris Tracking
-// Comprehensive NUnit EditMode tests (45+ tests) covering:
+// Comprehensive NUnit EditMode tests (49 tests) covering:
 // enums, config, TLE parsing, orbital mechanics, SGP4, debris system, docking, data models.
 
 using System;

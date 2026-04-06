@@ -37,6 +37,13 @@ namespace SWEF.SatelliteTracking
         private float _interiorStartTime;
         private bool  _inInterior;
 
+        // Stored delegates for clean unsubscription
+        private Action<SatelliteRecord> _onSatelliteAdded;
+        private Action<ConjunctionData> _onConjunctionWarning;
+        private Action<DockingState>    _onDockingStateChanged;
+        private Action<SpaceStationInterior.ISSModule> _onModuleEntered;
+        private Action                  _onExplorationEnded;
+
         // ── Unity lifecycle ───────────────────────────────────────────────────────
 
         private void Start()
@@ -71,38 +78,55 @@ namespace SWEF.SatelliteTracking
             var mgr = SatelliteTrackingManager.Instance;
             if (mgr != null)
             {
-                mgr.OnSatelliteAdded    += _ => SatellitesTracked++;
-                mgr.OnConjunctionWarning += c =>
-                {
-                    if (c.urgencyLevel >= 2) DebrisEncounters++;
-                };
+                _onSatelliteAdded    = _ => SatellitesTracked++;
+                _onConjunctionWarning = c => { if (c.urgencyLevel >= 2) DebrisEncounters++; };
+                mgr.OnSatelliteAdded     += _onSatelliteAdded;
+                mgr.OnConjunctionWarning += _onConjunctionWarning;
             }
 
             var docking = FindObjectOfType<DockingScenarioController>();
             if (docking != null)
             {
-                docking.OnStateChanged += state =>
+                _onDockingStateChanged = state =>
                 {
                     if (state == DockingState.FarApproach) DockingAttempts++;
                     if (state == DockingState.HardDock)    DockingSuccesses++;
                 };
+                docking.OnStateChanged += _onDockingStateChanged;
             }
 
             var interior = FindObjectOfType<SpaceStationInterior>();
             if (interior != null)
             {
-                interior.OnModuleEntered += _ =>
+                _onModuleEntered = _ =>
                 {
                     if (!_inInterior) { _inInterior = true; _interiorStartTime = Time.time; }
                 };
-                interior.OnExplorationEnded += () => _inInterior = false;
+                _onExplorationEnded = () => _inInterior = false;
+                interior.OnModuleEntered    += _onModuleEntered;
+                interior.OnExplorationEnded += _onExplorationEnded;
             }
         }
 
         private void UnsubscribeFromEvents()
         {
-            // Event lambdas captured at subscription time; no explicit unsubscribe needed
-            // for non-persistent events in this pattern.
+            var mgr = SatelliteTrackingManager.Instance;
+            if (mgr != null)
+            {
+                if (_onSatelliteAdded    != null) mgr.OnSatelliteAdded     -= _onSatelliteAdded;
+                if (_onConjunctionWarning != null) mgr.OnConjunctionWarning -= _onConjunctionWarning;
+            }
+
+            var docking = FindObjectOfType<DockingScenarioController>();
+            if (docking != null && _onDockingStateChanged != null)
+                docking.OnStateChanged -= _onDockingStateChanged;
+
+            var interior = FindObjectOfType<SpaceStationInterior>();
+            if (interior != null)
+            {
+                if (_onModuleEntered    != null) interior.OnModuleEntered    -= _onModuleEntered;
+                if (_onExplorationEnded != null) interior.OnExplorationEnded -= _onExplorationEnded;
+            }
         }
     }
 }

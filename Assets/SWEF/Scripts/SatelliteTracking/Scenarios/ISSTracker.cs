@@ -69,6 +69,8 @@ namespace SWEF.SatelliteTracking
         private OrbitalMechanicsEngine _engine;
         private bool _hasValidTLE;
 
+        private Coroutine _trackingCoroutine;
+
         // ── Unity lifecycle ───────────────────────────────────────────────────────
 
         private void Awake()
@@ -94,7 +96,12 @@ namespace SWEF.SatelliteTracking
             if (!_hasValidTLE)
                 LoadMockTLE();
 
-            StartCoroutine(TrackingLoop());
+            _trackingCoroutine = StartCoroutine(TrackingLoop());
+        }
+
+        private void OnDestroy()
+        {
+            if (_trackingCoroutine != null) StopCoroutine(_trackingCoroutine);
         }
 
         // ── Public API ────────────────────────────────────────────────────────────

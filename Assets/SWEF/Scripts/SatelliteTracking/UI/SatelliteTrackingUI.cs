@@ -71,7 +71,6 @@ namespace SWEF.SatelliteTracking
             if (mgr != null)
             {
                 mgr.OnSatelliteAdded   += _ => RefreshList();
-                mgr.OnSatelliteUpdated += _ => { };
             }
         }
 
