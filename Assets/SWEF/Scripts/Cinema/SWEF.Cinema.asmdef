@@ -2,8 +2,10 @@
     "name": "SWEF.Cinema",
     "rootNamespace": "SWEF.Cinema",
     "references": [
-        "UnityEngine.UI",
-        "SWEF.CoreMidB"
+        "SWEF.CoreMidB",
+        "SWEF.Flight",
+        "SWEF.Screenshot",
+        "UnityEngine.UI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

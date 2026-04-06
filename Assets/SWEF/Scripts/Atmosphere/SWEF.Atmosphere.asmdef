@@ -1,7 +1,13 @@
 {
     "name": "SWEF.Atmosphere",
     "rootNamespace": "SWEF.Atmosphere",
-    "references": [],
+    "references": [
+        "SWEF.Audio",
+        "SWEF.Cinema",
+        "SWEF.Flight",
+        "SWEF.Util",
+        "SWEF.Weather"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

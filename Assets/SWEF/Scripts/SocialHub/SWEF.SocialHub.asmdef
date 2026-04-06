@@ -2,6 +2,8 @@
     "name": "SWEF.SocialHub",
     "rootNamespace": "SWEF.SocialHub",
     "references": [
+        "SWEF.Achievement",
+        "SWEF.Progression",
         "Unity.TextMeshPro",
         "UnityEngine.UI"
     ],

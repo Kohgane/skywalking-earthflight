@@ -2,6 +2,7 @@
     "name": "SWEF.CockpitHUD",
     "rootNamespace": "SWEF.CockpitHUD",
     "references": [
+        "SWEF.Flight",
         "Unity.TextMeshPro",
         "UnityEngine.UI"
     ],

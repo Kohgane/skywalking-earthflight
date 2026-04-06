@@ -1,7 +1,9 @@
 {
     "name": "SWEF.Flight",
     "rootNamespace": "SWEF.Flight",
-    "references": [],
+    "references": [
+        "SWEF.Util"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

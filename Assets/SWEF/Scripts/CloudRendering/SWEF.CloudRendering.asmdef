@@ -2,8 +2,9 @@
     "name": "SWEF.CloudRendering",
     "rootNamespace": "SWEF.CloudRendering",
     "references": [
-        "UnityEngine.UI",
-        "SWEF.CoreMid"
+        "SWEF.CoreMid",
+        "SWEF.Flight",
+        "UnityEngine.UI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

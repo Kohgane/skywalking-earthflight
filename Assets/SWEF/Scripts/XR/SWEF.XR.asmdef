@@ -2,7 +2,11 @@
     "name": "SWEF.XR",
     "rootNamespace": "SWEF.XR",
     "references": [
-        "SWEF.CoreMidB"
+        "SWEF.CoreMidB",
+        "SWEF.Flight",
+        "SWEF.Screenshot",
+        "SWEF.UI",
+        "SWEF.Util"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

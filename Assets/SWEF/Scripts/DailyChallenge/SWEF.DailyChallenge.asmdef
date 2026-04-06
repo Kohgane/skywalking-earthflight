@@ -2,6 +2,11 @@
     "name": "SWEF.DailyChallenge",
     "rootNamespace": "SWEF.DailyChallenge",
     "references": [
+        "SWEF.Flight",
+        "SWEF.GuidedTour",
+        "SWEF.Multiplayer",
+        "SWEF.Progression",
+        "SWEF.Screenshot",
         "UnityEngine.UI"
     ],
     "includePlatforms": [],

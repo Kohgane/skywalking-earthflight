@@ -2,10 +2,11 @@
     "name": "SWEF.Offline",
     "rootNamespace": "SWEF.Offline",
     "references": [
-        "Unity.TextMeshPro",
-        "UnityEngine.UI",
         "SWEF.CoreBase",
-        "SWEF.CoreServices"
+        "SWEF.CoreServices",
+        "SWEF.Flight",
+        "Unity.TextMeshPro",
+        "UnityEngine.UI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

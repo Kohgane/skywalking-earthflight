@@ -1,7 +1,9 @@
 {
     "name": "SWEF.Terrain",
     "rootNamespace": "SWEF.Terrain",
-    "references": [],
+    "references": [
+        "SWEF.Performance"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

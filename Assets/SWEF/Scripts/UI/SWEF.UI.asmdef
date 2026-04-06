@@ -2,12 +2,20 @@
     "name": "SWEF.UI",
     "rootNamespace": "SWEF.UI",
     "references": [
+        "SWEF.Cinema",
+        "SWEF.CloudRendering",
         "SWEF.CoreBase",
-        "Unity.TextMeshPro",
-        "UnityEngine.UI",
         "SWEF.CoreMid",
         "SWEF.CoreMidB",
-        "SWEF.CorePremium"
+        "SWEF.CorePremium",
+        "SWEF.Flight",
+        "SWEF.IAP",
+        "SWEF.Replay",
+        "SWEF.Social",
+        "SWEF.Teleport",
+        "SWEF.Weather",
+        "Unity.TextMeshPro",
+        "UnityEngine.UI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

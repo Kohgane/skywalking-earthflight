@@ -2,7 +2,13 @@
     "name": "SWEF.Accessibility",
     "rootNamespace": "SWEF.Accessibility",
     "references": [
+        "SWEF.Achievement",
+        "SWEF.Analytics",
+        "SWEF.CockpitHUD",
+        "SWEF.Haptic",
         "SWEF.Localization",
+        "SWEF.Security",
+        "SWEF.UI",
         "UnityEngine.UI"
     ],
     "includePlatforms": [],

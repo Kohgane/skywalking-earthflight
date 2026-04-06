@@ -3,6 +3,7 @@
     "rootNamespace": "SWEF.Weather",
     "references": [
         "SWEF.CoreBase",
+        "SWEF.Flight",
         "UnityEngine.UI"
     ],
     "includePlatforms": [],

@@ -2,6 +2,8 @@
     "name": "SWEF.GuidedTour",
     "rootNamespace": "SWEF.GuidedTour",
     "references": [
+        "SWEF.Achievement",
+        "SWEF.Flight",
         "SWEF.Localization",
         "UnityEngine.UI"
     ],
