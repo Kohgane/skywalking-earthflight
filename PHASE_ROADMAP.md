@@ -1,7 +1,7 @@
 # SWEF Phase Roadmap
 
 > This file tracks the planned development phases for Skywalking: Earth Flight.
-> Last updated: 2026-04-06 (Phase 118 — Spatial Audio & 3D Soundscape)
+> Last updated: 2026-04-06 (Phase 119 — Advanced AI Traffic Control)
 
 ## Completed Phases
 
@@ -50,11 +50,11 @@ Phases 1–80 have been merged into `main`. See individual PR descriptions and `
 
 ## Current Phase
 
-**Phase 118 — 🔊 Spatial Audio & 3D Soundscape**
+**Phase 119 — 🤖 Advanced AI Traffic Control**
 
 ## Next Phase
 
-**Phase 119 — 🤖 Advanced AI Traffic Control**
+**Phase 120 — 🛬 Precision Landing & Autoland System**
 
 ## Post-Launch Phases (v2.0+)
 
@@ -77,7 +77,9 @@ Phases 1–80 have been merged into `main`. See individual PR descriptions and `
 | 115 | 🎨 Advanced Aircraft Livery Editor | Customization | — | **Completed** |
 | 116 | 📊 Flight Analytics Dashboard | Analytics | — | **Completed** |
 | 117 | 🌊 Advanced Ocean & Maritime System | World | — | **Completed** |
-| 118 | 🔊 Spatial Audio & 3D Soundscape | Audio | — | **Current** |
+| 118 | 🔊 Spatial Audio & 3D Soundscape | Audio | — | **Completed** |
+| 119 | 🤖 Advanced AI Traffic Control | AI | — | **Current** |
+| 120 | 🛬 Precision Landing & Autoland System | Flight | — | **Next** |
 
 ## Post-Launch Phases (v3.0+)
 
