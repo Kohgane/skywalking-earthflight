@@ -1,9 +1,9 @@
 # SWEF Project Briefing
 
 ## Current Status
-- **Feature Phases Completed**: 1–113 (of 120 planned)
-- **Current Phase**: 114 — Satellite & Space Debris Tracking
-- **Post-Launch v3.0+**: Phases 115–120 (planned)
+- **Feature Phases Completed**: 1–116 (of 120 planned)
+- **Current Phase**: 116 — Flight Analytics Dashboard
+- **Post-Launch v3.0+**: Phases 117–120 (planned)
 
 ## Timeline Estimates
 | Milestone | Estimate |
