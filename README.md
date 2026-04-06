@@ -145,7 +145,7 @@ See [`Assets/SWEF/README_SWEF_SETUP.md`](Assets/SWEF/README_SWEF_SETUP.md) for d
 |------|------|
 | [SCENE_SETUP_GUIDE.md](./SCENE_SETUP_GUIDE.md) | 씬 셋업 가이드 — Unity Editor에서 첫 테스트 비행까지 |
 | [BUG_TRACKING_GUIDE.md](./BUG_TRACKING_GUIDE.md) | 버그 트래킹 가이드 — 버그 리포트 템플릿, 라벨, 체크리스트 |
-| [PHASE_ROADMAP.md](./PHASE_ROADMAP.md) | 개발 로드맵 — 전체 112개 완료/진행 페이즈 + 포스트 런치 Phase 113–120 |
+| [PHASE_ROADMAP.md](./PHASE_ROADMAP.md) | 개발 로드맵 — 전체 113개 완료/진행 페이즈 + 포스트 런치 Phase 114–120 |
 | [RELEASE_NOTES_v1.0.0-rc1.md](./RELEASE_NOTES_v1.0.0-rc1.md) | 릴리즈 노트 — v1.0.0-rc1 전체 변경사항 요약 |
 
 ## License
@@ -4182,8 +4182,8 @@ to synchronise their progress across every device and platform automatically.
 | Phase | Title | Description |
 |-------|-------|-------------|
 | **111** | 🌐 Cross-Platform Cloud Save & Sync | 여러 기기에서 하나의 계정으로 진행상황 동기화 — PC에서 하던 비행을 모바일에서 이어서 — **✅ Completed** |
-| **112** | 🎮 VR/XR Flight Experience | Meta Quest / Apple Vision Pro에서 완전 몰입형 VR 비행 경험. 핸드 트래킹으로 조종간 직접 조작 — **🚧 Current** |
-| **113** | 🏙️ Procedural City & Airport Generation | 실제 지리 데이터 기반 절차적 도시/공항 생성. Cesium 타일 위에 건물과 활주로 자동 배치 |
+| **112** | 🎮 VR/XR Flight Experience | Meta Quest / Apple Vision Pro에서 완전 몰입형 VR 비행 경험. 핸드 트래킹으로 조종간 직접 조작 — **✅ Completed** |
+| **113** | 🏙️ Procedural City & Airport Generation | 실제 지리 데이터 기반 절차적 도시/공항 생성. Cesium 타일 위에 건물과 활주로 자동 배치 — **🚧 Current** |
 | **114** | 🛰️ Satellite & Space Debris Tracking | 실시간 위성 궤도 데이터 연동. 우주에서 실제 ISS 위치를 찾아 도킹 |
 | **115** | 🎨 Advanced Aircraft Livery Editor | Photoshop급 레이어 기반 항공기 도장 에디터. 커뮤니티 공유 마켓플레이스 |
 | **116** | 📊 Flight Analytics Dashboard | 비행 기록 분석 대시보드. 히트맵으로 자주 가는 곳, 착륙 정밀도 통계 등 |
@@ -4191,3 +4191,55 @@ to synchronise their progress across every device and platform automatically.
 | **118** | 🔊 Spatial Audio & 3D Soundscape | HRTF 기반 3D 공간 오디오. 옆을 지나가는 항공기 엔진 소리가 방향에 따라 변화 |
 | **119** | 🤖 Advanced AI Traffic Control | 완전 자동화된 AI 관제 시스템. 실시간 항로 충돌 감지 및 우회 지시 |
 | **120** | 🎯 Precision Landing Challenge System | 극한 환경 정밀 착륙 챌린지. 항공모함, 빙하, 화산 옆 착륙. 글로벌 리더보드 |
+
+---
+
+## Phase 113 — 🏙️ Procedural City & Airport Generation
+
+Phase 113 implements a comprehensive Procedural City & Airport Generation system —
+delivering noise-based city layout generation, multi-type airport construction with
+runways and ILS, four-level LOD management, tile-based world streaming, and real-world
+geographic data integration.
+
+### New Scripts (25 files) — `Assets/SWEF/Scripts/ProceduralWorld/` — namespace `SWEF.ProceduralWorld`
+
+| Script | Type | Summary |
+|--------|------|---------|
+| `Core/ProceduralWorldManager.cs` | MonoBehaviour singleton | Central orchestrator (DontDestroyOnLoad): city/airport generation pipeline, state machine, event bus |
+| `Core/ProceduralWorldConfig.cs` | ScriptableObject | Runtime config: density, LOD distances, floor ranges, road grid density, airport frequency, noise params |
+| `Core/ProceduralWorldData.cs` | Data models | Enums (`CityType`, `BuildingType`, `AirportType`, `RoadType`, `GenerationState`, `LODLevel`) + `BuildingInstance`, `RunwayData`, `AirportLayout`, `CityDescription`, `TerrainAnalysisResult`, `ChunkCoord` |
+| `City/CityGenerator.cs` | MonoBehaviour | Noise-based city layout: commercial centre, residential suburbs, industrial districts, Perlin zoning |
+| `City/CityLayout.cs` | Data class | City blueprint: road grid, block sizes, zoning map, population density map, statistics |
+| `City/BuildingGenerator.cs` | MonoBehaviour | Building prefab spawning with object pool, floor-count height scaling, zone-appropriate style |
+| `City/BuildingLODController.cs` | MonoBehaviour | Per-building LOD: LOD0 full detail → LOD1 simplified → LOD2 billboard → LOD3 batch |
+| `City/RoadNetworkGenerator.cs` | MonoBehaviour | Road mesh generation: highways, main roads, side streets, roundabouts |
+| `City/CityLightingController.cs` | MonoBehaviour | Day/night cycle lighting: window emission, street lights, traffic lights |
+| `Airport/AirportGenerator.cs` | MonoBehaviour | Procedural airport layout: ICAO code, runways, gates, control tower |
+| `Airport/RunwayGenerator.cs` | MonoBehaviour | Runway surface, edge lights, PAPI, approach lighting; `OptimalHeading()` wind utility |
+| `Airport/TerminalGenerator.cs` | MonoBehaviour | Terminal buildings, gate bridges, control towers |
+| `Airport/AirportInfrastructure.cs` | MonoBehaviour | Hangars, fuel depots, fire stations, parking areas |
+| `Airport/AirportNavaidPlacer.cs` | MonoBehaviour | ILS localiser + glideslope, VOR, PAPI placement |
+| `Terrain/TerrainAnalyzer.cs` | MonoBehaviour | Terrain suitability analysis: slope, elevation, coastal detection |
+| `Terrain/TerrainFlattener.cs` | MonoBehaviour | Heightmap modification with smooth edge blending for runways/cities |
+| `Terrain/CoastlineDetector.cs` | MonoBehaviour | Radial land/sea sampling; coastline direction calculation |
+| `Terrain/ElevationMapper.cs` | MonoBehaviour | 2-D elevation sampling, building height limits, no-fly zone ceilings |
+| `Streaming/WorldStreamer.cs` | MonoBehaviour | Tile-based async load/unload of city chunks by player distance |
+| `Streaming/LODTransitionController.cs` | MonoBehaviour | Alpha cross-fade LOD transitions with hysteresis |
+| `Streaming/CityChunkManager.cs` | MonoBehaviour | LRU chunk cache, deterministic seed-per-coordinate, GameObject root management |
+| `Streaming/MemoryBudgetController.cs` | MonoBehaviour | GC scheduling, quality scale recommendations based on memory pressure |
+| `Data/GeoDataProvider.cs` | MonoBehaviour singleton | Real-world geographic data (`#if SWEF_GEO_DATA_AVAILABLE`) — fallback world capitals |
+| `Data/RealWorldCityMapper.cs` | MonoBehaviour | Population → density, climate → building style, `MapRealCity()` helper |
+| `Data/AirportDatabaseProvider.cs` | MonoBehaviour singleton | ICAO airport DB (`#if SWEF_AIRPORT_DB_AVAILABLE`) — 4 built-in sample airports |
+| `UI/ProceduralWorldUI.cs` | MonoBehaviour | Settings panel: density slider, quality slider, city style dropdown |
+| `UI/CityInfoHUD.cs` | MonoBehaviour | HUD overlay: city name, population, nearby airports, city type |
+| `UI/AirportInfoPanel.cs` | MonoBehaviour | Airport info: ICAO, runways, simulated COM frequencies, gate count |
+| `Integration/ProceduralWorldBridge.cs` | MonoBehaviour singleton | Cross-system bridge: Minimap, Weather, ATC integration hooks |
+| `Integration/ProceduralWorldAnalytics.cs` | Static class | Generation telemetry: counters, LOD distribution, chunk load/unload stats |
+
+### Tests
+
+`Assets/SWEF/Scripts/ProceduralWorld/Tests/ProceduralWorldTests.cs` — 45+ NUnit EditMode tests covering
+all enums, `ProceduralWorldConfig` defaults, all data models (`BuildingInstance`, `RunwayData`,
+`AirportLayout`, `CityDescription`, `CityLayout`, `ChunkCoord`, `TerrainAnalysisResult`),
+`RunwayGenerator.OptimalHeading()`, `ElevationMapper` static utilities,
+`ProceduralWorldAnalytics`, and `RealWorldCityMapper`.
