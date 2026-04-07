@@ -4,8 +4,7 @@
     "references": [
         "SWEF.CoreBase",
         "SWEF.Multiplayer",
-        "UnityEngine.UI",
-        "UnityEngine.SceneManagement"
+        "UnityEngine.UI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -7,8 +7,6 @@
         "SWEF.Screenshot",
         "SWEF.UI",
         "SWEF.Util",
-        "UnityEngine.TestRunner",
-        "UnityEditor.TestRunner",
         "UnityEngine.UI",
         "Unity.TextMeshPro"
     ],

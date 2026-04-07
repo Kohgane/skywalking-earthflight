@@ -18,7 +18,9 @@ namespace SWEF.Core
         // ── Inspector ────────────────────────────────────────────────────────
         [Header("Store IDs")]
         [Tooltip("Numeric App Store app ID (numbers only, e.g. 1234567890).")]
+#pragma warning disable 0414
         [SerializeField] private string iosAppId = "";
+#pragma warning restore 0414
 
         [Tooltip("Play Store package name.")]
         [SerializeField] private string androidPackageName = "com.kohgane.swef.earthflight";
