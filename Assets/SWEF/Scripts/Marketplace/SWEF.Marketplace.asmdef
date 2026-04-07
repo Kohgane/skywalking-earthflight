@@ -2,7 +2,13 @@
     "name": "SWEF.Marketplace",
     "rootNamespace": "SWEF.Marketplace",
     "references": [
-        "SWEF.Core"
+        "SWEF.Achievement",
+        "SWEF.Analytics",
+        "SWEF.Multiplayer",
+        "SWEF.Progression",
+        "SWEF.Security",
+        "SWEF.SocialHub",
+        "SWEF.Workshop"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

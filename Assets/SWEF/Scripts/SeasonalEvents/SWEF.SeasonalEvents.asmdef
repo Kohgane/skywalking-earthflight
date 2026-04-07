@@ -2,7 +2,6 @@
     "name": "SWEF.SeasonalEvents",
     "rootNamespace": "SWEF.SeasonalEvents",
     "references": [
-        "SWEF.Core",
         "SWEF.Achievement",
         "SWEF.Progression",
         "SWEF.DailyChallenge",

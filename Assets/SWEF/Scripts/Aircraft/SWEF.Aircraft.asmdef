@@ -2,8 +2,18 @@
     "name": "SWEF.Aircraft",
     "rootNamespace": "SWEF.Aircraft",
     "references": [
-        "SWEF.Core",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "SWEF.Achievement",
+        "SWEF.DailyChallenge",
+        "SWEF.Events",
+        "SWEF.Flight",
+        "SWEF.HiddenGems",
+        "SWEF.IAP",
+        "SWEF.Localization",
+        "SWEF.Multiplayer",
+        "SWEF.Progression",
+        "SWEF.Settings",
+        "SWEF.Util"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

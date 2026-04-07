@@ -2,8 +2,14 @@
     "name": "SWEF.Water",
     "rootNamespace": "SWEF.Water",
     "references": [
-        "SWEF.Core",
-        "SWEF.Ocean"
+        "SWEF.Ocean",
+        "SWEF.Analytics",
+        "SWEF.Audio",
+        "SWEF.Contrail",
+        "SWEF.Damage",
+        "SWEF.Flight",
+        "SWEF.Landing",
+        "SWEF.Weather"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

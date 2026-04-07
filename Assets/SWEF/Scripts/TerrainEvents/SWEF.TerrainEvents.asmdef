@@ -2,9 +2,11 @@
     "name": "SWEF.TerrainEvents",
     "rootNamespace": "SWEF.TerrainEvents",
     "references": [
-        "SWEF.Core",
         "SWEF.Flight",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "SWEF.Achievement",
+        "SWEF.Biome",
+        "SWEF.Mission"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

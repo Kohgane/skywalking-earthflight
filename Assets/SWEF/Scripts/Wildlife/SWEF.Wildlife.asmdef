@@ -2,8 +2,16 @@
     "name": "SWEF.Wildlife",
     "rootNamespace": "SWEF.Wildlife",
     "references": [
-        "SWEF.Core",
-        "SWEF.Flight"
+        "SWEF.Flight",
+        "SWEF.Accessibility",
+        "SWEF.Achievement",
+        "SWEF.Audio",
+        "SWEF.Biome",
+        "SWEF.Damage",
+        "SWEF.DebugOverlay",
+        "SWEF.Journal",
+        "SWEF.TimeOfDay",
+        "SWEF.Water"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

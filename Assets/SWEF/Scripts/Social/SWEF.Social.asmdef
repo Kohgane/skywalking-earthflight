@@ -2,7 +2,10 @@
     "name": "SWEF.Social",
     "rootNamespace": "SWEF.Social",
     "references": [
-        "SWEF.Core",
+        "SWEF.CoreBase",
+        "SWEF.CoreMid",
+        "SWEF.Flight",
+        "SWEF.Recorder",
         "UnityEngine.UI"
     ],
     "includePlatforms": [],

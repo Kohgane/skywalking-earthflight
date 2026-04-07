@@ -2,7 +2,8 @@
     "name": "SWEF.LOD",
     "rootNamespace": "SWEF.LOD",
     "references": [
-        "SWEF.Core"
+        "SWEF.Performance",
+        "SWEF.Terrain"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

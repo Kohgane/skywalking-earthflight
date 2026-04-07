@@ -2,10 +2,9 @@
     "name": "SWEF.ReplayTheater",
     "rootNamespace": "SWEF.ReplayTheater",
     "references": [
-        "SWEF.Core",
-        "SWEF.Recorder",
-        "SWEF.Replay",
+        "SWEF.Analytics",
         "SWEF.Cinema",
+        "SWEF.Replay",
         "UnityEngine.UI"
     ],
     "includePlatforms": [],

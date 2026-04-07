@@ -2,10 +2,8 @@
     "name": "SWEF.Replay",
     "rootNamespace": "SWEF.Replay",
     "references": [
-        "SWEF.Core",
-        "SWEF.Recorder",
-        "SWEF.Flight",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "SWEF.CoreBase"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

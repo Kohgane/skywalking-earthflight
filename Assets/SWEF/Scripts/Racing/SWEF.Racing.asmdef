@@ -2,8 +2,8 @@
     "name": "SWEF.Racing",
     "rootNamespace": "SWEF.Racing",
     "references": [
-        "SWEF.Core",
-        "SWEF.Flight"
+        "SWEF.Flight",
+        "SWEF.CoreServices"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

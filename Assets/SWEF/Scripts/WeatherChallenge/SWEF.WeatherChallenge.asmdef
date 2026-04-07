@@ -2,9 +2,10 @@
     "name": "SWEF.WeatherChallenge",
     "rootNamespace": "SWEF.WeatherChallenge",
     "references": [
-        "SWEF.Core",
         "SWEF.Weather",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "SWEF.Analytics",
+        "SWEF.Flight"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

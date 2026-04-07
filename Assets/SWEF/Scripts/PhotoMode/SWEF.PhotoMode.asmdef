@@ -2,9 +2,16 @@
     "name": "SWEF.PhotoMode",
     "rootNamespace": "SWEF.PhotoMode",
     "references": [
-        "SWEF.Core",
         "SWEF.Flight",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "SWEF.Accessibility",
+        "SWEF.Analytics",
+        "SWEF.Audio",
+        "SWEF.Haptic",
+        "SWEF.Screenshot",
+        "SWEF.Social",
+        "SWEF.TimeOfDay",
+        "SWEF.UI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -2,7 +2,7 @@
     "name": "SWEF.Performance",
     "rootNamespace": "SWEF.Performance",
     "references": [
-        "SWEF.Core",
+        "SWEF.CoreBase",
         "UnityEngine.UI"
     ],
     "includePlatforms": [],

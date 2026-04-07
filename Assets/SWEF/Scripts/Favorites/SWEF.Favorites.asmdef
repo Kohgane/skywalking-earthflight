@@ -2,7 +2,11 @@
     "name": "SWEF.Favorites",
     "rootNamespace": "SWEF.Favorites",
     "references": [
-        "SWEF.Core",
+        "SWEF.CoreBase",
+        "SWEF.CorePremium",
+        "SWEF.Flight",
+        "SWEF.Teleport",
+        "SWEF.UI",
         "UnityEngine.UI"
     ],
     "includePlatforms": [],

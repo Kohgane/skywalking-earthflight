@@ -1,9 +1,7 @@
 {
     "name": "SWEF.DebugOverlay",
     "rootNamespace": "SWEF.DebugOverlay",
-    "references": [
-        "SWEF.Core"
-    ],
+    "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

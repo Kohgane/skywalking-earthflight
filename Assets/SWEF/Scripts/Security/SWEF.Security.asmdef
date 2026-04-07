@@ -2,7 +2,11 @@
     "name": "SWEF.Security",
     "rootNamespace": "SWEF.Security",
     "references": [
-        "SWEF.Core"
+        "SWEF.Achievement",
+        "SWEF.Analytics",
+        "SWEF.Multiplayer",
+        "SWEF.SocialHub",
+        "SWEF.Workshop"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

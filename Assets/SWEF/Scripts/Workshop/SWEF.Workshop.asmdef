@@ -2,7 +2,10 @@
     "name": "SWEF.Workshop",
     "rootNamespace": "SWEF.Workshop",
     "references": [
-        "SWEF.Core"
+        "SWEF.Achievement",
+        "SWEF.Analytics",
+        "SWEF.Progression",
+        "SWEF.SocialHub"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

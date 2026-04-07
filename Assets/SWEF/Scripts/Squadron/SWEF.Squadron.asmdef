@@ -2,8 +2,13 @@
     "name": "SWEF.Squadron",
     "rootNamespace": "SWEF.Squadron",
     "references": [
-        "SWEF.Core",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "SWEF.Achievement",
+        "SWEF.Analytics",
+        "SWEF.Multiplayer",
+        "SWEF.Progression",
+        "SWEF.Security",
+        "SWEF.Social"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -2,8 +2,12 @@
     "name": "SWEF.NPCTraffic",
     "rootNamespace": "SWEF.NPCTraffic",
     "references": [
-        "SWEF.Core",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "SWEF.Airshow",
+        "SWEF.Analytics",
+        "SWEF.Flight",
+        "SWEF.NaturalDisaster",
+        "SWEF.SeasonalEvents"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

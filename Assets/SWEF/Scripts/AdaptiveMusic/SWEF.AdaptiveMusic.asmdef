@@ -2,9 +2,16 @@
     "name": "SWEF.AdaptiveMusic",
     "rootNamespace": "SWEF.AdaptiveMusic",
     "references": [
-        "SWEF.Core",
         "SWEF.MusicPlayer",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "SWEF.Analytics",
+        "SWEF.Biome",
+        "SWEF.Damage",
+        "SWEF.Emergency",
+        "SWEF.Flight",
+        "SWEF.PassengerCargo",
+        "SWEF.TimeOfDay",
+        "SWEF.Weather"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -2,7 +2,8 @@
     "name": "SWEF.IAP",
     "rootNamespace": "SWEF.IAP",
     "references": [
-        "SWEF.Core",
+        "SWEF.Analytics",
+        "SWEF.CoreServices",
         "UnityEngine.UI"
     ],
     "includePlatforms": [],

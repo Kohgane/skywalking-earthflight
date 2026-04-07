@@ -2,7 +2,11 @@
     "name": "SWEF.Haptic",
     "rootNamespace": "SWEF.Haptic",
     "references": [
-        "SWEF.Core"
+        "SWEF.Achievement",
+        "SWEF.Flight",
+        "SWEF.Screenshot",
+        "SWEF.Settings",
+        "SWEF.Teleport"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

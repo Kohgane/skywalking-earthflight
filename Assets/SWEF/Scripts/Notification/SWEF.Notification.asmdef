@@ -1,10 +1,7 @@
 {
     "name": "SWEF.Notification",
     "rootNamespace": "SWEF.Notification",
-    "references": [
-        "SWEF.Core",
-        "SWEF.UI"
-    ],
+    "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

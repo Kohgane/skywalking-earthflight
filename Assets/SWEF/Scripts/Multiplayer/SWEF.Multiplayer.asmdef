@@ -2,9 +2,12 @@
     "name": "SWEF.Multiplayer",
     "rootNamespace": "SWEF.Multiplayer",
     "references": [
-        "SWEF.Core",
+        "SWEF.Achievement",
+        "SWEF.Analytics",
+        "SWEF.CoreMid",
         "SWEF.Flight",
-        "SWEF.Social",
+        "SWEF.Progression",
+        "SWEF.SocialHub",
         "UnityEngine.UI"
     ],
     "includePlatforms": [],

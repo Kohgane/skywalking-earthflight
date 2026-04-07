@@ -2,9 +2,12 @@
     "name": "SWEF.SpaceStation",
     "rootNamespace": "SWEF.SpaceStation",
     "references": [
-        "SWEF.Core",
         "SWEF.Flight",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "SWEF.Achievement",
+        "SWEF.Analytics",
+        "SWEF.Fuel",
+        "SWEF.Minimap"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -1,0 +1,21 @@
+{
+    "name": "SWEF.CoreServices",
+    "rootNamespace": "SWEF.Core",
+    "references": [
+        "SWEF.CoreBase",
+        "SWEF.Analytics",
+        "SWEF.Weather",
+        "SWEF.Multiplayer",
+        "SWEF.Flight",
+        "UnityEngine.UI"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

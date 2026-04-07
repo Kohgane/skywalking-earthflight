@@ -2,7 +2,7 @@
     "name": "SWEF.Flight",
     "rootNamespace": "SWEF.Flight",
     "references": [
-        "SWEF.Core"
+        "SWEF.Util"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

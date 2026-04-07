@@ -2,10 +2,11 @@
     "name": "SWEF.Landing",
     "rootNamespace": "SWEF.Landing",
     "references": [
-        "SWEF.Core",
         "SWEF.Flight",
         "Unity.TextMeshPro",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "SWEF.CockpitHUD",
+        "SWEF.Weather"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

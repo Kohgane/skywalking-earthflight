@@ -2,7 +2,6 @@
     "name": "SWEF.Mission",
     "rootNamespace": "SWEF.Mission",
     "references": [
-        "SWEF.Core",
         "SWEF.Flight",
         "Unity.TextMeshPro",
         "UnityEngine.UI"

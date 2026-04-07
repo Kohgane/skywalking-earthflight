@@ -2,8 +2,8 @@
     "name": "SWEF.SaveSystem",
     "rootNamespace": "SWEF.SaveSystem",
     "references": [
-        "SWEF.Core",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "SWEF.CoreBase"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

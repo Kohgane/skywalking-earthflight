@@ -2,7 +2,6 @@
     "name": "SWEF.TabletUI",
     "rootNamespace": "SWEF.TabletUI",
     "references": [
-        "SWEF.Core",
         "SWEF.UI",
         "SWEF.InputSystem",
         "SWEF.CockpitHUD",

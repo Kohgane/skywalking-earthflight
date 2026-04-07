@@ -2,10 +2,10 @@
     "name": "SWEF.Radar",
     "rootNamespace": "SWEF.Radar",
     "references": [
-        "SWEF.Core",
         "SWEF.Flight",
         "Unity.TextMeshPro",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "SWEF.CockpitHUD"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
