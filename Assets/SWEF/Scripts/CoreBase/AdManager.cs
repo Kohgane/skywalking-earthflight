@@ -1,5 +1,7 @@
 using System;
 using UnityEngine;
+using SWEF.CoreServices;
+using SWEF.IAP;
 
 namespace SWEF.Core
 {
@@ -145,7 +147,7 @@ namespace SWEF.Core
 
         private bool IsAdFree()
         {
-            return IAP.IAPManager.Instance != null && IAP.IAPManager.Instance.IsAdFree;
+            return IAPManager.Instance != null && IAPManager.Instance.IsAdFree;
         }
 
         private System.Collections.IEnumerator FireInterstitialClosed(Action onComplete)

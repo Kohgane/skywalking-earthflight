@@ -374,7 +374,7 @@ public class SpatialAudioTests
         controller.UpdateWindNoise(0f);
         float vol = controller.CalculateLaminarVolume();
         Assert.AreEqual(0f, vol, 0.001f);
-        Object.DestroyImmediate(go);
+        UnityEngine.Object.DestroyImmediate(go);
     }
 
     [Test]
@@ -385,7 +385,7 @@ public class SpatialAudioTests
         controller.UpdateWindNoise(5f);
         float vol = controller.CalculateTurbulentVolume();
         Assert.AreEqual(0f, vol, 0.001f);
-        Object.DestroyImmediate(go);
+        UnityEngine.Object.DestroyImmediate(go);
     }
 
     [Test]
@@ -396,7 +396,7 @@ public class SpatialAudioTests
         controller.UpdateWindNoise(100f);
         float vol = controller.CalculateMachVolume();
         Assert.AreEqual(0f, vol, 0.001f);
-        Object.DestroyImmediate(go);
+        UnityEngine.Object.DestroyImmediate(go);
     }
 
     [Test]
@@ -406,7 +406,7 @@ public class SpatialAudioTests
         var controller = go.AddComponent<WindNoiseController>();
         controller.UpdateWindNoise(250f);
         Assert.AreEqual(250f, controller.CurrentSpeedMs, 0.001f);
-        Object.DestroyImmediate(go);
+        UnityEngine.Object.DestroyImmediate(go);
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -422,7 +422,7 @@ public class SpatialAudioTests
         engine.relativeHumidity  = 0.5f;
         float sos = engine.CalculateSpeedOfSound();
         Assert.AreEqual(343f, sos, 5f, "Speed of sound should be near 343 m/s at 15°C");
-        Object.DestroyImmediate(go);
+        UnityEngine.Object.DestroyImmediate(go);
     }
 
     [Test]
@@ -439,7 +439,7 @@ public class SpatialAudioTests
         float warm = engine.CalculateSpeedOfSound();
 
         Assert.Greater(warm, cold);
-        Object.DestroyImmediate(go);
+        UnityEngine.Object.DestroyImmediate(go);
     }
 
     [Test]
@@ -449,7 +449,7 @@ public class SpatialAudioTests
         var engine = go.AddComponent<AudioPropagationEngine>();
         float atten = engine.CalculateAttenuation(5f, SoundPropagationModel.Linear);
         Assert.AreEqual(1f, atten, 0.001f);
-        Object.DestroyImmediate(go);
+        UnityEngine.Object.DestroyImmediate(go);
     }
 
     [Test]
@@ -459,7 +459,7 @@ public class SpatialAudioTests
         var engine = go.AddComponent<AudioPropagationEngine>();
         float atten = engine.CalculateAttenuation(5000f, SoundPropagationModel.Linear);
         Assert.AreEqual(0f, atten, 0.001f);
-        Object.DestroyImmediate(go);
+        UnityEngine.Object.DestroyImmediate(go);
     }
 
     [Test]
@@ -470,7 +470,7 @@ public class SpatialAudioTests
         float near = engine.CalculateAttenuation(10f,   SoundPropagationModel.Logarithmic);
         float far  = engine.CalculateAttenuation(1000f, SoundPropagationModel.Logarithmic);
         Assert.Greater(near, far);
-        Object.DestroyImmediate(go);
+        UnityEngine.Object.DestroyImmediate(go);
     }
 
     [Test]
@@ -480,7 +480,7 @@ public class SpatialAudioTests
         var engine = go.AddComponent<AudioPropagationEngine>();
         float delay = engine.CalculatePropagationDelay(343f);
         Assert.Greater(delay, 0f);
-        Object.DestroyImmediate(go);
+        UnityEngine.Object.DestroyImmediate(go);
     }
 
     [Test]
@@ -491,7 +491,7 @@ public class SpatialAudioTests
         engine.relativeHumidity = 0f; // dry air = more absorption
         float absorption = engine.CalculateAtmosphericAbsorption(5000f);
         Assert.Less(absorption, 1f);
-        Object.DestroyImmediate(go);
+        UnityEngine.Object.DestroyImmediate(go);
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -506,7 +506,7 @@ public class SpatialAudioTests
         // No config = default Raycast, but without geometry, not occluded
         bool occ = system.IsOccluded(Vector3.zero, new Vector3(0f, 0f, 100f));
         Assert.IsFalse(occ, "Should not be occluded when no geometry is present");
-        Object.DestroyImmediate(go);
+        UnityEngine.Object.DestroyImmediate(go);
     }
 
     [Test]
@@ -516,7 +516,7 @@ public class SpatialAudioTests
         var system = go.AddComponent<AudioOcclusionSystem>();
         float hz = system.GetOcclusionCutoffHz(0f);
         Assert.AreEqual(22000f, hz, 1f);
-        Object.DestroyImmediate(go);
+        UnityEngine.Object.DestroyImmediate(go);
     }
 
     [Test]
@@ -526,7 +526,7 @@ public class SpatialAudioTests
         var system = go.AddComponent<AudioOcclusionSystem>();
         float hz = system.GetOcclusionCutoffHz(1f);
         Assert.LessOrEqual(hz, 1000f);
-        Object.DestroyImmediate(go);
+        UnityEngine.Object.DestroyImmediate(go);
     }
 
     [Test]
@@ -536,7 +536,7 @@ public class SpatialAudioTests
         var system = go.AddComponent<AudioOcclusionSystem>();
         float vol = system.GetOcclusionVolumeMultiplier(0f);
         Assert.AreEqual(1f, vol, 0.001f);
-        Object.DestroyImmediate(go);
+        UnityEngine.Object.DestroyImmediate(go);
     }
 
     [Test]
@@ -546,7 +546,7 @@ public class SpatialAudioTests
         var system = go.AddComponent<AudioOcclusionSystem>();
         float vol = system.GetOcclusionVolumeMultiplier(1f);
         Assert.Less(vol, 1f);
-        Object.DestroyImmediate(go);
+        UnityEngine.Object.DestroyImmediate(go);
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -560,7 +560,7 @@ public class SpatialAudioTests
         var controller = go.AddComponent<DopplerEffectController>();
         float pitch    = controller.CalculateDopplerPitch(Vector3.zero, Vector3.zero, Vector3.forward);
         Assert.AreEqual(1f, pitch, 0.05f, "No velocity should produce no Doppler shift");
-        Object.DestroyImmediate(go);
+        UnityEngine.Object.DestroyImmediate(go);
     }
 
     [Test]
@@ -575,7 +575,7 @@ public class SpatialAudioTests
         float   pitch       = controller.CalculateDopplerPitch(sourceVel, listenerVel, direction);
         // Approaching source should raise pitch
         Assert.Greater(pitch, 1f);
-        Object.DestroyImmediate(go);
+        UnityEngine.Object.DestroyImmediate(go);
     }
 
     [Test]
@@ -589,7 +589,7 @@ public class SpatialAudioTests
         Vector3 direction   = Vector3.forward;
         float   pitch       = controller.CalculateDopplerPitch(sourceVel, listenerVel, direction);
         Assert.Less(pitch, 1f);
-        Object.DestroyImmediate(go);
+        UnityEngine.Object.DestroyImmediate(go);
     }
 
     [Test]
@@ -600,7 +600,7 @@ public class SpatialAudioTests
         var result     = controller.ComputeDopplerResult(440f, Vector3.zero, Vector3.zero, Vector3.forward);
         Assert.Greater(result.shiftedFrequency, 0f);
         Assert.AreEqual(440f, result.originalFrequency, 0.001f);
-        Object.DestroyImmediate(go);
+        UnityEngine.Object.DestroyImmediate(go);
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -656,7 +656,7 @@ public class SpatialAudioTests
         controller.boomMachThreshold = 1.0f;
         controller.UpdateSpeed(300f, 0f);
         Assert.IsFalse(controller.IsSupersonic);
-        Object.DestroyImmediate(go);
+        UnityEngine.Object.DestroyImmediate(go);
     }
 
     [Test]
@@ -668,7 +668,7 @@ public class SpatialAudioTests
         controller.boomMachThreshold = 1.0f;
         controller.UpdateSpeed(400f, 0f);
         Assert.IsTrue(controller.IsSupersonic);
-        Object.DestroyImmediate(go);
+        UnityEngine.Object.DestroyImmediate(go);
     }
 
     [Test]
@@ -679,7 +679,7 @@ public class SpatialAudioTests
         controller.speedOfSound = 343f;
         float delay = controller.CalculatePropagationDelay(1000f);
         Assert.Greater(delay, 0f);
-        Object.DestroyImmediate(go);
+        UnityEngine.Object.DestroyImmediate(go);
     }
 
     [Test]
@@ -691,7 +691,7 @@ public class SpatialAudioTests
         controller.boomMachThreshold = 1.0f;
         controller.UpdateSpeed(686f, 0f);   // exactly Mach 2
         Assert.AreEqual(2f, controller.CurrentMach, 0.05f);
-        Object.DestroyImmediate(go);
+        UnityEngine.Object.DestroyImmediate(go);
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -705,7 +705,7 @@ public class SpatialAudioTests
         var controller = go.AddComponent<PropWashAudio>();
         controller.UpdatePropWash(0f, 100f);
         Assert.AreEqual(0f, controller.GetWashLevel(), 0.001f);
-        Object.DestroyImmediate(go);
+        UnityEngine.Object.DestroyImmediate(go);
     }
 
     [Test]
@@ -716,7 +716,7 @@ public class SpatialAudioTests
         controller.maxRpm = 2700f;
         controller.UpdatePropWash(2700f, 100f);
         Assert.AreEqual(1f, controller.GetWashLevel(), 0.001f);
-        Object.DestroyImmediate(go);
+        UnityEngine.Object.DestroyImmediate(go);
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -743,7 +743,7 @@ public class SpatialAudioTests
         var go         = new GameObject("Warning");
         var controller = go.AddComponent<CockpitWarningAudio>();
         Assert.IsNull(controller.ActiveLoopWarning);
-        Object.DestroyImmediate(go);
+        UnityEngine.Object.DestroyImmediate(go);
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -781,7 +781,7 @@ public class SpatialAudioTests
         var go  = new GameObject("Startup");
         var seq = go.AddComponent<EngineStartupSequence>();
         Assert.AreEqual(EngineStartupSequence.SequenceState.Off, seq.CurrentState);
-        Object.DestroyImmediate(go);
+        UnityEngine.Object.DestroyImmediate(go);
     }
 
     [Test]
