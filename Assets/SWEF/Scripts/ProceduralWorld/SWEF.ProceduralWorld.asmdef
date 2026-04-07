@@ -5,8 +5,6 @@
         "SWEF.ATC",
         "SWEF.Minimap",
         "SWEF.Weather",
-        "UnityEngine.TestRunner",
-        "UnityEditor.TestRunner",
         "UnityEngine.UI"
     ],
     "includePlatforms": [],

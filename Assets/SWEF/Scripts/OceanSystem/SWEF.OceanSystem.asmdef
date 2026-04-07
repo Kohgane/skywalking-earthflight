@@ -5,8 +5,6 @@
         "SWEF.Achievement",
         "SWEF.Flight",
         "SWEF.Weather",
-        "UnityEngine.TestRunner",
-        "UnityEditor.TestRunner",
         "UnityEngine.UI"
     ],
     "includePlatforms": [],
