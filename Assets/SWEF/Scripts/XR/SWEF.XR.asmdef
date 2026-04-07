@@ -6,7 +6,11 @@
         "SWEF.Flight",
         "SWEF.Screenshot",
         "SWEF.UI",
-        "SWEF.Util"
+        "SWEF.Util",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner",
+        "UnityEngine.UI",
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

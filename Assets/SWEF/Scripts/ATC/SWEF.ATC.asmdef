@@ -9,7 +9,9 @@
         "SWEF.CityGen",
         "SWEF.Landing",
         "SWEF.Localization",
-        "SWEF.Weather"
+        "SWEF.Weather",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

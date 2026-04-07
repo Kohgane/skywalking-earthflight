@@ -13,7 +13,8 @@
         "SWEF.Fuel",
         "SWEF.Journal",
         "SWEF.Localization",
-        "SWEF.Wildlife"
+        "SWEF.Wildlife",
+        "UnityEngine.UI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

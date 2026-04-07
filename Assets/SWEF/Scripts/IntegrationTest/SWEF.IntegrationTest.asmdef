@@ -19,7 +19,10 @@
         "SWEF.TimeOfDay",
         "SWEF.VoiceCommand",
         "SWEF.Weather",
-        "SWEF.CoreBase"
+        "SWEF.CoreBase",
+        "SWEF.Cinema",
+        "SWEF.ReplayTheater",
+        "UnityEngine.UI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

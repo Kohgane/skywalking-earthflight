@@ -4,7 +4,9 @@
     "references": [
         "SWEF.Achievement",
         "SWEF.CloudSave",
-        "SWEF.Journal"
+        "SWEF.Journal",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

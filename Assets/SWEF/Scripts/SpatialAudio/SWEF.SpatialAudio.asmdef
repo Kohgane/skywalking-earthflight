@@ -1,7 +1,12 @@
 {
     "name": "SWEF.SpatialAudio",
     "rootNamespace": "SWEF.SpatialAudio",
-    "references": [],
+    "references": [
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner",
+        "UnityEngine.UI",
+        "SWEF.Flight"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
