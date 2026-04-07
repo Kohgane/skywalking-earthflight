@@ -91,7 +91,7 @@ namespace SWEF.SpatialAudio
                     zone.reverbPreset = AudioReverbPreset.Plain;
                     break;
                 case ReverbZonePreset.Cockpit:
-                    zone.reverbPreset = AudioReverbPreset.Car;
+                    zone.reverbPreset = AudioReverbPreset.Carpettedhallway;
                     break;
                 case ReverbZonePreset.Hangar:
                     zone.reverbPreset = AudioReverbPreset.Hangar;
@@ -128,7 +128,7 @@ namespace SWEF.SpatialAudio
                     filter.reverbPreset = AudioReverbPreset.Plain;
                     break;
                 case ReverbZonePreset.Cockpit:
-                    filter.reverbPreset = AudioReverbPreset.Car;
+                    filter.reverbPreset = AudioReverbPreset.Carpettedhallway;
                     break;
                 case ReverbZonePreset.Hangar:
                     filter.reverbPreset = AudioReverbPreset.Hangar;
