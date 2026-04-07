@@ -2,7 +2,11 @@
     "name": "SWEF.SatelliteTracking",
     "rootNamespace": "SWEF.SatelliteTracking",
     "references": [
-        "SWEF.Minimap"
+        "SWEF.Minimap",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner",
+        "UnityEngine.UI",
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

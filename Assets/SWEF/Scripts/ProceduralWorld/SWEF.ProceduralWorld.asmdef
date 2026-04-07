@@ -4,7 +4,10 @@
     "references": [
         "SWEF.ATC",
         "SWEF.Minimap",
-        "SWEF.Weather"
+        "SWEF.Weather",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner",
+        "UnityEngine.UI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

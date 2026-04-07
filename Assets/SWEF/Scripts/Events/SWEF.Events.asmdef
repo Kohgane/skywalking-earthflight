@@ -7,7 +7,8 @@
         "SWEF.Achievement",
         "SWEF.Flight",
         "SWEF.GuidedTour",
-        "SWEF.Weather"
+        "SWEF.Weather",
+        "SWEF.Localization"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -5,7 +5,8 @@
         "SWEF.Flight",
         "UnityEngine.UI",
         "SWEF.Analytics",
-        "SWEF.Security"
+        "SWEF.Security",
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

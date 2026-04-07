@@ -1,7 +1,10 @@
 {
     "name": "SWEF.LiveryEditor",
     "rootNamespace": "SWEF.LiveryEditor",
-    "references": [],
+    "references": [
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

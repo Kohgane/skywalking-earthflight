@@ -2,7 +2,6 @@
     "name": "SWEF.CoreServices",
     "rootNamespace": "SWEF.Core",
     "references": [
-        "SWEF.CoreBase",
         "SWEF.Analytics",
         "SWEF.Weather",
         "SWEF.Multiplayer",

@@ -3,7 +3,8 @@
     "rootNamespace": "SWEF.VoiceCommand",
     "references": [
         "SWEF.Flight",
-        "SWEF.Analytics"
+        "SWEF.Analytics",
+        "UnityEngine.UI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

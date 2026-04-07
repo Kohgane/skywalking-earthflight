@@ -7,7 +7,9 @@
         "SWEF.Academy",
         "SWEF.Achievement",
         "SWEF.Analytics",
-        "SWEF.CloudSave"
+        "SWEF.CloudSave",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

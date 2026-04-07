@@ -6,7 +6,8 @@
         "SWEF.Analytics",
         "SWEF.SaveSystem",
         "SWEF.Security",
-        "SWEF.CoreBase"
+        "SWEF.CoreBase",
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
