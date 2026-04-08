@@ -414,8 +414,8 @@ public class LiveryEditorTests
             if (p.b > 0.5f) hasB = true;
             if (hasA && hasB) break;
         }
-        Assert.IsTrue(hasA, "Primary colour missing from camouflage texture");
-        Assert.IsTrue(hasB, "Secondary colour missing from camouflage texture");
+        Assert.IsTrue(hasA, "Primary color missing from camouflage texture");
+        Assert.IsTrue(hasB, "Secondary color missing from camouflage texture");
         UnityEngine.Object.DestroyImmediate(tex);
     }
 
