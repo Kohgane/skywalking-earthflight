@@ -3,9 +3,6 @@
     "rootNamespace": "SWEF.Core",
     "references": [
         "SWEF.Analytics",
-        "SWEF.Weather",
-        "SWEF.Multiplayer",
-        "SWEF.Flight",
         "UnityEngine.UI"
     ],
     "includePlatforms": [],

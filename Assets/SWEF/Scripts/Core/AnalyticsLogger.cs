@@ -242,6 +242,7 @@ namespace SWEF.Core
             PlayerPrefs.DeleteKey(KEY_MAX_ALTITUDE);
             PlayerPrefs.DeleteKey(KEY_TELEPORT_COUNT);
             PlayerPrefs.DeleteKey(KEY_SCREENSHOT_COUNT);
+            PlayerPrefs.DeleteKey(KEY_WEATHER_EVENTS);
             PlayerPrefs.Save();
 
             SessionCount        = 0;
@@ -249,6 +250,7 @@ namespace SWEF.Core
             MaxAltitudeMeters   = 0f;
             TeleportCount       = 0;
             ScreenshotCount     = 0;
+            WeatherEventCount   = 0;
             _sessionFlightTime  = 0f;
             _sessionMaxAltitude = 0f;
         }
