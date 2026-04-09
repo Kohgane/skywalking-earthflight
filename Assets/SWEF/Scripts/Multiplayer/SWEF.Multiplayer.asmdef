@@ -7,7 +7,6 @@
         "SWEF.CoreMid",
         "SWEF.Flight",
         "SWEF.Progression",
-        "SWEF.SocialHub",
         "UnityEngine.UI"
     ],
     "includePlatforms": [],

@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
-using SWEF.Haptic;
 
 namespace SWEF.Settings
 {
@@ -51,6 +50,32 @@ namespace SWEF.Settings
         private bool _ignoreCallbacks;
 
         // ── Unity lifecycle ───────────────────────────────────────────────────────
+
+        // Access HapticManager without a direct assembly reference to break the circular
+        // dependency between SWEF.Settings and SWEF.Haptic.
+        private static readonly System.Type _hapticMgrType =
+            System.Type.GetType("SWEF.Haptic.HapticManager, SWEF.Haptic");
+        private static object HapticManagerInstance =>
+            _hapticMgrType?.GetProperty("Instance")?.GetValue(null);
+        private static bool HapticEnabled
+        {
+            get
+            {
+                var inst = HapticManagerInstance;
+                return inst != null && (bool)(_hapticMgrType.GetProperty("HapticsEnabled")?.GetValue(inst) ?? false);
+            }
+        }
+        private static float HapticIntensityValue =>
+            (float)(_hapticMgrType?.GetProperty("HapticIntensity")?.GetValue(HapticManagerInstance) ?? 1.0f);
+        private static void SetHapticsEnabled(bool value)
+        {
+            _hapticMgrType?.GetMethod("SetHapticsEnabled")?.Invoke(HapticManagerInstance, new object[] { value });
+        }
+        private static void SetHapticIntensity(float value)
+        {
+            _hapticMgrType?.GetMethod("SetHapticIntensity")?.Invoke(HapticManagerInstance, new object[] { value });
+        }
+
         private void Awake()
         {
             _accessCtrl = FindFirstObjectByType<SWEF.UI.AccessibilityController>();
@@ -184,13 +209,13 @@ namespace SWEF.Settings
                 }
             }
 
-            if (HapticManager.Instance != null)
+            if (HapticManagerInstance != null)
             {
                 if (hapticsToggle != null)
-                    hapticsToggle.isOn = HapticManager.Instance.HapticsEnabled;
+                    hapticsToggle.isOn = HapticEnabled;
 
                 if (hapticIntensitySlider != null)
-                    hapticIntensitySlider.value = HapticManager.Instance.HapticIntensity;
+                    hapticIntensitySlider.value = HapticIntensityValue;
             }
 
             if (_voiceCmd != null && voiceCommandsToggle != null)
@@ -236,13 +261,13 @@ namespace SWEF.Settings
         private void OnHapticsToggleChanged(bool value)
         {
             if (_ignoreCallbacks) return;
-            HapticManager.Instance?.SetHapticsEnabled(value);
+            if (HapticManagerInstance != null) SetHapticsEnabled(value);
         }
 
         private void OnHapticIntensityChanged(float value)
         {
             if (_ignoreCallbacks) return;
-            HapticManager.Instance?.SetHapticIntensity(value);
+            if (HapticManagerInstance != null) SetHapticIntensity(value);
         }
 
         private void OnVoiceCommandsToggleChanged(bool value)
@@ -267,8 +292,8 @@ namespace SWEF.Settings
             _accessCtrl?.SetReducedMotion(false);
             _accessCtrl?.SetScreenReaderEnabled(false);
             _oneHanded?.SetOneHandedMode(false);
-            HapticManager.Instance?.SetHapticsEnabled(true);
-            HapticManager.Instance?.SetHapticIntensity(1.0f);
+            if (HapticManagerInstance != null) SetHapticsEnabled(true);
+            if (HapticManagerInstance != null) SetHapticIntensity(1.0f);
             _voiceCmd?.SetVoiceCommandsEnabled(false);
 
             RefreshUI();

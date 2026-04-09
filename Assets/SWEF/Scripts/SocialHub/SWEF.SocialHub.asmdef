@@ -3,6 +3,8 @@
     "rootNamespace": "SWEF.SocialHub",
     "references": [
         "SWEF.Achievement",
+        "SWEF.DailyChallenge",
+        "SWEF.Multiplayer",
         "SWEF.Progression",
         "Unity.TextMeshPro",
         "UnityEngine.UI"

@@ -2,16 +2,17 @@
     "name": "SWEF.CompetitiveRacing",
     "rootNamespace": "SWEF.CompetitiveRacing",
     "references": [
-        "SWEF.Flight",
-        "UnityEngine.UI",
         "SWEF.Achievement",
         "SWEF.Analytics",
+        "SWEF.Flight",
         "SWEF.Leaderboard",
         "SWEF.Minimap",
+        "SWEF.Recorder",
         "SWEF.Replay",
         "SWEF.RoutePlanner",
         "SWEF.Social",
-        "SWEF.UI"
+        "SWEF.UI",
+        "UnityEngine.UI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

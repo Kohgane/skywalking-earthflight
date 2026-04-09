@@ -2,13 +2,14 @@
     "name": "SWEF.XR",
     "rootNamespace": "SWEF.XR",
     "references": [
+        "SWEF.Atmosphere",
         "SWEF.CoreMidB",
         "SWEF.Flight",
         "SWEF.Screenshot",
         "SWEF.UI",
         "SWEF.Util",
-        "UnityEngine.UI",
-        "Unity.TextMeshPro"
+        "Unity.TextMeshPro",
+        "UnityEngine.UI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

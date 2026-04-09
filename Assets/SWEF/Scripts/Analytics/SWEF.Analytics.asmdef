@@ -2,8 +2,9 @@
     "name": "SWEF.Analytics",
     "rootNamespace": "SWEF.Analytics",
     "references": [
-        "UnityEngine.UI",
-        "SWEF.CoreBase"
+        "SWEF.CoreBase",
+        "SWEF.Flight",
+        "UnityEngine.UI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

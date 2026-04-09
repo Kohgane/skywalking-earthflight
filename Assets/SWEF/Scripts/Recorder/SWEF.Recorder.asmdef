@@ -2,6 +2,7 @@
     "name": "SWEF.Recorder",
     "rootNamespace": "SWEF.Recorder",
     "references": [
+        "SWEF.CoreBase",
         "SWEF.Flight",
         "SWEF.Replay",
         "UnityEngine.UI"

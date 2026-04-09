@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using UnityEngine;
-using SWEF.Recorder;
 
 namespace SWEF.Replay
 {
@@ -54,68 +53,6 @@ namespace SWEF.Replay
 
         /// <summary>Ordered list of recorded frames.</summary>
         public List<ReplayFrame> frames = new List<ReplayFrame>();
-
-        // ── Static factory ────────────────────────────────────────────────────────
-
-        /// <summary>
-        /// Converts a <see cref="FlightRecorder"/> session into a <see cref="ReplayData"/>
-        /// instance, mapping every <see cref="FlightRecorder.FlightFrame"/> to a
-        /// <see cref="ReplayFrame"/>.
-        /// </summary>
-        /// <param name="recorder">The recorder whose frames should be exported.</param>
-        /// <returns>A fully populated <see cref="ReplayData"/> object.</returns>
-        public static ReplayData FromFlightRecorder(FlightRecorder recorder)
-        {
-            string now = System.DateTime.UtcNow.ToString("o");
-            var data = new ReplayData
-            {
-                replayId   = System.Guid.NewGuid().ToString(),
-                playerName = SystemInfo.deviceName,
-                createdAt  = now,
-                recordedAt = now,
-                startLat   = Core.SWEFSession.Lat,
-                startLon   = Core.SWEFSession.Lon,
-            };
-
-            var srcFrames = recorder.GetFrames();
-            float firstTime = srcFrames.Count > 0 ? srcFrames[0].time : 0f;
-            float totalDist = 0f;
-            Vector3 prevPos = Vector3.zero;
-            bool firstFrame = true;
-
-            foreach (var f in srcFrames)
-            {
-                var rf = new ReplayFrame
-                {
-                    time     = f.time - firstTime,
-                    px       = f.position.x,
-                    py       = f.position.y,
-                    pz       = f.position.z,
-                    rx       = f.rotation.x,
-                    ry       = f.rotation.y,
-                    rz       = f.rotation.z,
-                    rw       = f.rotation.w,
-                    altitude = f.altitude,
-                    speed    = f.speed,
-                };
-                data.frames.Add(rf);
-
-                if (f.altitude > data.maxAltitudeM) data.maxAltitudeM = f.altitude;
-                if (f.speed    > data.maxSpeedMps)  data.maxSpeedMps  = f.speed;
-
-                if (!firstFrame)
-                    totalDist += Vector3.Distance(prevPos, f.position);
-                else
-                    firstFrame = false;
-
-                prevPos = f.position;
-            }
-
-            data.totalDistanceKm  = totalDist / 1000f;
-            data.totalDurationSec = recorder.GetRecordedDuration();
-
-            return data;
-        }
 
         // ── Serialization ─────────────────────────────────────────────────────────
 

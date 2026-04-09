@@ -213,10 +213,10 @@ namespace SWEF.Terrain
             chunk.HeightData  = FlattenHeightmap(heightmap);
 
             // Build all four LOD meshes
-            chunk.SetLODMesh(LOD.TerrainLODLevel.Full,     BuildMesh(heightmap, 1));
-            chunk.SetLODMesh(LOD.TerrainLODLevel.Half,     BuildMesh(heightmap, 2));
-            chunk.SetLODMesh(LOD.TerrainLODLevel.Quarter,  BuildMesh(heightmap, 4));
-            chunk.SetLODMesh(LOD.TerrainLODLevel.Minimal,  BuildMesh(heightmap, 8));
+            chunk.SetLODMesh(TerrainLODLevel.Full,     BuildMesh(heightmap, 1));
+            chunk.SetLODMesh(TerrainLODLevel.Half,     BuildMesh(heightmap, 2));
+            chunk.SetLODMesh(TerrainLODLevel.Quarter,  BuildMesh(heightmap, 4));
+            chunk.SetLODMesh(TerrainLODLevel.Minimal,  BuildMesh(heightmap, 8));
 
             // Position in world
             float worldSize = chunkSize;
@@ -227,7 +227,7 @@ namespace SWEF.Terrain
             if (mr != null && mr.sharedMaterial == null)
                 mr.sharedMaterial = GetDefaultMaterial();
 
-            chunk.UpdateLOD(LOD.TerrainLODLevel.Full);
+            chunk.UpdateLOD(TerrainLODLevel.Full);
             chunk.SetVisible(true);
 
             _activeChunks[coord] = chunk;

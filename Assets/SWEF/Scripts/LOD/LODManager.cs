@@ -7,23 +7,6 @@ using SWEF.Terrain;
 namespace SWEF.LOD
 {
     /// <summary>
-    /// LOD levels for terrain chunks.  Values increase with distance/coarseness.
-    /// </summary>
-    public enum TerrainLODLevel
-    {
-        /// <summary>Highest resolution — full vertex count.</summary>
-        Full    = 0,
-        /// <summary>Half resolution.</summary>
-        Half    = 1,
-        /// <summary>Quarter resolution.</summary>
-        Quarter = 2,
-        /// <summary>Minimal (1/8) resolution.</summary>
-        Minimal = 3,
-        /// <summary>Completely hidden / frustum-culled.</summary>
-        Culled  = 4
-    }
-
-    /// <summary>
     /// MonoBehaviour singleton that manages all LOD decisions for terrain chunks.
     /// Distance thresholds are altitude-aware and can be shifted by
     /// <see cref="AdaptiveQualityController"/> when performance degrades.
