@@ -1,7 +1,6 @@
 using UnityEngine;
 using SWEF.Flight;
 using SWEF.Util;
-using SWEF.Audio;
 
 namespace SWEF.Atmosphere
 {
@@ -42,6 +41,22 @@ namespace SWEF.Atmosphere
         private float _smoothedEmissionRate;
         private float _smoothedGlowAlpha;
         private bool  _sfxPlaying;
+
+        // ── Reflection cache (avoids repeated lookup for SWEF.Audio dependency) ──
+
+        // SFX index used for the altitude-warning sound (matches AudioManager's clip array).
+        private const int AltitudeWarningSfxIndex = 4;
+
+        private static System.Type           _audioManagerType;
+        private static System.Reflection.MethodInfo _playSfxMethod;
+
+        private static void EnsureAudioReflection()
+        {
+            if (_audioManagerType != null) return;
+            _audioManagerType = System.Type.GetType("SWEF.Audio.AudioManager, SWEF.Audio");
+            if (_audioManagerType != null)
+                _playSfxMethod = _audioManagerType.GetMethod("PlaySFX", new[] { typeof(int) });
+        }
 
         // ── Unity lifecycle ───────────────────────────────────────────────────────
 
@@ -88,9 +103,15 @@ namespace SWEF.Atmosphere
 
                 if (!_sfxPlaying)
                 {
-                    var audio = AudioManager.Instance;
-                    if (audio != null)
-                        audio.PlaySFX(4); // AltitudeWarning index
+                    // Use reflection to avoid a hard compile-time dependency on SWEF.Audio
+                    // (which would create a cyclic assembly reference Atmosphere → Audio → … → Atmosphere).
+                    EnsureAudioReflection();
+                    if (_audioManagerType != null)
+                    {
+                        var instance = _audioManagerType.GetProperty("Instance")?.GetValue(null);
+                        if (instance != null)
+                            _playSfxMethod?.Invoke(instance, new object[] { AltitudeWarningSfxIndex });
+                    }
                     _sfxPlaying = true;
                 }
             }

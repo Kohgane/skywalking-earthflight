@@ -139,12 +139,36 @@ namespace SWEF.Core
 
         private bool _multiplayerPause;
 
+        // Reflection cache — avoids hard compile-time dependency on SWEF.Multiplayer
+        // (a direct reference would create a cyclic assembly chain CoreMidB → Multiplayer → … → CoreMidB).
+        private static System.Type                  _multiplayerManagerType;
+        private static System.Reflection.PropertyInfo _isInRoomProp;
+
+        private static void EnsureMultiplayerReflection()
+        {
+            if (_multiplayerManagerType != null) return;
+            _multiplayerManagerType = System.Type.GetType("SWEF.Multiplayer.MultiplayerManager, SWEF.Multiplayer");
+            if (_multiplayerManagerType != null)
+                _isInRoomProp = _multiplayerManagerType.GetProperty("IsInRoom");
+        }
+
         /// <summary>
         /// Whether the game is currently in multiplayer mode.
         /// When true, <see cref="TogglePause"/> dims the screen instead of freezing time.
+        /// Uses reflection to avoid a hard compile-time dependency on SWEF.Multiplayer
+        /// (which would create a cyclic assembly reference CoreMidB → Multiplayer → … → CoreMidB).
         /// </summary>
-        public bool IsInMultiplayerRoom =>
-            FindFirstObjectByType<SWEF.Multiplayer.MultiplayerManager>()?.IsInRoom ?? false;
+        public bool IsInMultiplayerRoom
+        {
+            get
+            {
+                EnsureMultiplayerReflection();
+                if (_multiplayerManagerType == null) return false;
+                var obj = FindFirstObjectByType(_multiplayerManagerType) as MonoBehaviour;
+                if (obj == null) return false;
+                return _isInRoomProp != null && (bool)_isInRoomProp.GetValue(obj);
+            }
+        }
 
         /// <summary>
         /// Shows a dim overlay for multiplayer without stopping <see cref="Time.timeScale"/>,
