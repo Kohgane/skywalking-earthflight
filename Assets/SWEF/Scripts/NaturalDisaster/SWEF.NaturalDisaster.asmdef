@@ -3,7 +3,7 @@
     "rootNamespace": "SWEF.NaturalDisaster",
     "references": [
         "SWEF.Flight",
-        "Unity.ugui",
+        "GUID:f5f67c52d1564df4a8936ccd202a3bd8",
         "SWEF.Biome",
         "SWEF.Minimap",
         "SWEF.Mission",

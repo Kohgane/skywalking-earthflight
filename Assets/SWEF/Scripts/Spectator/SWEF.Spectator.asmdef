@@ -3,10 +3,10 @@
     "rootNamespace": "SWEF.Spectator",
     "references": [
         "SWEF.Flight",
-        "Unity.ugui",
+        "GUID:f5f67c52d1564df4a8936ccd202a3bd8",
         "SWEF.Analytics",
         "SWEF.Security",
-        "Unity.TextMeshPro"
+        "GUID:45fb4d3f12bda5d4eb5d1df1b5421dab"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -2,7 +2,7 @@
     "name": "SWEF.UGC",
     "rootNamespace": "SWEF.UGC",
     "references": [
-        "Unity.ugui",
+        "GUID:f5f67c52d1564df4a8936ccd202a3bd8",
         "SWEF.Achievement",
         "SWEF.Analytics",
         "SWEF.FlightPlan",
