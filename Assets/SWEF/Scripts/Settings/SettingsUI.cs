@@ -281,7 +281,7 @@ namespace SWEF.Settings
 
             // Propagate to NotificationManager immediately
             var nm = SWEF.Notification.NotificationManager.Instance;
-            if (nm != null && !b) nm.CancelAll();
+            if (nm != null) nm.OnSettingChanged(b);
         }
 
         private void OnSensitivityChanged(float v)

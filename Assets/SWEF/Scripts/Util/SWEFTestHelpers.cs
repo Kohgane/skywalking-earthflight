@@ -1,7 +1,5 @@
-using System.Collections;
 using UnityEngine;
 using SWEF.Core;
-using SWEF.Flight;
 
 namespace SWEF.Util
 {
@@ -28,57 +26,18 @@ namespace SWEF.Util
             return new MockSession { Lat = lat, Lon = lon, Alt = alt, HasFix = true };
         }
 
-        // ── Altitude simulation ───────────────────────────────────────────────
-
-        /// <summary>
-        /// Coroutine that linearly lerps an <see cref="AltitudeController"/>'s target altitude
-        /// to <paramref name="targetAlt"/> over <paramref name="duration"/> seconds.
-        /// </summary>
-        /// <param name="controller">The <see cref="AltitudeController"/> to drive.</param>
-        /// <param name="targetAlt">Target altitude in metres.</param>
-        /// <param name="duration">Total lerp duration in seconds.</param>
-        public static IEnumerator SimulateAltitudeChange(AltitudeController controller,
-                                                          float              targetAlt,
-                                                          float              duration)
-        {
-            if (controller == null)
-            {
-                Debug.LogWarning("[SWEF] SWEFTestHelpers.SimulateAltitudeChange: controller is null.");
-                yield break;
-            }
-
-            float startAlt  = controller.CurrentAltitudeMeters;
-            float elapsed   = 0f;
-
-            while (elapsed < duration)
-            {
-                elapsed += Time.deltaTime;
-                float t  = Mathf.Clamp01(elapsed / duration);
-                controller.SetTargetAltitude(Mathf.Lerp(startAlt, targetAlt, t));
-                yield return null;
-            }
-
-            controller.SetTargetAltitude(targetAlt);
-        }
-
         // ── Player rig factory ────────────────────────────────────────────────
 
         /// <summary>
-        /// Creates a minimal <see cref="GameObject"/> hierarchy that mirrors the SWEF player rig
-        /// and is suitable for unit tests. The root has <see cref="FlightController"/>,
-        /// <see cref="TouchInputRouter"/>, and <see cref="AltitudeController"/> attached.
+        /// Creates a minimal test <see cref="GameObject"/> for use in unit tests.
+        /// Flight-specific components (FlightController, AltitudeController, etc.)
+        /// should be added by callers to avoid a circular assembly dependency
+        /// between SWEF.Util and SWEF.Flight.
         /// </summary>
-        /// <returns>The root <see cref="GameObject"/> of the test rig.</returns>
+        /// <returns>An empty root <see cref="GameObject"/>.</returns>
         public static GameObject CreateTestPlayerRig()
         {
             var root = new GameObject("TestPlayerRig");
-            root.AddComponent<FlightController>();
-            root.AddComponent<TouchInputRouter>();
-
-            var altGo  = new GameObject("AltitudeNode");
-            altGo.transform.SetParent(root.transform, false);
-            var alt    = altGo.AddComponent<AltitudeController>();
-
             Debug.Log("[SWEF] SWEFTestHelpers: test player rig created.");
             return root;
         }

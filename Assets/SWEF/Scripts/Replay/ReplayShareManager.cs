@@ -1,5 +1,4 @@
 using UnityEngine;
-using SWEF.Social;
 
 namespace SWEF.Replay
 {
@@ -15,7 +14,7 @@ namespace SWEF.Replay
         // ── Inspector fields ──────────────────────────────────────────────────────
         [Header("Dependencies")]
         [SerializeField] private ReplayFileManager fileManager;
-        [SerializeField] private ShareManager      shareManager;
+        [SerializeField] private MonoBehaviour      shareManager;
 
         // ── Events ────────────────────────────────────────────────────────────────
         /// <summary>Fired when a replay has been successfully imported.</summary>
@@ -30,7 +29,10 @@ namespace SWEF.Replay
             if (fileManager == null)
                 fileManager = FindFirstObjectByType<ReplayFileManager>();
             if (shareManager == null)
-                shareManager = FindFirstObjectByType<ShareManager>();
+            {
+                var t = System.Type.GetType("SWEF.Social.ShareManager, SWEF.Social");
+                if (t != null) shareManager = FindFirstObjectByType(t) as MonoBehaviour;
+            }
         }
 
         // ── Public API ────────────────────────────────────────────────────────────
@@ -77,14 +79,16 @@ namespace SWEF.Replay
             }
 
             if (shareManager != null)
-                shareManager.ShareReplayText(shareText);
+                shareManager.SendMessage("ShareReplayText", shareText);
             else
                 GUIUtility.systemCopyBuffer = shareText;
 
             Debug.Log($"[SWEF] ReplayShareManager: Shared replay '{replayId}'.");
 
-            // Fire replay-shared achievement
-            Achievement.AchievementManager.Instance?.TryUnlock("replay_shared");
+            // Fire replay-shared achievement (loose-coupled to avoid circular assembly dependency)
+            var achMgrType = System.Type.GetType("SWEF.Achievement.AchievementManager, SWEF.Achievement");
+            var achInstance = achMgrType?.GetProperty("Instance")?.GetValue(null);
+            achMgrType?.GetMethod("TryUnlock")?.Invoke(achInstance, new object[] { "replay_shared" });
         }
 
         /// <summary>
@@ -112,7 +116,7 @@ namespace SWEF.Replay
                           $"&dur={data.totalDurationSec:F0}";
 
             if (shareManager != null)
-                shareManager.ShareReplayText(link);
+                shareManager.SendMessage("ShareReplayText", link);
             else
                 GUIUtility.systemCopyBuffer = link;
 

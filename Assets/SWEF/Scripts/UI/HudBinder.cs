@@ -1,7 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
 using SWEF.Flight;
-using SWEF.Audio;
 using SWEF.CloudRendering;
 
 namespace SWEF.UI
@@ -26,7 +25,7 @@ namespace SWEF.UI
 
         [Header("Phase 28 — Spatial Audio (optional)")]
         [SerializeField] private Text machNumberText;
-        [SerializeField] private SonicBoomController sonicBoomController;
+        [SerializeField] private MonoBehaviour sonicBoomController;
 
         [Header("Phase 29 — Cloud Rendering (optional)")]
         [SerializeField] private GameObject cloudStatusIndicator;
@@ -41,7 +40,14 @@ namespace SWEF.UI
             if (flight == null)   flight   = FindFirstObjectByType<FlightController>();
             if (altitude == null) altitude = FindFirstObjectByType<AltitudeController>();
             if (cameraController == null) cameraController = FindFirstObjectByType<CameraController>();
-            if (sonicBoomController == null) sonicBoomController = FindFirstObjectByType<SonicBoomController>();
+            if (sonicBoomController == null)
+            {
+                var t = System.Type.GetType("SWEF.Audio.SonicBoomController, SWEF.Audio");
+                if (t != null) sonicBoomController = FindFirstObjectByType(t) as MonoBehaviour;
+            }
+            if (sonicBoomController != null && machNumberText != null &&
+                sonicBoomController.GetType().GetProperty("CurrentMach") == null)
+                Debug.LogWarning("[SWEF] HudBinder: SonicBoomController does not have a 'CurrentMach' property — mach number display disabled.");
             _cloudManager    = FindFirstObjectByType<CloudRenderingManager>();
             _streamingClient = FindFirstObjectByType<StreamingClient>();
 
@@ -72,7 +78,10 @@ namespace SWEF.UI
                 altitudeText.text = $"ALT {altitude.CurrentAltitudeMeters:0} m";
 
             if (machNumberText != null && sonicBoomController != null)
-                machNumberText.text = $"M {sonicBoomController.CurrentMach:F2}";
+            {
+                var mach = sonicBoomController.GetType().GetProperty("CurrentMach")?.GetValue(sonicBoomController);
+                if (mach != null) machNumberText.text = $"M {(float)mach:F2}";
+            }
 
             // Phase 29 — cloud streaming status
             bool isCloud = _cloudManager != null && _cloudManager.IsCloudMode;

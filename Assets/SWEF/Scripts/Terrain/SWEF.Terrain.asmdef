@@ -2,8 +2,7 @@
     "name": "SWEF.Terrain",
     "rootNamespace": "SWEF.Terrain",
     "references": [
-        "SWEF.Performance",
-        "SWEF.LOD"
+        "SWEF.Performance"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

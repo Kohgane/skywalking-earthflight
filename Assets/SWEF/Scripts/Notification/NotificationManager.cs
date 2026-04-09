@@ -41,24 +41,15 @@ namespace SWEF.Notification
             Instance = this;
             DontDestroyOnLoad(gameObject);
 
-            // Prefer SettingsManager as the authoritative source; fall back to PlayerPrefs
-            var sm = FindFirstObjectByType<Settings.SettingsManager>();
-            notificationsEnabled = sm != null
-                ? sm.NotificationsEnabled
-                : PlayerPrefs.GetInt(KeyEnabled, 1) == 1;
-
-            if (sm != null)
-                sm.OnNotificationSettingChanged += OnSettingChanged;
+            notificationsEnabled = PlayerPrefs.GetInt(KeyEnabled, 1) == 1;
         }
 
-        private void OnDestroy()
-        {
-            var sm = FindFirstObjectByType<Settings.SettingsManager>();
-            if (sm != null)
-                sm.OnNotificationSettingChanged -= OnSettingChanged;
-        }
-
-        private void OnSettingChanged(bool enabled)
+        /// <summary>
+        /// Called by SettingsManager (via SettingsUI) when the notification toggle changes.
+        /// Keeps <see cref="notificationsEnabled"/> in sync without creating a circular
+        /// assembly dependency between SWEF.Notification and SWEF.Settings.
+        /// </summary>
+        public void OnSettingChanged(bool enabled)
         {
             notificationsEnabled = enabled;
             if (!enabled) CancelAll();

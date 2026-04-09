@@ -3,6 +3,7 @@
     "rootNamespace": "SWEF.Editor",
     "references": [
         "SWEF.Achievement",
+        "SWEF.Analytics",
         "SWEF.Audio",
         "SWEF.CloudRendering",
         "SWEF.CoreBase",

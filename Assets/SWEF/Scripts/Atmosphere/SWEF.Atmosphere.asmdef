@@ -6,7 +6,7 @@
         "SWEF.Cinema",
         "SWEF.Flight",
         "SWEF.Util",
-        "SWEF.Weather"
+        "UnityEngine.UI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

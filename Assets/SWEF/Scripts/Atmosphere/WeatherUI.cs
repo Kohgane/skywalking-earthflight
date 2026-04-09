@@ -1,8 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
-using SWEF.Atmosphere;
 
-namespace SWEF.UI
+namespace SWEF.Atmosphere
 {
     /// <summary>
     /// Displays current weather information and wind status in the HUD.

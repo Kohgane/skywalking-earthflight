@@ -2,7 +2,12 @@
     "name": "SWEF.Minimap",
     "rootNamespace": "SWEF.Minimap",
     "references": [
+        "SWEF.Events",
         "SWEF.Flight",
+        "SWEF.GuidedTour",
+        "SWEF.Multiplayer",
+        "SWEF.Replay",
+        "SWEF.Weather",
         "UnityEngine.UI"
     ],
     "includePlatforms": [],

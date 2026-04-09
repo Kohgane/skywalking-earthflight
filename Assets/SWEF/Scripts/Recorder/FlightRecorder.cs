@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -85,7 +86,55 @@ namespace SWEF.Recorder
         /// <summary>Exports the current recording to a <see cref="SWEF.Replay.ReplayData"/> instance.</summary>
         public SWEF.Replay.ReplayData ExportToReplayData()
         {
-            return SWEF.Replay.ReplayData.FromFlightRecorder(this);
+            string now = System.DateTime.UtcNow.ToString("o");
+            var data = new SWEF.Replay.ReplayData
+            {
+                replayId   = System.Guid.NewGuid().ToString(),
+                playerName = SystemInfo.deviceName,
+                createdAt  = now,
+                recordedAt = now,
+                startLat   = Core.SWEFSession.Lat,
+                startLon   = Core.SWEFSession.Lon,
+            };
+
+            var srcFrames = GetFrames();
+            float firstTime = srcFrames.Count > 0 ? srcFrames[0].time : 0f;
+            float totalDist = 0f;
+            Vector3 prevPos = Vector3.zero;
+            bool firstFrame = true;
+
+            foreach (var f in srcFrames)
+            {
+                var rf = new SWEF.Replay.ReplayFrame
+                {
+                    time     = f.time - firstTime,
+                    px       = f.position.x,
+                    py       = f.position.y,
+                    pz       = f.position.z,
+                    rx       = f.rotation.x,
+                    ry       = f.rotation.y,
+                    rz       = f.rotation.z,
+                    rw       = f.rotation.w,
+                    altitude = f.altitude,
+                    speed    = f.speed,
+                };
+                data.frames.Add(rf);
+
+                if (f.altitude > data.maxAltitudeM) data.maxAltitudeM = f.altitude;
+                if (f.speed    > data.maxSpeedMps)  data.maxSpeedMps  = f.speed;
+
+                if (!firstFrame)
+                    totalDist += Vector3.Distance(prevPos, f.position);
+                else
+                    firstFrame = false;
+
+                prevPos = f.position;
+            }
+
+            data.totalDistanceKm  = totalDist / 1000f;
+            data.totalDurationSec = GetRecordedDuration();
+
+            return data;
         }
 
         /// <summary>Returns a copy of the recorded frames list.</summary>
