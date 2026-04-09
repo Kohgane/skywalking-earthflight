@@ -4,7 +4,7 @@
     "references": [
         "SWEF.Flight",
         "SWEF.Mission",
-        "UnityEngine.UI",
+        "Unity.ugui",
         "SWEF.Achievement",
         "SWEF.Analytics",
         "SWEF.DailyChallenge",

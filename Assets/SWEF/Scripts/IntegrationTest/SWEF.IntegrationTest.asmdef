@@ -22,7 +22,7 @@
         "SWEF.CoreBase",
         "SWEF.Cinema",
         "SWEF.ReplayTheater",
-        "UnityEngine.UI"
+        "Unity.ugui"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

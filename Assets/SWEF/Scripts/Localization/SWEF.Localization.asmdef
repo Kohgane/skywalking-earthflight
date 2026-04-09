@@ -2,7 +2,7 @@
     "name": "SWEF.Localization",
     "rootNamespace": "SWEF.Localization",
     "references": [
-        "UnityEngine.UI",
+        "Unity.ugui",
         "Unity.TextMeshPro"
     ],
     "includePlatforms": [],

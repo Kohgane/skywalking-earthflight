@@ -3,7 +3,7 @@
     "rootNamespace": "SWEF.Autopilot",
     "references": [
         "SWEF.Flight",
-        "UnityEngine.UI",
+        "Unity.ugui",
         "SWEF.Accessibility",
         "SWEF.Analytics",
         "SWEF.CockpitHUD",

@@ -5,7 +5,7 @@
         "SWEF.Analytics",
         "SWEF.Flight",
         "SWEF.Localization",
-        "UnityEngine.UI"
+        "Unity.ugui"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

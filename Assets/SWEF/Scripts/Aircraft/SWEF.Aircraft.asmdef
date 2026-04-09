@@ -2,7 +2,7 @@
     "name": "SWEF.Aircraft",
     "rootNamespace": "SWEF.Aircraft",
     "references": [
-        "UnityEngine.UI",
+        "Unity.ugui",
         "SWEF.Achievement",
         "SWEF.DailyChallenge",
         "SWEF.Events",

@@ -9,7 +9,7 @@
         "SWEF.Localization",
         "SWEF.Security",
         "SWEF.UI",
-        "UnityEngine.UI"
+        "Unity.ugui"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

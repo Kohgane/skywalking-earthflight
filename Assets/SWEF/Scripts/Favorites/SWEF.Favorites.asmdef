@@ -7,7 +7,7 @@
         "SWEF.Flight",
         "SWEF.Teleport",
         "SWEF.UI",
-        "UnityEngine.UI"
+        "Unity.ugui"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

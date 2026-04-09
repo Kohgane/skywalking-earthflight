@@ -8,7 +8,7 @@
         "SWEF.IAP",
         "SWEF.Localization",
         "SWEF.Settings",
-        "UnityEngine.UI"
+        "Unity.ugui"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

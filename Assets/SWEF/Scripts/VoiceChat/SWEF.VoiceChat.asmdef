@@ -3,7 +3,7 @@
     "rootNamespace": "SWEF.VoiceChat",
     "references": [
         "SWEF.UI",
-        "UnityEngine.UI",
+        "Unity.ugui",
         "SWEF.Accessibility",
         "SWEF.Analytics",
         "SWEF.Audio",

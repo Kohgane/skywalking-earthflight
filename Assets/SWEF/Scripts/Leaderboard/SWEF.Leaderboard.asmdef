@@ -3,7 +3,7 @@
     "rootNamespace": "SWEF.Leaderboard",
     "references": [
         "SWEF.Social",
-        "UnityEngine.UI"
+        "Unity.ugui"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

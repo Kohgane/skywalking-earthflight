@@ -2,7 +2,7 @@
     "name": "SWEF.InputSystem",
     "rootNamespace": "SWEF.InputSystem",
     "references": [
-        "UnityEngine.UI",
+        "Unity.ugui",
         "SWEF.Analytics"
     ],
     "includePlatforms": [],

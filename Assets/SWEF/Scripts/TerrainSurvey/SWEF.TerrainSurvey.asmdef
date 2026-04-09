@@ -4,7 +4,7 @@
     "references": [
         "SWEF.Terrain",
         "SWEF.Journal",
-        "UnityEngine.UI",
+        "Unity.ugui",
         "SWEF.Achievement",
         "SWEF.Analytics",
         "SWEF.Flight",

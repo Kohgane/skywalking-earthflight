@@ -14,7 +14,7 @@
         "SWEF.Journal",
         "SWEF.Localization",
         "SWEF.Wildlife",
-        "UnityEngine.UI"
+        "Unity.ugui"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

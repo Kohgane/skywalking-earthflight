@@ -2,7 +2,7 @@
     "name": "SWEF.TimeCapsule",
     "rootNamespace": "SWEF.TimeCapsule",
     "references": [
-        "UnityEngine.UI"
+        "Unity.ugui"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

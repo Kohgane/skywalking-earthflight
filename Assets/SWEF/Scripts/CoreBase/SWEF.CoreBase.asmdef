@@ -2,7 +2,7 @@
     "name": "SWEF.CoreBase",
     "rootNamespace": "SWEF.Core",
     "references": [
-        "UnityEngine.UI"
+        "Unity.ugui"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

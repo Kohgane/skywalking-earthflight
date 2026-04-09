@@ -6,7 +6,7 @@
         "SWEF.CoreServices",
         "SWEF.Flight",
         "Unity.TextMeshPro",
-        "UnityEngine.UI"
+        "Unity.ugui"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

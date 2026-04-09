@@ -2,7 +2,7 @@
     "name": "SWEF.TimeOfDay",
     "rootNamespace": "SWEF.TimeOfDay",
     "references": [
-        "UnityEngine.UI",
+        "Unity.ugui",
         "SWEF.Analytics",
         "SWEF.Atmosphere",
         "SWEF.Flight",

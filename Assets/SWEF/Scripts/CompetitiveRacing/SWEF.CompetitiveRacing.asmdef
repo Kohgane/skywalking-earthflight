@@ -12,7 +12,7 @@
         "SWEF.RoutePlanner",
         "SWEF.Social",
         "SWEF.UI",
-        "UnityEngine.UI"
+        "Unity.ugui"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

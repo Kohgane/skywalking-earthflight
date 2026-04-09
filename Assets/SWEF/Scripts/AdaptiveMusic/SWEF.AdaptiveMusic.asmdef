@@ -3,7 +3,7 @@
     "rootNamespace": "SWEF.AdaptiveMusic",
     "references": [
         "SWEF.MusicPlayer",
-        "UnityEngine.UI",
+        "Unity.ugui",
         "SWEF.Analytics",
         "SWEF.Biome",
         "SWEF.Damage",

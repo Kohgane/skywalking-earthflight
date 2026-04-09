@@ -3,7 +3,7 @@
     "rootNamespace": "SWEF.Journal",
     "references": [
         "Unity.TextMeshPro",
-        "UnityEngine.UI",
+        "Unity.ugui",
         "SWEF.Achievement",
         "SWEF.Flight",
         "SWEF.GuidedTour",

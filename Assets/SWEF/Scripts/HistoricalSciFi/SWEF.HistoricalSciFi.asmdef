@@ -3,7 +3,7 @@
     "rootNamespace": "SWEF.HistoricalSciFi",
     "references": [
         "SWEF.Flight",
-        "UnityEngine.UI"
+        "Unity.ugui"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

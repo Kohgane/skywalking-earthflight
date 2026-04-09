@@ -4,7 +4,7 @@
     "references": [
         "SWEF.Flight",
         "Unity.TextMeshPro",
-        "UnityEngine.UI",
+        "Unity.ugui",
         "SWEF.CockpitHUD"
     ],
     "includePlatforms": [],

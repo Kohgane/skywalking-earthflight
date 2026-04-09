@@ -15,7 +15,7 @@
         "SWEF.Teleport",
         "SWEF.Weather",
         "Unity.TextMeshPro",
-        "UnityEngine.UI"
+        "Unity.ugui"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -15,7 +15,7 @@
         "SWEF.UI",
         "SWEF.Weather",
         "SWEF.XR",
-        "UnityEngine.UI"
+        "Unity.ugui"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

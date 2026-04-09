@@ -3,7 +3,7 @@
     "rootNamespace": "SWEF.WeatherChallenge",
     "references": [
         "SWEF.Weather",
-        "UnityEngine.UI",
+        "Unity.ugui",
         "SWEF.Analytics",
         "SWEF.Flight"
     ],

@@ -5,7 +5,7 @@
         "SWEF.CoreBase",
         "SWEF.Flight",
         "SWEF.Replay",
-        "UnityEngine.UI"
+        "Unity.ugui"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -28,7 +28,7 @@
         "SWEF.XR",
         "SWEF.Accessibility",
         "SWEF.ReplayTheater",
-        "UnityEngine.UI"
+        "Unity.ugui"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
