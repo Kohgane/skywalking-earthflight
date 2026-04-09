@@ -4,7 +4,7 @@
     "references": [
         "SWEF.Analytics",
         "SWEF.CoreServices",
-        "UnityEngine.UI"
+        "Unity.ugui"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

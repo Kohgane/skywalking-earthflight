@@ -7,7 +7,7 @@
         "SWEF.Multiplayer",
         "SWEF.Progression",
         "SWEF.Screenshot",
-        "UnityEngine.UI"
+        "Unity.ugui"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

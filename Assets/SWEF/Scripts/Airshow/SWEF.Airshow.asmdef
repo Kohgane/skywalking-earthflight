@@ -3,7 +3,7 @@
     "rootNamespace": "SWEF.Airshow",
     "references": [
         "SWEF.Flight",
-        "UnityEngine.UI",
+        "Unity.ugui",
         "SWEF.Analytics",
         "SWEF.Autopilot",
         "SWEF.Contrail",

@@ -2,7 +2,7 @@
     "name": "SWEF.SpatialAudio",
     "rootNamespace": "SWEF.SpatialAudio",
     "references": [
-        "UnityEngine.UI",
+        "Unity.ugui",
         "SWEF.Flight"
     ],
     "includePlatforms": [],

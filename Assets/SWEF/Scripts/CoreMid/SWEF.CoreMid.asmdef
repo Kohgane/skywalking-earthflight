@@ -10,7 +10,7 @@
         "SWEF.Weather",
         "SWEF.Notification",
         "SWEF.Analytics",
-        "UnityEngine.UI"
+        "Unity.ugui"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -2,7 +2,7 @@
     "name": "SWEF.CloudSave",
     "rootNamespace": "SWEF.CloudSave",
     "references": [
-        "UnityEngine.UI",
+        "Unity.ugui",
         "SWEF.Analytics",
         "SWEF.SaveSystem",
         "SWEF.Security",

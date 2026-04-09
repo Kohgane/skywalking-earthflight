@@ -7,7 +7,7 @@
         "SWEF.Multiplayer",
         "SWEF.Progression",
         "Unity.TextMeshPro",
-        "UnityEngine.UI"
+        "Unity.ugui"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

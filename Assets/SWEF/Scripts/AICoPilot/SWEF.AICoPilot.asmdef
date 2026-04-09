@@ -10,7 +10,7 @@
         "SWEF.CockpitHUD",
         "SWEF.Weather",
         "SWEF.UI",
-        "UnityEngine.UI"
+        "Unity.ugui"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

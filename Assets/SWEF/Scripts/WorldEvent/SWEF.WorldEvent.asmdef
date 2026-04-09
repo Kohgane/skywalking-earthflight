@@ -2,7 +2,7 @@
     "name": "SWEF.WorldEvent",
     "rootNamespace": "SWEF.WorldEvent",
     "references": [
-        "UnityEngine.UI"
+        "Unity.ugui"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

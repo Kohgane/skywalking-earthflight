@@ -3,7 +3,7 @@
     "rootNamespace": "SWEF.SatelliteTracking",
     "references": [
         "SWEF.Minimap",
-        "UnityEngine.UI",
+        "Unity.ugui",
         "Unity.TextMeshPro"
     ],
     "includePlatforms": [],

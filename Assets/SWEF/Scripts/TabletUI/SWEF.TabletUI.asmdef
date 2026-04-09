@@ -6,7 +6,7 @@
         "SWEF.InputSystem",
         "SWEF.CockpitHUD",
         "SWEF.Accessibility",
-        "UnityEngine.UI"
+        "Unity.ugui"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

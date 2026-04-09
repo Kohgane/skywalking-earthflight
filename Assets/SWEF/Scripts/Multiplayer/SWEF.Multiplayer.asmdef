@@ -7,7 +7,7 @@
         "SWEF.CoreMid",
         "SWEF.Flight",
         "SWEF.Progression",
-        "UnityEngine.UI"
+        "Unity.ugui"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

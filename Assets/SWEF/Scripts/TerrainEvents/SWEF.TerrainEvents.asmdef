@@ -3,7 +3,7 @@
     "rootNamespace": "SWEF.TerrainEvents",
     "references": [
         "SWEF.Flight",
-        "UnityEngine.UI",
+        "Unity.ugui",
         "SWEF.Achievement",
         "SWEF.Biome",
         "SWEF.Mission"

@@ -9,7 +9,7 @@
         "SWEF.UI",
         "SWEF.Util",
         "Unity.TextMeshPro",
-        "UnityEngine.UI"
+        "Unity.ugui"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

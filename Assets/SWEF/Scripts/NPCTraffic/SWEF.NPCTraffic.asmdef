@@ -2,7 +2,7 @@
     "name": "SWEF.NPCTraffic",
     "rootNamespace": "SWEF.NPCTraffic",
     "references": [
-        "UnityEngine.UI",
+        "Unity.ugui",
         "SWEF.Airshow",
         "SWEF.Analytics",
         "SWEF.Flight",

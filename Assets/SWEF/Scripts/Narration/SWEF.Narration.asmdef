@@ -2,7 +2,7 @@
     "name": "SWEF.Narration",
     "rootNamespace": "SWEF.Narration",
     "references": [
-        "UnityEngine.UI",
+        "Unity.ugui",
         "SWEF.Achievement",
         "SWEF.Analytics",
         "SWEF.Audio",

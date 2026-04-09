@@ -9,7 +9,7 @@
         "SWEF.Screenshot",
         "SWEF.Teleport",
         "SWEF.UI",
-        "UnityEngine.UI"
+        "Unity.ugui"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

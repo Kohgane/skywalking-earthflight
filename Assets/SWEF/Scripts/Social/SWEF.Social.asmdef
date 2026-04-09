@@ -6,7 +6,7 @@
         "SWEF.CoreMid",
         "SWEF.Flight",
         "SWEF.Recorder",
-        "UnityEngine.UI"
+        "Unity.ugui"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

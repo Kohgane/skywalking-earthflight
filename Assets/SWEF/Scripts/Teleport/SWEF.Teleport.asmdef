@@ -3,7 +3,7 @@
     "rootNamespace": "SWEF.Teleport",
     "references": [
         "SWEF.Achievement",
-        "UnityEngine.UI"
+        "Unity.ugui"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

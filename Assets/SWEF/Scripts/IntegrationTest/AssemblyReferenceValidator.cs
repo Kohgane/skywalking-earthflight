@@ -73,6 +73,8 @@ namespace SWEF.IntegrationTest
         private void ValidateUnityEngineUI()
         {
             // Probe for core UI types that ReplayTheaterUI and others depend on.
+            // In Unity 6 with com.unity.ugui 2.x the assembly is named "Unity.ugui";
+            // fall back to the legacy "UnityEngine.UI" name for older Unity versions.
             string[] requiredUITypes =
             {
                 "UnityEngine.UI.Button",
@@ -84,7 +86,9 @@ namespace SWEF.IntegrationTest
 
             foreach (string typeName in requiredUITypes)
             {
-                Type t = Type.GetType(typeName + ", UnityEngine.UI");
+                Type t = Type.GetType(typeName + ", Unity.ugui");
+                if (t == null)
+                    t = Type.GetType(typeName + ", UnityEngine.UI");
                 if (t == null)
                     t = FindType(typeName);
 
@@ -125,6 +129,16 @@ namespace SWEF.IntegrationTest
                 asmdefMap[name] = refs;
             }
 
+            // Known external package / built-in assembly names that are not .asmdef files
+            // inside Assets/ but are valid references (Unity built-ins, com.unity.* packages).
+            var knownExternal = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "Unity.ugui",          // com.unity.ugui 2.x (Unity 6+)
+                "UnityEngine.UI",      // com.unity.ugui 1.x legacy name (kept for completeness)
+                "Unity.TextMeshPro",   // com.unity.ugui 2.x bundled TMP
+                "Editor",              // Unity built-in Editor assembly
+            };
+
             // Check references.
             foreach (var kvp in asmdefMap)
             {
@@ -133,6 +147,9 @@ namespace SWEF.IntegrationTest
                 {
                     // Strip GUID-style references (e.g. "GUID:abc123")
                     if (refName.StartsWith("GUID:", StringComparison.OrdinalIgnoreCase)) continue;
+
+                    // Allow known external Unity/package assemblies.
+                    if (knownExternal.Contains(refName)) continue;
 
                     if (!knownNames.Contains(refName))
                         _errors.Add($"{asmName} → '{refName}' (not found)");

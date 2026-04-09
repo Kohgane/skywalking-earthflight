@@ -8,7 +8,7 @@
         "SWEF.Multiplayer",
         "SWEF.Replay",
         "SWEF.Weather",
-        "UnityEngine.UI"
+        "Unity.ugui"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

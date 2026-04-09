@@ -2,7 +2,7 @@
     "name": "SWEF.MusicPlayer",
     "rootNamespace": "SWEF.MusicPlayer",
     "references": [
-        "UnityEngine.UI",
+        "Unity.ugui",
         "SWEF.Audio",
         "SWEF.Flight",
         "SWEF.Localization",

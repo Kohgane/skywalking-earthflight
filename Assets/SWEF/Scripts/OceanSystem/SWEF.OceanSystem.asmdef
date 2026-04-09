@@ -5,7 +5,7 @@
         "SWEF.Achievement",
         "SWEF.Flight",
         "SWEF.Weather",
-        "UnityEngine.UI"
+        "Unity.ugui"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -2,7 +2,7 @@
     "name": "SWEF.Screenshot",
     "rootNamespace": "SWEF.Screenshot",
     "references": [
-        "UnityEngine.UI",
+        "Unity.ugui",
         "SWEF.CorePremium"
     ],
     "includePlatforms": [],
