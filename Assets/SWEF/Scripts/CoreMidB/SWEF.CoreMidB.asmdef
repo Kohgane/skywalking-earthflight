@@ -3,7 +3,6 @@
     "rootNamespace": "SWEF.Core",
     "references": [
         "SWEF.CoreBase",
-        "SWEF.Multiplayer",
         "UnityEngine.UI"
     ],
     "includePlatforms": [],
