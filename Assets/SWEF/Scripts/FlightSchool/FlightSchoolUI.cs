@@ -23,6 +23,31 @@ namespace SWEF.FlightSchool
         [SerializeField] private GameObject certificationPanel;
         [SerializeField] private GameObject inFlightHudOverlay;
 
+        [Header("Phase 84 — Debrief Panel")]
+        [SerializeField] private GameObject debriefPanel;
+        [SerializeField] private Text   debriefLessonTitle;
+        [SerializeField] private Text   debriefFinalScore;
+        [SerializeField] private Text   debriefLetterGrade;
+        [SerializeField] private Text   debriefDuration;
+        [SerializeField] private Text   debriefPersonalBest;
+        [SerializeField] private Transform debriefCriteriaRoot;
+        [SerializeField] private GameObject debriefCriteriaItemPrefab;
+        [SerializeField] private Transform debriefTipsRoot;
+        [SerializeField] private GameObject debriefTipItemPrefab;
+        [SerializeField] private Button debriefCloseButton;
+
+        [Header("Phase 84 — Skill Tree Panel")]
+        [SerializeField] private GameObject skillTreePanel;
+        [SerializeField] private Transform skillTreeNodeRoot;
+        [SerializeField] private GameObject skillTreeNodePrefab;
+        [SerializeField] private Text   skillTreeProgressText;
+
+        [Header("Phase 84 — Exam UI")]
+        [SerializeField] private GameObject examPanel;
+        [SerializeField] private Text   examTitleText;
+        [SerializeField] private Text   examProgressText;
+        [SerializeField] private Button examStartButton;
+
         // ── Inspector — curriculum panel ──────────────────────────────────────────
 
         [Header("Curriculum Panel")]
@@ -64,6 +89,9 @@ namespace SWEF.FlightSchool
         [Header("Dependencies")]
         [SerializeField] private FlightSchoolManager schoolManager;
         [SerializeField] private FlightInstructor    instructor;
+        [SerializeField] private DebriefingController debriefingController;
+        [SerializeField] private SkillTreeController  skillTreeController;
+        [SerializeField] private CertificationExamController examController;
 
         // ── Internal ─────────────────────────────────────────────────────────────
 
@@ -85,6 +113,13 @@ namespace SWEF.FlightSchool
                 schoolManager.OnLessonCompleted    += HandleLessonCompleted;
                 schoolManager.OnCertificationEarned += HandleCertificationEarned;
             }
+            if (debriefingController != null)
+                debriefingController.OnDebriefReady += HandleDebriefReady;
+            if (examController != null)
+            {
+                examController.OnExamPassed += HandleExamPassed;
+                examController.OnExamFailed += HandleExamFailed;
+            }
         }
 
         private void OnDisable()
@@ -93,6 +128,13 @@ namespace SWEF.FlightSchool
             {
                 schoolManager.OnLessonCompleted    -= HandleLessonCompleted;
                 schoolManager.OnCertificationEarned -= HandleCertificationEarned;
+            }
+            if (debriefingController != null)
+                debriefingController.OnDebriefReady -= HandleDebriefReady;
+            if (examController != null)
+            {
+                examController.OnExamPassed -= HandleExamPassed;
+                examController.OnExamFailed -= HandleExamFailed;
             }
         }
 
@@ -411,8 +453,150 @@ namespace SWEF.FlightSchool
 
         private void HandleCertificationEarned(PilotCertification cert)
         {
-            // Show a brief notification — implementations may override
             Debug.Log($"[FlightSchoolUI] Certification earned: {cert.displayName}");
+        }
+
+        // ── Phase 84 — Debrief ──────────────────────────────────────────────────
+
+        private void HandleDebriefReady(DebriefingController.DebriefPayload payload)
+        {
+            if (payload == null) return;
+            ShowDebriefPanel(payload);
+        }
+
+        /// <summary>Populates and displays the debrief panel from <paramref name="payload"/>.</summary>
+        public void ShowDebriefPanel(DebriefingController.DebriefPayload payload)
+        {
+            if (payload == null) return;
+
+            SetPanelActive(debriefPanel, true);
+            SetPanelActive(inFlightHudOverlay, false);
+
+            SafeSetText(debriefLessonTitle,  payload.lesson?.title);
+            SafeSetText(debriefFinalScore,   $"{payload.report.finalScore:F0}/100");
+            SafeSetText(debriefLetterGrade,  payload.report.letterGrade);
+            SafeSetText(debriefDuration,     $"{payload.report.durationSeconds / 60f:F1} min");
+            SafeSetText(debriefPersonalBest, payload.isNewPersonalBest
+                ? $"NEW BEST! (prev: {payload.previousBestScore:F0})"
+                : $"Best: {payload.previousBestScore:F0}");
+
+            // Criteria breakdown
+            if (debriefCriteriaRoot != null)
+            {
+                foreach (Transform child in debriefCriteriaRoot) Destroy(child.gameObject);
+                if (debriefCriteriaItemPrefab != null)
+                    foreach (var c in payload.report.criteria)
+                        SpawnDebriefCriteriaItem(c);
+            }
+
+            // Tips
+            if (debriefTipsRoot != null)
+            {
+                foreach (Transform child in debriefTipsRoot) Destroy(child.gameObject);
+                if (debriefTipItemPrefab != null)
+                    foreach (var tip in payload.tips)
+                        SpawnDebriefTipItem(tip);
+            }
+
+            if (debriefCloseButton != null)
+            {
+                debriefCloseButton.onClick.RemoveAllListeners();
+                debriefCloseButton.onClick.AddListener(CloseDebriefPanel);
+            }
+        }
+
+        /// <summary>Hides the debrief panel and notifies the controller.</summary>
+        public void CloseDebriefPanel()
+        {
+            SetPanelActive(debriefPanel, false);
+            debriefingController?.CloseDebrief();
+        }
+
+        private void SpawnDebriefCriteriaItem(GradeCriteria c)
+        {
+            var go = Instantiate(debriefCriteriaItemPrefab, debriefCriteriaRoot);
+            SetChildText(go, "TitleText", c.displayName);
+            SetChildText(go, "ScoreText", $"{c.score:F0}");
+            var slider = go.GetComponentInChildren<Slider>();
+            if (slider != null) slider.value = c.score / 100f;
+        }
+
+        private void SpawnDebriefTipItem(DebriefingController.DebriefTip tip)
+        {
+            var go = Instantiate(debriefTipItemPrefab, debriefTipsRoot);
+            SetChildText(go, "TipText", tip.message);
+        }
+
+        // ── Phase 84 — Skill Tree ───────────────────────────────────────────────
+
+        /// <summary>Shows the skill-tree visualisation panel.</summary>
+        public void ShowSkillTree()
+        {
+            SetPanelActive(skillTreePanel, true);
+            SetPanelActive(curriculumPanel, false);
+            SetPanelActive(lessonDetailPanel, false);
+            SetPanelActive(certificationPanel, false);
+
+            if (skillTreeController == null || skillTreeNodeRoot == null) return;
+
+            foreach (Transform child in skillTreeNodeRoot) Destroy(child.gameObject);
+
+            if (skillTreeController.Tree?.nodes == null) return;
+
+            foreach (var node in skillTreeController.Tree.nodes)
+                SpawnSkillTreeNode(node);
+
+            SafeSetText(skillTreeProgressText,
+                $"Progress: {skillTreeController.ComputeUnlockProgress() * 100f:F0}%");
+        }
+
+        private void SpawnSkillTreeNode(SkillNode node)
+        {
+            if (skillTreeNodePrefab == null || skillTreeNodeRoot == null) return;
+            var go = Instantiate(skillTreeNodePrefab, skillTreeNodeRoot);
+            SetChildText(go, "TitleText",  node.displayName);
+            SetChildText(go, "StatusText", node.isUnlocked ? "Unlocked" : "Locked");
+
+            var btn = go.GetComponentInChildren<Button>();
+            if (btn != null && node.isUnlocked && !string.IsNullOrEmpty(node.lessonId))
+            {
+                string lessonId = node.lessonId;
+                btn.onClick.AddListener(() => ShowLessonDetail(lessonId));
+            }
+        }
+
+        // ── Phase 84 — Exam ─────────────────────────────────────────────────────
+
+        /// <summary>Shows the exam panel for <paramref name="certType"/>.</summary>
+        public void ShowExamPanel(CertificationType certType)
+        {
+            if (examController == null) return;
+            var exam = examController.GetExamFor(certType);
+            if (exam == null) return;
+
+            SetPanelActive(examPanel, true);
+            SafeSetText(examTitleText, exam.displayName ?? certType.ToString());
+            SafeSetText(examProgressText, $"Attempts: {exam.attemptsUsed}/{exam.maxAttempts}");
+
+            if (examStartButton != null)
+            {
+                bool canStart = exam.maxAttempts <= 0 || exam.attemptsUsed < exam.maxAttempts;
+                examStartButton.gameObject.SetActive(canStart);
+                examStartButton.onClick.RemoveAllListeners();
+                var ct = certType;
+                examStartButton.onClick.AddListener(() => examController.StartExam(ct));
+            }
+        }
+
+        private void HandleExamPassed(CertificationExam exam)
+        {
+            SetPanelActive(examPanel, false);
+            Debug.Log($"[FlightSchoolUI] Exam passed: {exam.displayName}");
+        }
+
+        private void HandleExamFailed(CertificationExam exam, string reason)
+        {
+            SafeSetText(examProgressText, $"Failed: {reason} — Attempts: {exam.attemptsUsed}/{exam.maxAttempts}");
         }
 
         // ── Static utilities ─────────────────────────────────────────────────────

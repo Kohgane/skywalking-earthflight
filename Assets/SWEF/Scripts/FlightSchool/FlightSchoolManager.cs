@@ -33,6 +33,9 @@ namespace SWEF.FlightSchool
         /// <summary>Raised when the player earns XP, carrying the amount awarded.</summary>
         public event Action<int> OnXpEarned;
 
+        /// <summary>Raised when a <see cref="SkillNode"/> becomes unlocked (Phase 84).</summary>
+        public event Action<SkillNode> OnSkillNodeUnlocked;
+
         // ── Public state ─────────────────────────────────────────────────────────
 
         /// <summary>All lessons in the curriculum.</summary>
@@ -43,6 +46,15 @@ namespace SWEF.FlightSchool
 
         /// <summary>Cumulative XP the player has earned through flight school.</summary>
         public int totalXpEarned;
+
+        /// <summary>Persisted skill-tree graph (Phase 84). Populated by <see cref="SkillTreeController"/>.</summary>
+        public SkillTreeData skillTree = new SkillTreeData();
+
+        /// <summary>
+        /// Practical-test definitions for certifications (Phase 84).
+        /// Registered by <see cref="CertificationExamController"/> at runtime.
+        /// </summary>
+        public List<CertificationExam> examDefinitions = new List<CertificationExam>();
 
         // ── Persistence ──────────────────────────────────────────────────────────
 
@@ -55,6 +67,8 @@ namespace SWEF.FlightSchool
             public List<FlightLesson>       lessons        = new List<FlightLesson>();
             public List<PilotCertification> certifications = new List<PilotCertification>();
             public int                      totalXpEarned;
+            public SkillTreeData            skillTree      = new SkillTreeData();
+            public List<CertificationExam>  examDefinitions = new List<CertificationExam>();
         }
 
         // ── Unity lifecycle ──────────────────────────────────────────────────────
@@ -201,6 +215,28 @@ namespace SWEF.FlightSchool
         }
 
         /// <summary>
+        /// Returns the registered <see cref="CertificationExam"/> for
+        /// <paramref name="certType"/>, or <c>null</c> when none is defined.
+        /// </summary>
+        public CertificationExam GetExamForCertification(CertificationType certType)
+        {
+            if (examDefinitions == null) return null;
+            foreach (var e in examDefinitions)
+                if (e != null && e.certType == certType) return e;
+            return null;
+        }
+
+        /// <summary>
+        /// Notifies listeners that <paramref name="node"/> was unlocked.
+        /// Intended to be called by <see cref="SkillTreeController"/>.
+        /// </summary>
+        public void NotifySkillNodeUnlocked(SkillNode node)
+        {
+            if (node == null) return;
+            OnSkillNodeUnlocked?.Invoke(node);
+        }
+
+        /// <summary>
         /// Evaluates every certification against the set of completed lessons and
         /// raises <see cref="OnCertificationEarned"/> for any newly satisfied ones.
         /// </summary>
@@ -244,9 +280,11 @@ namespace SWEF.FlightSchool
             {
                 var data = new SaveData
                 {
-                    lessons        = allLessons,
-                    certifications = certifications,
-                    totalXpEarned  = totalXpEarned
+                    lessons         = allLessons,
+                    certifications  = certifications,
+                    totalXpEarned   = totalXpEarned,
+                    skillTree       = skillTree,
+                    examDefinitions = examDefinitions
                 };
                 File.WriteAllText(SavePath, JsonUtility.ToJson(data, true));
             }
@@ -269,9 +307,11 @@ namespace SWEF.FlightSchool
                     var data = JsonUtility.FromJson<SaveData>(File.ReadAllText(SavePath));
                     if (data != null)
                     {
-                        allLessons     = data.lessons        ?? new List<FlightLesson>();
-                        certifications = data.certifications ?? new List<PilotCertification>();
-                        totalXpEarned  = data.totalXpEarned;
+                        allLessons      = data.lessons         ?? new List<FlightLesson>();
+                        certifications  = data.certifications  ?? new List<PilotCertification>();
+                        totalXpEarned   = data.totalXpEarned;
+                        skillTree       = data.skillTree       ?? new SkillTreeData();
+                        examDefinitions = data.examDefinitions ?? new List<CertificationExam>();
                         return;
                     }
                 }

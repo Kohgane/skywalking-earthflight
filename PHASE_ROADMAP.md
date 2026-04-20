@@ -12,12 +12,12 @@ Phases 1–80 have been merged into `main`. See individual PR descriptions and `
 | 81 | Terrain Scanning & Geological Survey System | [#98](https://github.com/Kohgane/skywalking-earthflight/pull/98) | 2026-04-01 |
 | 82 | Passenger & Cargo Mission System | [#99](https://github.com/Kohgane/skywalking-earthflight/pull/99) | 2026-04-01 |
 | 83 | Dynamic Soundtrack & Adaptive Music System | — | 2026-04-01 |
+| 84 | Flight Training Academy & Skill Certification | — | 2026-04-20 |
 
-## In Progress (84–85)
+## In Progress (85)
 
 | Phase | Title | Status | PR | Notes |
 |-------|-------|--------|----|-------|
-| 84 | Flight Training Academy & Skill Certification | ⚠️ WIP/Draft — needs rebuild | [#101](https://github.com/Kohgane/skywalking-earthflight/pull/101) | Rate-limited draft; conflicts with main. Close & recreate. |
 | 85 | Space Station & Orbital Docking System | ⚠️ WIP/Draft — needs rebuild | [#102](https://github.com/Kohgane/skywalking-earthflight/pull/102) | Rate-limited draft (0 additions); empty shell. Close & recreate. |
 
 ## Next Batch — Phase 86–90 (Confirmed)

@@ -27,6 +27,12 @@ namespace SWEF.FlightSchool
 
         [SerializeField] private FlightSchoolManager schoolManager;
 
+        [Tooltip("Optional grading engine used for detailed multi-criteria scoring (Phase 84).")]
+        [SerializeField] private FlightGradingSystem gradingSystem;
+
+        [Tooltip("Optional constraint enforcer wired automatically when the lesson starts (Phase 84).")]
+        [SerializeField] private FlightConstraintEnforcer constraintEnforcer;
+
         [Tooltip("Minimum seconds between automatically delivered hints.")]
         [SerializeField] private float hintCooldown = 15f;
 
@@ -53,6 +59,8 @@ namespace SWEF.FlightSchool
         {
             if (schoolManager == null)
                 schoolManager = FlightSchoolManager.Instance;
+            if (gradingSystem == null)
+                gradingSystem = FlightGradingSystem.Instance;
         }
 
         private void Update()
@@ -78,6 +86,11 @@ namespace SWEF.FlightSchool
             _lessonStartTime       = Time.time;
             _totalDeviationPenalty = 0f;
             _isActive              = true;
+
+            // Phase 84: begin a grading session + apply lesson constraints.
+            gradingSystem?.BeginSession();
+            if (constraintEnforcer != null)
+                constraintEnforcer.SetConstraints(lesson.constraints);
 
             schoolManager?.StartLesson(lesson.lessonId);
 
@@ -177,6 +190,13 @@ namespace SWEF.FlightSchool
         public float EvaluatePerformance()
         {
             if (activeLesson == null) return 0f;
+
+            // Phase 84: when a grading system is available, use its weighted aggregate.
+            if (gradingSystem != null)
+            {
+                float liveScore = gradingSystem.GetLiveAggregateScore();
+                if (liveScore > 0f) return Mathf.Clamp(liveScore - _totalDeviationPenalty, 0f, 100f);
+            }
 
             if (activeLesson.objectives == null || activeLesson.objectives.Count == 0)
                 return Mathf.Clamp01(1f - _totalDeviationPenalty / 100f) * 100f;
