@@ -72,6 +72,7 @@ Assets/SWEF/
 │   ├── Flight/           # FlightController, AltitudeController, TouchInputRouter, HoldButton, AeroPhysicsModel, AeroState, FlightPhysicsIntegrator, FlightPhysicsSnapshot, OrbitalMechanics, OrbitState, JetTrail, CameraController, StallWarningSystem
 │   ├── FlightSchool/     # FlightSchoolData, FlightSchoolManager, FlightInstructor, FlightSchoolUI, FlightSchoolAnalyticsBridge
 │   ├── Fuel/             # FuelEnums, FuelConfig, FuelTank, FuelConsumptionModel, FuelManager, RefuelStation, FuelGaugeUI, EmergencyFuelProtocol
+│   ├── GPWS/             # GPWSData, GPWSManager, GPWSModeController, TerrainAwarenessDisplay, GPWSAudioController, GPWSVisualController, WindshearDetector, GPWSHUD, GPWSTrainingBridge, GPWSDebugOverlay
 │   ├── GuidedTour/       # TourData, TourManager, WaypointNavigator, WaypointHUD, TourNarrationController, TourCatalogUI, TourProgressTracker, TourMinimapOverlay
 │   ├── Haptic/           # HapticManager, HapticPattern, HapticTriggerZone
 │   ├── HiddenGems/       # HiddenGemData, HiddenGemDatabase, HiddenGemManager, GemDiscoveryUI, GemCollectionUI, GemRadarUI, GemMinimapIntegration, GemTourGenerator, GemStatisticsTracker, Editor/HiddenGemEditorWindow
@@ -4693,3 +4694,38 @@ tier promotion, challenge scenarios (`CrosswindLandingChallenge`, `MountainLandi
 counters, `LandingHUD` PAPI states, `LandingTutorialController` activation/hints,
 `ReplayRecorder` start/save, `DailyLandingChallenge` seed/NextReset, `ChallengeAircraftRestrictor`
 rules/handicap, `LandingCoachSystem` activation/tips.
+
+---
+
+## Phase 121 — Ground Proximity Warning System (GPWS) & Terrain Awareness
+
+Phase 121 implements the complete **GPWS / EGPWS** and **TAWS** (Terrain Awareness
+and Warning System) — all seven standard GPWS modes with aviation-accurate logic,
+forward-looking terrain scanning, reactive windshear detection, advisory altitude
+callouts, and cockpit HUD integration.
+
+### New Scripts (10 files) — `Assets/SWEF/Scripts/GPWS/` — namespace `SWEF.GPWS`
+
+| File | Type | Description |
+|------|------|-------------|
+| `GPWSData.cs` | Data models | Enums: `GPWSMode` (7), `GPWSAlertLevel` (4), `GPWSCalloutType` (12), `TerrainThreatLevel` (4), `TAWSDisplayMode` (3); Data classes: `GPWSAlert`, `TerrainCell`, `GPWSConfig`, `TerrainScanResult` |
+| `GPWSManager.cs` | MonoBehaviour singleton | DontDestroyOnLoad; central GPWS manager running all 7 modes, terrain raycast queries, aircraft state from `FlightDataProvider` (`#if SWEF_COCKPITHUD_AVAILABLE`), gear state from `LandingGearController` (`#if SWEF_LANDING_AVAILABLE`); events: `OnGPWSAlert`, `OnGPWSAlertCleared`, `OnAltitudeCallout`, `OnWindshearDetected`, `OnTerrainAhead` |
+| `GPWSModeController.cs` | MonoBehaviour | Implements Modes 1–6: excessive sink rate (>1000 fpm below 2450 ft AGL), terrain closure rate, altitude loss after takeoff (>10%), unsafe terrain clearance (gear/flaps), below glideslope (>1.3 dots), advisory altitude callouts (500/400/300/200/100/50/40/30/20/10 ft) |
+| `TerrainAwarenessDisplay.cs` | MonoBehaviour | TAWS forward-looking terrain scan via raycasts, threat-level cell classification, RenderTexture cockpit MFD output, minimap danger-zone blips (`#if SWEF_MINIMAP_AVAILABLE`) |
+| `GPWSAudioController.cs` | MonoBehaviour | Priority-queued aural alerts: "TERRAIN TERRAIN", "PULL UP", "TOO LOW TERRAIN/GEAR/FLAPS", "SINK RATE", "DON'T SINK", "GLIDESLOPE", "WINDSHEAR", altitude callouts; dedicated AudioSource |
+| `GPWSVisualController.cs` | MonoBehaviour | Master warning light flash, GPWS annunciator panel, pull-up bar, WarningSystem integration (`#if SWEF_COCKPITHUD_AVAILABLE`) |
+| `WindshearDetector.cs` | MonoBehaviour | Reactive windshear from airspeed/altitude-rate deviations, microburst detection via `WindSystem` altitude layers (`#if SWEF_WEATHER_AVAILABLE`), escape guidance (pitch target) |
+| `GPWSHUD.cs` | MonoBehaviour | HUD overlay: GPWS status, active alert text, radar altitude readout, windshear escape guidance, TAWS display |
+| `GPWSTrainingBridge.cs` | MonoBehaviour | Flight school integration: reaction-time scoring, objective tracking via `FlightSchoolManager` (`#if SWEF_FLIGHTSCHOOL_AVAILABLE`), telemetry dispatch (`#if SWEF_ANALYTICS_AVAILABLE`) |
+| `GPWSDebugOverlay.cs` | MonoBehaviour | `#if UNITY_EDITOR \|\| DEVELOPMENT_BUILD` debug gizmos: terrain scan rays, threat zones, altitude ring, runtime GUI overlay |
+
+### Assembly
+
+| File | Description |
+|------|-------------|
+| `SWEF.GPWS.asmdef` | Assembly definition referencing Flight, CockpitHUD, Audio, Weather, FlightSchool, Minimap, Landing, Analytics, Localization |
+
+### Localization
+
+41 GPWS keys added to all 8 language files (`lang_en/ko/ja/zh/de/es/fr/pt.json`) covering
+GPWS modes 1–7 callouts, alert levels, HUD status, TAWS display, windshear warnings, and training text.

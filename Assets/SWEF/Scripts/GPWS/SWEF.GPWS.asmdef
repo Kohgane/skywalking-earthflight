@@ -1,0 +1,24 @@
+{
+    "name": "SWEF.GPWS",
+    "rootNamespace": "SWEF.GPWS",
+    "references": [
+        "SWEF.Flight",
+        "SWEF.CockpitHUD",
+        "SWEF.Audio",
+        "SWEF.Weather",
+        "SWEF.FlightSchool",
+        "SWEF.Minimap",
+        "SWEF.Landing",
+        "SWEF.Analytics",
+        "SWEF.Localization"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
