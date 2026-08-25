@@ -1,3 +1,107 @@
+# skywalking-earthflight — Unity 트랙 전용 저장소
+
+> **⚠️ 2026-08 웹 피벗 이후, 이 저장소는 Unity 트랙 전용입니다.**
+> 웹 앱 본체는 [`Kohgane/LinkLynk`](https://github.com/Kohgane/LinkLynk) 저장소의 `static/fly/` 아래에 있습니다.
+> 배포 URL: **<https://linklynk.onrender.com/fly/>**
+
+---
+
+## 현재 상태 요약
+
+| 항목 | 내용 |
+|------|------|
+| 역할 | Unity 클라이언트 트랙 (3D 비행 뷰어) |
+| 웹 앱 위치 | `Kohgane/LinkLynk` / `static/fly/` |
+| 웹 앱 배포 | <https://linklynk.onrender.com/fly/> |
+| Unity 버전 | Unity 6.3 LTS |
+| 주요 패키지 | Cesium for Unity |
+
+---
+
+## 웹 앱 위치 안내
+
+2026-08 이후 실서비스 앱은 이 저장소가 아닌 별도 저장소에서 관리됩니다.
+
+- **저장소**: [`Kohgane/LinkLynk`](https://github.com/Kohgane/LinkLynk)
+- **경로**: `static/fly/`
+- **배포 URL**: <https://linklynk.onrender.com/fly/>
+
+이 저장소(`skywalking-earthflight`)는 Unity 기반 3D 비행 뷰어 트랙만 담당합니다.
+
+---
+
+## Unity 트랙 — 현재 씬 및 구성
+
+### 현재 씬: `MainScene`
+
+#### 주요 오브젝트
+| 오브젝트 | 역할 |
+|----------|------|
+| `CesiumGeoreference` | 지구 좌표계 기준점 설정 |
+| `Cesium3DTileset` | 실사 3D 지형 타일 스트리밍 |
+| `DynamicCamera` | 비행 카메라 제어 |
+
+#### 주요 스크립트
+| 스크립트 | 역할 |
+|----------|------|
+| `LandmarkMenu.cs` | 명소 텔레포트 (관심 지점 이동) |
+| `SunDial.cs` | 시간대별 대기·조명 시뮬레이션 |
+
+#### 렌더링 / 후처리
+- **렌더 파이프라인**: URP (Universal Render Pipeline)
+- **후처리**: Global Volume
+  - Bloom
+  - ACES 톤매핑
+  - Vignette
+
+---
+
+## 요구 환경
+
+Unity 프로젝트를 빌드·실행하려면 아래 환경이 필요합니다.
+
+- **Unity 6.3 LTS**
+- **Cesium for Unity** 패키지 (Package Manager에서 설치)
+- **Cesium ion 토큰** — Cesium ion 계정 발급 후 프로젝트에 설정 필요
+
+---
+
+## `_Parked/` — ⚠️ 주의: 구 아키텍처 유산
+
+`_Parked/` 디렉터리는 **절대 현재 빌드 범위로 복원하지 마세요.**
+
+- 구 아키텍처에서 사용하던 **1,411개 C# 스크립트**가 포함되어 있습니다.
+- `.meta` 파일 부재로 인해 **asmdef GUID가 손상**된 상태입니다.
+- 현재 빌드에서 **의도적으로 제외**되어 있습니다.
+- 이 폴더를 `Assets/` 등 빌드 범위 안으로 이동하면 대규모 컴파일 오류가 발생할 수 있습니다.
+
+> **실수로 복원하지 않도록 주의하세요.** 이 폴더는 참고 아카이브 용도로만 유지됩니다.
+
+---
+
+## 관련 이슈 메모
+
+| 이슈 | 상태 | 비고 |
+|------|------|------|
+| [#125](../../issues/125) | 아카이브 대상 | 웹 피벗 이전 기획, 현재 로드맵과 무관 |
+| [#133](../../issues/133) | 아카이브 대상 | 웹 피벗 이전 기획, 현재 로드맵과 무관 |
+
+이슈 #125, #133은 2026-08 웹 피벗 이전에 작성된 기획 이슈로, 현재 방향과 맞지 않아 **아카이브 대상**입니다.
+
+---
+
+## 기존 문서 (참고용)
+
+> 아래 문서들은 이전 단계의 기획·설계 기록입니다. 현재 개발 방향과 다를 수 있습니다.
+
+- [PROJECT_BRIEFING.md](./PROJECT_BRIEFING.md)
+- [PHASE_ROADMAP.md](./PHASE_ROADMAP.md)
+- [SCENE_SETUP_GUIDE.md](./SCENE_SETUP_GUIDE.md)
+- [RELEASE_NOTES_v1.0.0-rc1.md](./RELEASE_NOTES_v1.0.0-rc1.md)
+- [BUG_TRACKING_GUIDE.md](./BUG_TRACKING_GUIDE.md)
+
+---
+
 # SkywalkingEarthFlight (SWEF)
 
 🚀 **Fly from your exact location to the edge of space.**
